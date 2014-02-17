@@ -1,0 +1,51 @@
+GREEN
+
+To calculate Green functions and elementary seismograms.
+
+
+1. Provide CRUSTAL.DAT, i.e. an 1D horizontally latered model 
+of the medium. Follow comments in the sample file.
+
+2. Provide  STATION.DAT (copy from directory SOURSTAT).
+
+3. Provide trial source positions SRC01.DAT, SRC02.DAT, ...
+(copy from directory SOURSTAT)
+
+4.  Provide auxiliary parameters for Green's fctn,
+calculation in GRDAT.HED. See and edit sample file.
+Edit only this: 
+ nc...number of layers from CRUSTAL.DAT
+ nfreq... number of frequencies to be computed; then
+          maximum calculated frequency is nfreq * df,
+          where the frequency step is df=1./tl
+ tl ... the time window length (in sec), it must be         
+        tl=8192 * dt, where dt is the time step 
+        of the XXXRAW.DAT input waveform files 
+ nr ... number of all stations in ALLSTAT.DAT
+ xl ... this number should be larger than 20 * epimax,
+        where epimax is max.epic. distance (in meters !)
+ 
+ 
+5. Calculate Green fctns. for the trial source positions.
+   Use GRE_25.BAT. If you need more then 25 trial sources,
+   or less, edit GRE_25.BAT (add or remove some lines).
+   Sample data are for 3 trial sources, see GRE_3.BAT.
+???????????????????????????????????????????????????????????????
+
+6. Calculate elementary seismograms. Use ELE_25.BAT.
+   Elemseis are seismograms for 5 basic focal mechanisms
+   (that cannot be changed),and for a given moment rate
+   time fctn. Present version makes use of delta fctn.
+   Time fctn. cannot be changed unless the user makes
+   a small edit of ELEMSE.FOR to select, e.g. a triangle.
+   Sample data are for 3 trial sources, see ELE_3.BAT.
+???????????????????????????????????????????????????????????????   
+
+7. Elemseis come in files numbered according the trial sources,
+   ELEMSE01.DAT, ELEMSE02.DAT, ..for trial source 1, 2, ....
+   i.e. one file for one source and all stations
+   (the station succession same as in STATION.DAT).
+   Sample ELEMSExx.DAT files are not distributed with this
+   package due to their length.
+   
+8. Go to directory INVERT.

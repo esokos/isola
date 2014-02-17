@@ -1,0 +1,7 @@
+Source size and mechanism (in free format)
+   scalar moment (in Nm):
+1.68959e+015
+ strike (in degrees)  dip (in degrees)  rake (in degrees); see Aki & Richards
+104   68   -4
+  delay (in seconds); >0 is to the right
+-3.45

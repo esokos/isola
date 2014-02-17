@@ -1,0 +1,8 @@
+
+
+Moment Tensor Solution computed using ISOLA
+http://seismo.geology.upatras.gr/isola/
+
+University of Patras, Geology Department
+Seismological Laboratory
+http://seismo.geology.upatras.gr

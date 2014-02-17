@@ -1,0 +1,12 @@
+Crustal model (free format)    Novotny model
+number of layers, not more than 15:
+   6
+Parameters of the layers
+depth of layer top(km)   Vp(km/s)    Vs(km/s)    Rho(g/cm**3)    Qp     Qs
+      0.0                 2.31       1.300        2.500         300    150
+      1.0                 4.27       2.400        2.900         300    150
+      2.0                 5.52       3.100        3.000         300    150
+      5.0                 6.23       3.500        3.300         300    150
+     16.0                 6.41       3.600        3.400         300    150
+     33.0                 8.37       4.700        3.400        1000   1000
+**************** not more than 15 layers ! ******************************
