@@ -10,3 +10,5 @@ gfortran    sigma5or6.for  -o sigma5or6.exe
 
 
 del *.obj
+
+copy *.exe ..

@@ -21,3 +21,5 @@ pause
 gfortran  dsretc.for -o dsretc.exe
 
 del *.obj
+
+copy *.exe ..

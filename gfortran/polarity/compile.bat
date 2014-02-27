@@ -10,3 +10,5 @@ pause
 gfortran  onlysym.for  -o onlysym.exe
 
 del *.obj
+
+copy *.exe ..

@@ -33,5 +33,7 @@ gfortran  -c time_loop_two.for
 gfortran -o time_loop_two time_loop_two.o nnls.o tinv.o
 
 
+copy *.exe ..
+
 
 

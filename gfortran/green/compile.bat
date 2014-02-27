@@ -5,3 +5,6 @@ gfortran elecomb.for -o elecomb.exe
 
 
 del *.obj
+
+
+copy *.exe ..
