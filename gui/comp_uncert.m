@@ -464,7 +464,12 @@ else
    end
 end
 %%
+
 % now we need to decide if this is prescribed or estimated data variance
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % check the radio buttons
 if (get(handles.pdata,'Value') == get(handles.pdata,'Max'))
@@ -689,6 +694,10 @@ set(handles.plot,'Enable','On')
 
 
 %%  Calculate data variance
+%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 elseif (get(handles.edata,'Value') == get(handles.edata,'Max'))
     % Estimated
@@ -725,6 +734,90 @@ cd uncertainty
 
     nsource=load('srcno.dat');
 
+%% update values in inpinv and allstat..!!
+    %% update inpinv.dat with data variance in GUI
+    % and Freq range
+     copyfile('inpinv.dat','inpinv.bak');
+    
+       linetmp1=handles.linetmp1;
+       linetmp2=handles.linetmp2;
+       linetmp3=handles.linetmp3;
+       linetmp4=handles.linetmp4;
+       linetmp5=handles.linetmp5;
+       linetmp6=handles.linetmp6;
+       linetmp7=handles.linetmp7;
+       linetmp8=handles.linetmp8;
+       linetmp9=handles.linetmp9;
+       linetmp10=handles.linetmp10;
+       linetmp11=handles.linetmp11;
+       linetmp12=handles.linetmp12;
+       linetmp13=handles.linetmp13;
+       linetmp14=handles.linetmp14;
+       linetmp15=handles.linetmp15;
+    % read fi f2 f3 f4
+       f1=get(handles.f1,'String');
+       f2=get(handles.f2,'String');
+       f3=get(handles.f3,'String');
+       f4=get(handles.f4,'String');
+   
+    if ispc 
+      fid = fopen('inpinv.dat','w');
+          fprintf(fid,'%s\r\n',linetmp1);
+          fprintf(fid,'%s\r\n',linetmp2);
+          fprintf(fid,'%s\r\n',linetmp3);
+          fprintf(fid,'%s\r\n',linetmp4);
+          fprintf(fid,'%s\r\n',linetmp5);
+          fprintf(fid,'%s\r\n',linetmp6);
+          fprintf(fid,'%s\r\n',linetmp7);
+          fprintf(fid,'%s\r\n',linetmp8);
+          fprintf(fid,'%s\r\n',linetmp9);
+          fprintf(fid,'%s\r\n',linetmp10);
+          fprintf(fid,'%s\r\n',linetmp11);
+          fprintf(fid,'%s\r\n',linetmp12);
+          fprintf(fid,'%s\r\n',linetmp13);
+          fprintf(fid,'%s %s %s %s\r\n', f1, f2, f3, f4);
+          fprintf(fid,'%s\r\n',linetmp15);
+          fprintf(fid,'%e\r\n',1.e15);  % put something 
+      fclose(fid);
+    else
+      fid = fopen('inpinv.dat','w');
+          fprintf(fid,'%s\n',linetmp1);
+          fprintf(fid,'%s\n',linetmp2);
+          fprintf(fid,'%s\n',linetmp3);
+          fprintf(fid,'%s\n',linetmp4);
+          fprintf(fid,'%s\n',linetmp5);
+          fprintf(fid,'%s\n',linetmp6);
+          fprintf(fid,'%s\n',linetmp7);
+          fprintf(fid,'%s\n',linetmp8);
+          fprintf(fid,'%s\n',linetmp9);
+          fprintf(fid,'%s\n',linetmp10);
+          fprintf(fid,'%s\n',linetmp11);
+          fprintf(fid,'%s\n',linetmp12);
+          fprintf(fid,'%s\n',linetmp13);
+          fprintf(fid,'%s %s %s %s\n', f1, f2, f3, f4);
+          fprintf(fid,'%s\n',linetmp15);
+          fprintf(fid,'%e\n',1.e15);  % put something 
+      fclose(fid);
+    end
+%%  here we must update the allstat.dat frq range also..!!
+     copyfile('allstat.dat','allstat.bak');
+     stnnames=allstat_info{1,1}; usest=cell2mat(allstat_info(1,2)); usens=cell2mat(allstat_info(1,3));useew=cell2mat(allstat_info(1,4));useve=cell2mat(allstat_info(1,5));
+
+  if ispc   
+    fid = fopen('allstat.dat','w');
+     for i=1:nstations
+      fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\r\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f2, f3, f4);
+     end
+    fclose(fid);
+  else
+    fid = fopen('allstat.dat','w');
+     for i=1:nstations
+      fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f2, f3, f4);
+     end
+    fclose(fid);
+  end
+    
+    
 %% first find G
 %  run iso12 
 
@@ -773,11 +866,11 @@ pwd
 %% we know G calculate data variance based on C
 
    dvariance=(C*Gvalue*Mo)^2;
+  pause
+% now we can do the calculation
 
-  
-%% now we can do the calculation
-    %% update inpinv.dat with data variance in GUI
-    % and Freq range
+% update inpinv.dat with CALCULATED data variance 
+% and Freq range
      copyfile('inpinv.dat','inpinv.bak');
     
        linetmp1=handles.linetmp1;
@@ -840,23 +933,25 @@ pwd
           fprintf(fid,'%e\n',dvariance);
       fclose(fid);
     end
+    
+    
 %%  here we must update the allstat.dat frq range also..!!
-     copyfile('allstat.dat','allstat.bak');
-     stnnames=allstat_info{1,1}; usest=cell2mat(allstat_info(1,2)); usens=cell2mat(allstat_info(1,3));useew=cell2mat(allstat_info(1,4));useve=cell2mat(allstat_info(1,5));
-
-  if ispc   
-    fid = fopen('allstat.dat','w');
-     for i=1:nstations
-      fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\r\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f2, f3, f4);
-     end
-    fclose(fid);
-  else
-    fid = fopen('allstat.dat','w');
-     for i=1:nstations
-      fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f2, f3, f4);
-     end
-    fclose(fid);
-  end
+%      copyfile('allstat.dat','allstat.bak');
+%      stnnames=allstat_info{1,1}; usest=cell2mat(allstat_info(1,2)); usens=cell2mat(allstat_info(1,3));useew=cell2mat(allstat_info(1,4));useve=cell2mat(allstat_info(1,5));
+% 
+%   if ispc   
+%     fid = fopen('allstat.dat','w');
+%      for i=1:nstations
+%       fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\r\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f2, f3, f4);
+%      end
+%     fclose(fid);
+%   else
+%     fid = fopen('allstat.dat','w');
+%      for i=1:nstations
+%       fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f2, f3, f4);
+%      end
+%     fclose(fid);
+%   end
      
 %% prepare the acka_stara.dat file
           strike = str2double(get(handles.strike,'String'));
