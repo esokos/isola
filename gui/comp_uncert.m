@@ -866,8 +866,7 @@ pwd
 %% we know G calculate data variance based on C
 
    dvariance=(C*Gvalue*Mo)^2;
-  pause
-% now we can do the calculation
+  % now we can do the calculation
 
 % update inpinv.dat with CALCULATED data variance 
 % and Freq range
