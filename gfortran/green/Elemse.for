@@ -4,6 +4,8 @@ c          6 elementary seismograms for basic focal mech.
 c          (the 6th is isotropic)
 c          moment rate = delta fctn. , output = velocity
 
+c         time function from file soutype.dat !!!!!!!
+
 ccc       fixed  N=8192 (mm=13)
 
 c
@@ -61,6 +63,8 @@ cc    open(350,form='formatted',file='elemsef.dat') ! elem seis formated
                                                    ! SUCCESSION OF STATS
                                                    ! AS IN GREEN
 
+
+
       read(10,input)
 
       if ((ns.gt.nsp).or.(nr.gt.nrp).or.(nc.gt.ncp)) then
@@ -72,12 +76,19 @@ cc    open(350,form='formatted',file='elemsef.dat') ! elem seis formated
        stop
       endif
 
-
-
 c  true step
-      ics=7   !true step
-      t1=0.
-      icc=2   !output = velocity
+c      ics=7   !true step
+c      t1=0.
+c      icc=2   !output = velocity
+
+cccccccc  read the source type from file !!! thimios 28/3/10
+
+	open(301,file='soutype.dat')
+	read(301,'(i1)') ics
+	read(301,'(f4.1)') t0
+	read(301,'(f3.1)') t1
+      read(301,'(i1)') icc
+	close(301)
 cccccccccccccccccccccccccc
 c  moment time fctn fsource
 c     ics=2                ! Bouchon's smooth step
@@ -124,7 +135,7 @@ ccccccccccccccccccccccccccc
 
 ccccccccc modification for 0 freq
 
-          if(jf.eq.1)  us=us*0.0001
+          if(jf.eq.1)  us=us*0.0001   !! or 0.000
 ccccccccc
 
 	 do ir=1,nr   ! loop over stations
@@ -185,13 +196,14 @@ cccc    ELEMENTARY SEISMO  (it=1,2...6)  OUTPUT   !!!  always all 6 !!!
         do it=1,6            ! seismo for 6 basic moment tensors
           do itim=1,nt         ! time
           time=float(itim-1)*dt
-          bux=real(ux(itim,ir,it))       !!! new only SINGLE precision
+          bux=real(ux(itim,ir,it))       
           buy=real(uy(itim,ir,it))
           buz=real(uz(itim,ir,it))
           write(300) time,bux,buy,buz
           enddo               ! time
         enddo                ! basic moment tensors
       enddo                ! stations
+
 
 
 	stop
@@ -499,5 +511,3 @@ c         trupt = Length/2/rupt_velocity (Haskell)
     
 	return
 	end
-	
-
