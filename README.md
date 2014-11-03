@@ -9,6 +9,6 @@ This is the ISOLA github distribution. Isola code updates will be sent here.
 <h1>Installation</h1>
 ============
 
-Copy the isola *.m, *.fig, *.exe files to your isola installation folder (e.g. c:\isola). Then add this folder to your system path and to your Matlab path. Restart Matlab, change directory (cd) to the folder you want to use for processing an event (so called run folder) and type isola, the GUI will ininitialize in this folder and you can start work with isola.
+Copy the isola *.m, *.fig, *.exe files to your isola installation folder (e.g. c:\isola). Then add this folder to your system path and to your Matlab path. Restart Matlab, change directory (cd) to the folder you want to use for processing an event (so called run folder) and type isola, the GUI will ininitialize in this folder and you can start working with isola.
 
 
