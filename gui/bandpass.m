@@ -10,9 +10,11 @@ function [d]=bandpass(c,flp,fhi,npts,delt)
 % npts = samples in data 
 % delt = sampling interval of data 
 % 
-n=2;      % 4th order butterworth filter 
+n=1;      % 4th order butterworth filter 
 fnq=1/(2*delt);  % Nyquist frequency 
 Wn=[flp/fnq fhi/fnq];    % butterworth bandpass non-dimensional frequency 
 [b,a]=butter(n,Wn); % construct the filter 
 d=filtfilt(b,a,c); % zero phase filter the data 
+% figure
+% freqz(b,a,1024,1/delt);
 return;

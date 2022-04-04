@@ -22,7 +22,7 @@ function varargout = imdata(varargin)
 
 % Edit the above text to modify the response to help imdata
 
-% Last Modified by GUIDE v2.5 17-Oct-2011 15:06:06
+% Last Modified by GUIDE v2.5 10-Nov-2020 10:49:48
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -117,4 +117,14 @@ function pitsa_Callback(hObject, eventdata, handles)
 disp('Calling PITSA import')
 
 pitsaimport
+
+
+% --- Executes on button press in mseed.
+function mseed_Callback(hObject, eventdata, handles)
+% hObject    handle to mseed (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+mseedimport
+disp('BE CAREFUL this is new, not tested much !!')
 

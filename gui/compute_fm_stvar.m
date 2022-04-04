@@ -169,7 +169,14 @@ cd invert
 
 % call fortran code
    [status, result] = system('corr_kag');
-
+     if status~=0
+         disp(' ')         
+         disp('*********************************************************')
+         disp(['Problem running corr_kag.exe. System report is.   '  result])
+         disp('*********************************************************')
+         disp(' ')         
+     end
+     
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   FMVAR part 
 if status ==0 

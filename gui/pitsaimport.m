@@ -92,7 +92,7 @@ function varargout = pitsaimport_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-disp('This is pitsaimport 25/07/06');
+disp('This is pitsaimport 17/03/2022');
 
 
 % --- Executes on button press in readew.
@@ -115,8 +115,8 @@ cd(path1)
    
          try 
              
-          [samples,year,month,day,hour,minute,seconds,sfreq,npoints,scode,chan2] = readpitsafile(lopa);
-            
+          [samples,yearew,monthew,dayew,hourew,minuteew,secondsew,sfreq,npoints,scode,chan2] = readpitsafile(lopa);
+ 
           catch
              infostr= ['Error reading ' lopa ' please check the file and try again'];
              helpdlg(infostr,'File info');
@@ -139,9 +139,16 @@ time_sec=((tim.*dt)-dt)';
 
 set(handles.ewname,'String',[scode '  ' chan2])
 
-%%%%find file start time....        
+%% find file start time....        
+mon=num2mon(str2num(monthew));
+doy=day(datetime([str2num(yearew) str2num(monthew) str2num(dayew)]),'dayofyear');
+ 
+n=[deblank(num2str(dayew)) '-' deblank(mon) '-'  deblank(num2str(yearew))  '  ('  deblank(num2str(doy)) ')  '  '  ' deblank(num2str(hourew)) ':'...
+        deblank(num2str(minuteew)) ':'  deblank(num2str(secondsew,'%5.2f'))];
 
-set(handles.ewtime,'String',[year month ' ' day ' ' hour ':' minute ':' seconds]);
+set(handles.ewtime,'String',n);
+
+
 
 %%%%plotting
 axes(handles.ewaxis)
@@ -186,7 +193,7 @@ cd(path1)
    
          try 
              
-          [samples,year,month,day,hour,minute,seconds,sfreq,npoints,scode,chan2] = readpitsafile(lopa);
+          [samples,yearns,monthns,dayns,hourns,minutens,secondsns,sfreq,npoints,scode,chan2] = readpitsafile(lopa);
             
           catch
              infostr= ['Error reading ' lopa ' please check the file and try again'];
@@ -210,9 +217,15 @@ time_sec=((tim.*dt)-dt)';
 
 set(handles.nsname,'String',[scode '  ' chan2])
 
-%%%%find file start time....        
+%% find file start time....        
+mon=num2mon(str2num(monthns));
+doy=day(datetime([str2num(yearns) str2num(monthns) str2num(dayns)]),'dayofyear');
+ 
+n=[deblank(num2str(dayns)) '-' deblank(mon) '-'  deblank(num2str(yearns))  '  ('  deblank(num2str(doy)) ')  '  '  ' deblank(num2str(hourns)) ':'...
+        deblank(num2str(minutens)) ':'  deblank(num2str(secondsns,'%5.2f'))];
 
-set(handles.nstime,'String',[year month ' ' day ' ' hour ':' minute ':' seconds]);
+%set(handles.nstime,'String',[year month ' ' day ' ' hour ':' minute ':' seconds]);
+set(handles.nstime,'String',n);
 
 %%%%plotting
 axes(handles.nsaxis)
@@ -229,6 +242,7 @@ handles.mainpath=mainpath;
 handles.ns = samples;
 %handles.istns=istns;
 handles.dt=dt;
+handles.staname=scode;
 %handles.timerefns=datestr(istns);
 guidata(hObject,handles)
 
@@ -258,8 +272,8 @@ cd(path1)
    
          try 
              
-          [samples,year,month,day,hour,minute,seconds,sfreq,npoints,scode,chan2] = readpitsafile(lopa);
-            
+          [samples,yearz,monthz,dayz,hourz,minutez,secondsz,sfreq,npoints,scode,chan2] = readpitsafile(lopa);
+                  
           catch
              infostr= ['Error reading ' lopa ' please check the file and try again'];
              helpdlg(infostr,'File info');
@@ -283,8 +297,14 @@ time_sec=((tim.*dt)-dt)';
 set(handles.vername,'String',[scode '  ' chan2])
 
 %%%%find file start time....        
+%% find file start time....        
+mon=num2mon(str2num(monthz));
+doy=day(datetime([str2num(yearz) str2num(monthz) str2num(dayz)]),'dayofyear');
+ 
+n=[deblank(num2str(dayz)) '-' deblank(mon) '-'  deblank(num2str(yearz))  '  ('  deblank(num2str(doy)) ')  '  '  ' deblank(num2str(hourz)) ':'...
+        deblank(num2str(minutez)) ':'  deblank(num2str(secondsz,'%5.2f'))];
 
-set(handles.vertime,'String',[year month ' ' day ' ' hour ':' minute ':' seconds]);
+set(handles.vertime,'String',n);
 
 %%%%plotting
 axes(handles.veraxis)
@@ -321,7 +341,8 @@ nscounts=handles.ns;
 vercounts=handles.ver;
 
 %%%read station name from EW..
-station_name = get(handles.ewname,'String');
+%station_name = get(handles.ewname,'String'); 
+station_name=strtrim(handles.staname);
 %%% read sampling rate
 sfreq = str2double(get(handles.sfreq,'String'))
 %%%%dt
@@ -330,18 +351,18 @@ dt=1/sfreq;
 tim=(1:1:length(vercounts));
 time_sec=((tim.*dt)-dt)';
 
-whos time_sec ewcounts nscounts vercounts
+%whos time_sec ewcounts nscounts vercounts
 
 
 alld=[time_sec'; nscounts' ; ewcounts' ; vercounts'];    %%% Changed to N,E,Z
 
-whos alld
+%whos alld
 %%%%%% now we select folder to save ....ISOLA likes data folder...
 %% so we check for it and save files inside...
 %check if DATA exists..!
 h=dir('data');
 
-if length(h) == 0;
+if length(h) == 0 
     button=questdlg('Data folder doesn''t exist. ISOLA uses DATA folder to store data files. Create it..?',...
                     'Folder Error','Yes','No','Yes');
                 
@@ -351,7 +372,7 @@ if strcmp(button,'Yes')
 %%% save files   
 try
 cd data
-[newfile, newdir] = uiputfile([station_name(1:3) 'unc' '.dat'], 'Save station data as');
+[newfile, newdir] = uiputfile([station_name 'unc' '.dat'], 'Save station data as');
 fid = fopen([newdir newfile],'w');
   if ispc
      fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
@@ -375,7 +396,7 @@ end
 elseif strcmp(button,'No')
    disp('Canceled folder operation')
    
-[newfile, newdir] = uiputfile([station_name(1:3) 'unc' '.dat'], 'Save station data as');
+[newfile, newdir] = uiputfile([station_name 'unc' '.dat'], 'Save station data as');
 fid = fopen([newdir newfile],'w');
  if ispc
       fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
@@ -388,8 +409,6 @@ infostr= ['Data were written in the file ' newdir newfile ' the column order is 
 
 helpdlg(infostr,'File info');
    
-   
-   
 end
 else
 %%%%DATA folder exists......    
@@ -397,7 +416,7 @@ else
 disp('DATA folder exists. Files will be saved there.')
 try
 cd data
-[newfile, newdir] = uiputfile([station_name(1:3) 'unc' '.dat'], 'Save station data as');
+[newfile, newdir] = uiputfile([station_name 'unc' '.dat'], 'Save station data as');
 fid = fopen([newdir newfile],'w');
  if ispc
      fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
@@ -416,11 +435,32 @@ cd ..
 pwd
 end
 
-
-
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% new ... prepare a file with file start time
+k=strfind(newfile,'unc.dat');
 
+if isempty(k)
+    errordlg('Filename should be in the form <station name>unc.dat. Please save your file with such a name.','File Error');
+   return
+else
+    
+stime_filename=[newfile(1:k-1)  'stime' '.isl'];
+start_time=strrep(strrep(strrep(strrep(get(handles.nstime,'String'),':',' '),'-',' '),')',' '),'(',' ');
+%%%
+disp(['Saving file start time info in file   ' stime_filename])
+fid = fopen(stime_filename,'w');
+ if ispc
+   fprintf(fid,'%s %s\r\n',station_name,start_time);
+ else
+   fprintf(fid,'%s %s\n',station_name,start_time);
+ end
+fclose(fid);
+end
+% 
+% 
+% 
+pwd
 
 
 
@@ -735,5 +775,37 @@ samples = fscanf(fid,'%i');
 
 fclose(fid);
 
+
+function mon = num2mon(n)
+ 
+switch n
+   case 1
+      mon='Jan';
+   case 2
+      mon='Feb';
+   case 3
+      mon='Mar';
+   case 4
+      mon='Apr';
+   case 5
+      mon='May';
+   case 6
+      mon='Jun';
+   case 7
+      mon='Jul';
+   case 8
+      mon='Aug';
+   case 9
+      mon='Sep';
+   case 10
+      mon='Oct';
+   case 11
+      mon='Nov';
+   case 12
+      mon='Dec';
+      
+    otherwise
+      disp('Unknown month !!')
+end
 
 

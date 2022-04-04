@@ -22,7 +22,7 @@ function varargout = shiftraw(varargin)
 
 % Edit the above text to modify the response to help shiftraw
 
-% Last Modified by GUIDE v2.5 28-Jul-2006 23:51:19
+% Last Modified by GUIDE v2.5 06-Jul-2017 09:54:09
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -71,20 +71,20 @@ handles.totalver=0;
 
 
 
-%%% check rawinfo.isl files with event info
-h=dir('rawinfo.isl');
-
-if length(h) == 0; 
-  errordlg('Rawinfo.isl file doesn''t exist. Run Event info. ','File Error');
-  return
-else
-    fid = fopen('rawinfo.isl','r');
-%    samfreq=fscanf(fid,'%g',1);
-    rawhour=fscanf(fid,'%g',1);
-    rawmin=fscanf(fid,'%g',1);
-    rawsec=fscanf(fid,'%g',1);
-    fclose(fid);
-end
+% %%% check rawinfo.isl files with event info
+% h=dir('rawinfo.isl');
+% 
+% if length(h) == 0; 
+%   errordlg('Rawinfo.isl file doesn''t exist. Run Event info. ','File Error');
+%   return
+% else
+%     fid = fopen('rawinfo.isl','r');
+% %    samfreq=fscanf(fid,'%g',1);
+%     rawhour=fscanf(fid,'%g',1);
+%     rawmin=fscanf(fid,'%g',1);
+%     rawsec=fscanf(fid,'%g',1);
+%     fclose(fid);
+% end
 
 %handles.samfreq=samfreq;
 %handles.dt=1/samfreq;
@@ -446,5 +446,3 @@ function Exit_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 delete(handles.shiftraw)
-
-

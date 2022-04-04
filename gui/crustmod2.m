@@ -1,15 +1,15 @@
 function varargout = crustmod2(varargin)
-% CRUSTMOD2 M-file for crustmod2.fig
-%      CRUSTMOD2, by itself, creates a new CRUSTMOD2 or raises the existing
+% crustmod2 M-file for crustmod2.fig
+%      crustmod2, by itself, creates a new crustmod2 or raises the existing
 %      singleton*.
 %
-%      H = CRUSTMOD2 returns the handle to a new CRUSTMOD2 or the handle to
+%      H = crustmod2 returns the handle to a new crustmod2 or the handle to
 %      the existing singleton*.
 %
-%      CRUSTMOD2('CALLBACK',hObject,eventData,handles,...) calls the local
-%      function named CALLBACK in CRUSTMOD2.M with the given input arguments.
+%      crustmod2('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in crustmod2.m with the given input arguments.
 %
-%      CRUSTMOD2('Property','Value',...) creates a new CRUSTMOD2 or raises the
+%      crustmod2('Property','Value',...) creates a new crustmod2 or raises the
 %      existing singleton*.  Starting from the left, property value pairs are
 %      applied to the GUI before crustmod2_OpeningFunction gets called.  An
 %      unrecognized property name or invalid value makes property application

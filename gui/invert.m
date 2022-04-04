@@ -22,7 +22,7 @@ function varargout = invert(varargin)
 
 % Edit the above text to modify the response to help invert
 
-% Last Modified by GUIDE v2.5 15-Nov-2012 10:52:28
+% Last Modified by GUIDE v2.5 26-Nov-2020 17:34:21
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -55,14 +55,14 @@ function invert_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for invert
 handles.output = hObject;
 %%
-disp('This is invert 12/04/09');
+disp('This is invert 26/11/2020');
 % check if INVERT exists..!
 
 pwd
 
 h=dir('invert');
 
-if isempty(h);
+if isempty(h)
     errordlg('Invert folder doesn''t exist. Please create it. ','Folder Error');
     return
 else
@@ -70,7 +70,7 @@ end
 %%
 h=dir('correl.isl');
 
-if isempty(h); 
+if isempty(h)
         scalex='21';
         scaley='18';
         fscale='.35';
@@ -106,7 +106,7 @@ end
 %% check if all ISOLA input files exist..
 h=dir('duration.isl');
 
-if isempty(h); 
+if isempty(h) 
   errordlg('Duration.isl file doesn''t exist. Run Event info. ','File Error');
   return
 else
@@ -115,30 +115,28 @@ else
     fclose(fid);
 end
 
-dtres=tl/8192;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-minimumd = num2str(-2500*dtres);
-maximumd = num2str(2500*dtres);
+%% read ISOLA defaults
+[gmt_ver,psview,npts] = readisolacfg;
+dtres=tl/npts;
 
-    set(handles.minshifts,'String',minimumd,...
-                        'ForegroundColor','red')        
-
-    set(handles.maxshifts,'String',maximumd,...
-                        'ForegroundColor','red')        
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+% 
+% minimumd = num2str(-2500*dtres);
+% maximumd = num2str(2500*dtres);
+% 
+     set(handles.minshifts,'String',dtres,...
+                           'ForegroundColor','red')        
+% 
+%     set(handles.tsdt,'String',dtres*3)        
+ 
+%% 
 h=dir('tsources.isl');
 
-if isempty(h); 
+if isempty(h)
     errordlg('tsources.isl file doesn''t exist. Run Source create. ','File Error');
   return    
 else
     fid = fopen('tsources.isl','r');
-    tsource=fscanf(fid,'%s',1)
+    tsource=fscanf(fid,'%s',1);
     
      if strcmp(tsource,'line')
         disp('Inversion was done for a line of sources.')
@@ -147,9 +145,9 @@ else
         sdepth=fscanf(fid,'%f',1);
         invtype=fscanf(fid,'%c');
           
-        conplane=2;   %%% Line
+        conplane=2;   %  Line
         % dummy sdepth
-        sdepth=-333;
+       % sdepth=-333;
         % Update handles structure
         guidata(hObject, handles);
         
@@ -160,7 +158,7 @@ else
         sdepth=fscanf(fid,'%f',1);
         invtype=fscanf(fid,'%c');
         
-         conplane=0;   %%%depth
+         conplane=0;   % depth
 
          handles.sdepth=sdepth;
          % Update handles structure
@@ -170,10 +168,10 @@ else
         disp('Inversion was done for a plane of sources.')
         nsources=fscanf(fid,'%i',1);
 %         distep=fscanf(fid,'%f',1);
-           noSourcesstrike=fscanf(fid,'%i',1)
-           strikestep=fscanf(fid,'%f',1)
-           noSourcesdip=fscanf(fid,'%i',1)
-           dipstep=fscanf(fid,'%f',1)
+           noSourcesstrike=fscanf(fid,'%i',1);
+           strikestep=fscanf(fid,'%f',1);
+           noSourcesdip=fscanf(fid,'%i',1);
+           dipstep=fscanf(fid,'%f',1);
 %           nsources=noSourcesstrike*noSourcesdip;
           
            invtype='   Multiple Source line or plane ';%(Trial Sources on a plane or line)';
@@ -181,7 +179,7 @@ else
            conplane=1;
            
            set(handles.udistdep,'Enable','Off') %   disp('Distance corel plot is not available for plane source model. Source number will be used.')
-           %% dummy sdepth
+           %  dummy sdepth
            sdepth=-333;
             distep=-333;
             
@@ -216,23 +214,24 @@ end
 %%
 h=dir('stations.isl');
 
-if isempty(h); 
+if isempty(h)
     errordlg('Stations.isl file doesn''t exist. Run Station select. ','File Error');
-  return    
+  return  
 else
     fid = fopen('stations.isl','r');
     nstations=fscanf(fid,'%i',1);
     fclose(fid);
 end
-
-
-%%%%check if inpinv.dat exists....
+%%
+% check if inpinv.dat exists....
 if ispc
  a=exist('.\invert\inpinv.dat');
 else
  a=exist('./invert/inpinv.dat');
 end
-  
+
+
+%%  
 if a == 2
       if ispc
           fid = fopen('.\invert\inpinv.dat','r');
@@ -242,7 +241,7 @@ if a == 2
             linetmp=fgets(fid);         %01 line
             id=fscanf(fid,'%g',1);
             linetmp=fgets(fid);         %01 line
-            linetmp=fgets(fid);        %01 line
+            linetmp=fgets(fid);         %01 line
             linetmp=fgets(fid);         %01 line
             linetmp=fgets(fid);         %01 line
             linetmp=fgets(fid);         %01 line
@@ -257,114 +256,152 @@ if a == 2
             linetmp=fgets(fid);         %01 line
             ifilter=fscanf(fid,'%g',4);
        fclose(fid);
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if id == 1
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%
+ if id == 1
     set(handles.fullmt,'Value',1)
     set(handles.free,'Value',0)
     set(handles.dc,'Value',0)
     set(handles.fixed,'Value',0)
-elseif id ==2
+ elseif id ==2
     set(handles.fullmt,'Value',0)
     set(handles.free,'Value',1)
     set(handles.dc,'Value',0)
     set(handles.fixed,'Value',0)
-elseif id ==3
+ elseif id ==3
     set(handles.fullmt,'Value',0)
     set(handles.free,'Value',0)
     set(handles.dc,'Value',1)
     set(handles.fixed,'Value',0)
-elseif id ==4
+ elseif id ==4
     set(handles.fullmt,'Value',0)
     set(handles.free,'Value',0)
     set(handles.dc,'Value',0)
     set(handles.fixed,'Value',1)
+ %  enable....
+  on =[handles.strike,handles.dip,handles.rake,handles.striketext,handles.diptext,handles.raketext];
+  enableon(on)
+ %  search for mechan.dat in invert folder and add the values here
 
-    %%%%enable....
-on =[handles.strike,handles.dip,handles.rake,handles.striketext,handles.diptext,handles.raketext];
-enableon(on)
-    
-%%% search for mechan.dat in invert folder and add the values here
-if ispc 
-  a=exist('.\invert\mechan.dat'); 
-else
-  a=exist('./invert/mechan.dat'); 
-end
+  if ispc 
+   a=exist('.\invert\mechan.dat'); 
+  else
+   a=exist('./invert/mechan.dat'); 
+  end
   
-if a == 2
-      try 
+  if a == 2
+        try 
           if ispc
-          fid = fopen('.\invert\mechan.dat','r');
+           fid = fopen('.\invert\mechan.dat','r');
           else
-          fid = fopen('./invert/mechan.dat','r');
+           fid = fopen('./invert/mechan.dat','r');
           end
             linetmp=fgets(fid);         %01 line
             linetmp=fgets(fid);         %02 line
             linetmp=fgets(fid);         %03 line
             linetmp=fgets(fid);         %04 line
             sdr=fscanf(fid,'%g',3);
-          fclose(fid);
+           fclose(fid);
          
-       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
        set(handles.strike,'String',num2str(sdr(1,1)));        
        set(handles.dip,'String',num2str(sdr(2,1)));         
        set(handles.rake,'String',num2str(sdr(3,1)));          
        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
            disp('Found mechan.dat in .\invert folder. Updating ....')  
-       catch
-%             %%% mechan.dat is not present ...
-              disp('Could not read data from mechan.dat in .\invert folder. Check format.')    
+        catch
+ %             %  mechan.dat is not present ...
+           disp('Could not read data from mechan.dat in .\invert folder. Check format.')    
         end 
-else
-%%% mechan.dat is not present ...
-disp('Could not find mechan.dat in .\invert folder. Probably this is first run with fixed mechanism.')    
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
-
-end  %end of id if 
-   
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  else
+  % mechan.dat is not present ...
+   disp('Could not find mechan.dat in .\invert folder. Probably this is first run with fixed mechanism.')    
+  end
+ % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+ end  %end of id if 
+%%
 stime = itime(1,1)*dtres;
 tstep = itime(2,1)*dtres;
 etime = itime(3,1)*dtres;
-set(handles.starttime,'String',num2str(stime));        
-set(handles.timestep,'String',num2str(tstep));         
-set(handles.endtime,'String',num2str(etime));          
 
-set(handles.stdt,'String',num2str(itime(1,1)));
-set(handles.tsdt,'String',num2str(itime(2,1)));
-set(handles.etdt,'String',num2str(itime(3,1)));
+% set(handles.starttime,'String',num2str(stime));        
+% set(handles.timestep,'String',num2str(tstep));         
+% set(handles.endtime,'String',num2str(etime));          
 
-set(handles.sliderstdt,'Value',itime(1,1));
+set(handles.stdt,'String',num2str(stime));
+set(handles.tsdt,'String',num2str(tstep));
+set(handles.etdt,'String',num2str(etime));
+
+% set(handles.sliderstdt,'Value',itime(1,1));
 set(handles.slidertsdt,'Value',itime(2,1));
-set(handles.slideretdt,'Value',itime(3,1));
+% set(handles.slideretdt,'Value',itime(3,1));
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%set(handles.sliderstdt,'SliderStep',[1/5000 10/5000]);
+%set(handles.slidertsdt,'SliderStep',[1/100  10/100]);
+%set(handles.slideretdt,'SliderStep',[1/5000 10/5000]);
+
+%get(handles.slidertsdt,'Value')
+
+%%
+%%%%%%%%%%%%%%%%%%%%
+ifirst = itime(1,1);
+istep  = itime(2,1);
+ilast  = itime(3,1);
+%%%%%%%%%%%%%%%%%%%%
+
+%%%%check how many steps...
+if (ifirst >= 0 && ilast > 0 )
+  iseqm=(ilast-ifirst)/istep;
+elseif  (ifirst < 0 && ilast <= 0 )
+  iseqm=(abs(ifirst)-abs(ilast))/istep;
+elseif (ifirst < 0 && ilast >= 0 )
+  iseqm=(ilast+abs(ifirst))/istep;
+else
+    disp('check your time search inputs')
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        if iseqm < 100  
+               set(handles.trialts,'String',num2str(round(iseqm)),...)
+                        'ForegroundColor','black') 
+               set(handles.many,'String','')        
+        elseif iseqm >= 100 
+               set(handles.trialts,'String',num2str(round(iseqm)),...)
+                        'ForegroundColor','red')        
+               set(handles.many,'String','too many shifts',...)
+                        'ForegroundColor','red')        
+        end
+                
+%%
 set(handles.f1,'String',num2str(ifilter(1,1)));        
-set(handles.f2,'String',num2str(ifilter(2,1)));         
-set(handles.f3,'String',num2str(ifilter(3,1)));          
+% set(handles.f2,'String',num2str(ifilter(2,1)));         
+% set(handles.f3,'String',num2str(ifilter(3,1)));          
 set(handles.f4,'String',num2str(ifilter(4,1)));          
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 set(handles.nsubevents,'String',num2str(nevents));          
 
 else              %%% inpinv is not present ...
 
-valst=get(handles.sliderstdt,'Value');
-set(handles.stdt,'String',num2str(round(valst)));
+%valst=get(handles.sliderstdt,'Value');
+set(handles.stdt,'String',num2str(-75*dtres));
 
-valts=get(handles.slidertsdt,'Value');
-set(handles.tsdt,'String',num2str(round(valts)));
+%valts=get(handles.slidertsdt,'Value');
+set(handles.tsdt,'String',num2str(round(3*dtres)));
 
-valet=get(handles.slideretdt,'Value');
-set(handles.etdt,'String',num2str(round(valet)));
+%valet=get(handles.slideretdt,'Value');
+set(handles.etdt,'String',num2str(75*dtres));
+
+% set(handles.sliderstdt,'SliderStep',[dtres 5*dtres]);
+% set(handles.slidertsdt,'SliderStep',[dtres 5*dtres]);
+% set(handles.slideretdt,'SliderStep',[dtres 5*dtres]);
 
 %%%%%
-stime = str2double(get(handles.stdt,'String'));
-tstep = str2double(get(handles.tsdt,'String'));  
-etime = str2double(get(handles.etdt,'String'));
+%stime = str2double(get(handles.stdt,'String'));
+%tstep = str2double(get(handles.tsdt,'String'));  
+%etime = str2double(get(handles.etdt,'String'));
 
-set(handles.starttime,'String',num2str(stime*dtres));        
-set(handles.timestep,'String',num2str(tstep*dtres));         
-set(handles.endtime,'String',num2str(etime*dtres));          
+% set(handles.starttime,'String',num2str(stime*dtres));        
+% set(handles.timestep,'String',num2str(tstep*dtres));         
+% set(handles.endtime,'String',num2str(etime*dtres));          
 
 %% we must create an inpinv.dat or else stagui will not work...!!
 % read values
@@ -401,9 +438,10 @@ else
 end
 %%
 f1 = str2double(get(handles.f1,'String'));
-f2 = str2double(get(handles.f2,'String'));
-f3 = str2double(get(handles.f3,'String'));
+% f2 = str2double(get(handles.f2,'String'));
+% f3 = str2double(get(handles.f3,'String'));
 f4 = str2double(get(handles.f4,'String'));
+f2=f1;f3=f4;
 
 %% write
 if ispc
@@ -414,9 +452,9 @@ if ispc
     fprintf(fid,'%g\r\n',dtres);
     fprintf(fid,'%s\r\n','    number of trial source positions (isourmax), max. 51');
     fprintf(fid,'%i\r\n',nsources);
-    fprintf(fid,'%s\r\n','    trial time shifts (max. 100 shifts): from (>-2500), step, to (<2500)');
+    fprintf(fid,'%s\r\n','    trial time shifts (max. 100 shifts): from (>-3500), step, to (<3500)');
     fprintf(fid,'%s\r\n','    example: -10,5,50 means -10dt to 50dt, step = 5dt, i.e. 12 shifts');
-    fprintf(fid,'%i %i %i\r\n',ifirst, istep, ilast);
+    fprintf(fid,'%d %u %d\r\n',ifirst/dtres, istep/dtres, ilast/dtres);
     fprintf(fid,'%s\r\n','    number of subevents to be searched (isubmax), max. 20');
     fprintf(fid,'%i\r\n',nsubevents);
     fprintf(fid,'%s\r\n','    filter (f1,f2,f3,f4); flat band-pass between f2, f3');
@@ -428,16 +466,16 @@ if ispc
   
 
 else
-  fid = fopen('inpinv.dat','w');
+  fid = fopen('./invert/inpinv.dat','w');
     fprintf(fid,'%s\n','    mode of inversion: 1=full MT, 2=deviatoric MT (recommended), 3= DC MT, 4=known fixed DC MT');
     fprintf(fid,'%i\n',inv);
     fprintf(fid,'%s\n','    time step of XXXRAW.DAT files (in sec)');
     fprintf(fid,'%g\n',dtres);
     fprintf(fid,'%s\n','    number of trial source positions (isourmax), max. 51');
     fprintf(fid,'%i\n',nsources);
-    fprintf(fid,'%s\n','    trial time shifts (max. 100 shifts): from (>-2500), step, to (<2500)');
+    fprintf(fid,'%s\n','    trial time shifts (max. 100 shifts): from (>-3500), step, to (<3500)');
     fprintf(fid,'%s\n','    example: -10,5,50 means -10dt to 50dt, step = 5dt, i.e. 12 shifts');
-    fprintf(fid,'%i %i %i\n',ifirst, istep, ilast);
+    fprintf(fid,'%d %u %d\n',ifirst/dtres, istep/dtres, ilast/dtres);
     fprintf(fid,'%s\n','    number of subevents to be searched (isubmax), max. 20');
     fprintf(fid,'%i\n',nsubevents);
     fprintf(fid,'%s\n','    filter (f1,f2,f3,f4); flat band-pass between f2, f3');
@@ -447,10 +485,6 @@ else
     fprintf(fid,'%s\n','2.0e-12');
   fclose(fid);
 end
-
-
-
-
 
 
 end
@@ -465,14 +499,14 @@ end
 %% Try to populate GMT palette popupmenu....
 h=dir('C:\GMT\share\cpt');
 
-if isempty(h); 
+if isempty(h) 
     %%% GMT is not installed in c:\gmt or cpt folder doesn't exist...so
     %%% we'll use standard palettes
     
  cpt_file={'cool','copper','drywet','gebco','globe','gray','haxby','hot','jet','no green','ocean','polar','rainbow','red2green','relief','sealand','seis','split','topo','wysiwyg'};
 
  disp('It seems that GMT is not installed at c:\gmt ... ')
- disp('If you want INVERT_GUI to automatically find your cpt files change the path at line 252 of invert.m')
+ disp('If you want INVERT_GUI to automatically find your cpt files change the path in invert.m')
  disp('Using GMT default cpt files...')
  
      set(handles.gmtpal,'String',cpt_file);
@@ -493,7 +527,7 @@ end
 
 h=dir('event.isl');
 
-if isempty(h); 
+if isempty(h) 
   errordlg('Event.isl file doesn''t exist. Run Event info. ','File Error');
   return
 else
@@ -511,12 +545,13 @@ else
     fclose(fid);
 end
 
-eventid=[eventdate '_' eventhour '_' eventmin '_' eventsec  ];
+eventid=[eventdate(3:8) '_' eventhour '_' eventmin '_' eventsec  ];
+%eventidnew=[eventdate(3:8) '_' eventhour '_' eventmin '_' eventsec  ];
 
 %% find time function used...
 h=dir('stype.isl');
 
-if isempty(h); 
+if isempty(h) 
   disp('stype.isl file doesn''t exist. Suppose that Delta time function was used.');
   
         fid = fopen('stype.isl','w');
@@ -579,7 +614,7 @@ if ispc
 else
    h=dir('./invert/allstat.dat');
 end
-if isempty(h); 
+if isempty(h)
          errordlg('allstat.dat file doesn''t exist in invert folder. Run Station Selection. ','File Error');
      return
 else
@@ -696,9 +731,18 @@ snrvalue=(sumNS+sumEW+sumZ)/ncomp;
             
 end
  
+
+%% check status of freqcheck Check box
+if exist('invert.isl','file')
+          fid = fopen('invert.isl','r');
+             fvalue =fscanf(fid,'%u',1);
+          fclose(fid);  
+          disp('Updating Freq Check button')
+          set(handles.freqcheck,'Value',fvalue)
+else
+end
   
 %%
-
 %%%% updata handles.....
 set(handles.scalex,'String',num2str(scalex));        
 set(handles.scaley,'String',num2str(scaley));         
@@ -721,6 +765,12 @@ handles.sdepth=sdepth;
 handles.conplane=conplane;
 handles.stypeorig=stypeorig;
 handles.stdurorig=stfdur;
+
+%% write to handles ISOLA defaults
+handles.gmt_ver=gmt_ver;
+handles.psview=psview;
+handles.npts=npts;
+
 % Update handles structure
 guidata(hObject, handles);
 
@@ -768,13 +818,18 @@ freqch=get(handles.freqcheck,'Value');
 % minimumd = num2str(-1250*dtres,'%5.2g');
 % maximumd = num2str(1250*dtres,'%5.2g');
 
-ifirst=stime;
-istep=tstep;
-ilast=etime;
+% ifirst=fix(stime/dtres)
+% istep=fix(tstep/dtres)
+% ilast=fix(etime/dtres)
 
-errorstring= ['Trial time shifts should be between ' num2str(-2500) ' and ' num2str(2500) ' sec'];
+ifirst=round(stime/dtres);
+istep=round(tstep/dtres);
+ilast=round(etime/dtres);
 
-if ifirst < -2500 || ilast > 2500
+
+errorstring= ['Trial time shifts should be between ' num2str(-3500*dtres) ' and ' num2str(3500*dtres) ' sec'];
+
+if stime < -3500*dtres || etime > 3500*dtres
         errordlg(errorstring,'Error');
         return
 else
@@ -792,13 +847,13 @@ end
 % end
 % 
 
-disp('No of Time steps')
+iseqm=round((ilast-ifirst)/istep);
 
-iseqm=round((ilast-ifirst)/istep)
+disp(['No of Time steps   ' num2str(iseqm)])
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-if iseqm  > 100
+if iseqm  >= 100
         errordlg('Too many shifts requested; check Start,Time step,End','Error');
         return
 else
@@ -813,9 +868,9 @@ end
   end
 
   
-  ifirst*dtres
-  ilast*dtres
-  istep*dtres
+%   ifirst*dtres
+%   ilast*dtres
+%   istep*dtres
   
   
 %   infostr= ['Your time search values after rounding are: Start ' num2str(ifirst*dtres,'%5.2g') ' Time step '  num2str( istep*dtres,'%5.2g') ' End '  num2str(ilast*dtres,'%5.2g')];
@@ -824,10 +879,10 @@ end
 % 
 % disp(infostr)
 
-set(handles.starttime,'String',num2str(ifirst*dtres,'%5.2g'))
-set(handles.timestep,'String', num2str(istep*dtres,'%5.2g')) 
-set(handles.endtime,'String',  num2str(ilast*dtres,'%5.2g'))
-  
+% set(handles.starttime,'String',num2str(ifirst*dtres,'%5.2g'))
+% set(handles.timestep,'String', num2str(istep*dtres,'%5.2g')) 
+% set(handles.endtime,'String',  num2str(ilast*dtres,'%5.2g'))
+%   
 
 %%%%%%%%%%%Update handles for time limits correlation plot...
 
@@ -841,11 +896,12 @@ set(handles.postime,'String',num2str(ilast*dtres,'%5.2g'))
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 f1 = str2double(get(handles.f1,'String'))
-f2 = str2double(get(handles.f2,'String'))
-f3 = str2double(get(handles.f3,'String'))
+% f2 = str2double(get(handles.f2,'String'))
+% f3 = str2double(get(handles.f3,'String'))
 f4 = str2double(get(handles.f4,'String'))
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Check if inversion band is lower than mac freq of green
+f2=f1;f3=f4;
+%% Check if inversion band is lower than max freq of green
 
 if ispc
   [~,nfreq,tl,~,~,~,~,~,~,~]=readgrdathed('.\green\grdat.hed')
@@ -948,7 +1004,7 @@ if ispc
 else
  h=dir('./invert/allstat.dat');
 end
-  if isempty(h); 
+  if isempty(h)
          errordlg('allstat.dat file doesn''t exist in invert folder. Run Station Selection. ','File Error');
      return
   else
@@ -1047,6 +1103,15 @@ end
        
   end % if for allstat existance
   
+%% give a warning if used stations=1
+   nused=length(us1(us1~=0));
+   
+   if nused==1
+       w=warndlg('Be careful inversion using a single station is DANGEROUS','!! Warning !!');
+       uiwait(w);
+   else
+   end
+
 %%
 cd invert
 
@@ -1075,9 +1140,9 @@ if ispc
     fprintf(fid,'%g\r\n',dtres);
     fprintf(fid,'%s\r\n','    number of trial source positions (isourmax), max. 51');
     fprintf(fid,'%i\r\n',nsources);
-    fprintf(fid,'%s\r\n','    trial time shifts (max. 100 shifts): from (>-2500), step, to (<2500)');
+    fprintf(fid,'%s\r\n','    trial time shifts (max. 100 shifts): from (>-3500), step, to (<3500)');
     fprintf(fid,'%s\r\n','    example: -10,5,50 means -10dt to 50dt, step = 5dt, i.e. 12 shifts');
-    fprintf(fid,'%i %i %i\r\n',ifirst, istep, ilast);
+    fprintf(fid,'%d %u %d\r\n',ifirst, istep, ilast);
     fprintf(fid,'%s\r\n','    number of subevents to be searched (isubmax), max. 20');
     fprintf(fid,'%i\r\n',nsubevents);
     fprintf(fid,'%s\r\n','    filter (f1,f2,f3,f4); flat band-pass between f2, f3');
@@ -1094,7 +1159,7 @@ if ispc
            fid = fopen('allstat.dat','w');
 
             for p=1:nostations
-              fprintf(fid,'%s %u %u %u %u %5.2f %5.2f %5.2f %5.2f\r\n',char(NS(p)),us1(p),us2(p),us3(p),us4(p),f1,f2,f3,f4);
+              fprintf(fid,'%s %u %u %u %u %8.4f %8.4f %8.4f %8.4f\r\n',char(NS(p)),us1(p),us2(p),us3(p),us4(p),f1,f2,f3,f4);
             end
            fclose(fid);
 
@@ -1111,9 +1176,9 @@ else
     fprintf(fid,'%g\n',dtres);
     fprintf(fid,'%s\n','    number of trial source positions (isourmax), max. 51');
     fprintf(fid,'%i\n',nsources);
-    fprintf(fid,'%s\n','    trial time shifts (max. 100 shifts): from (>-2500), step, to (<2500)');
+    fprintf(fid,'%s\n','    trial time shifts (max. 100 shifts): from (>-3500), step, to (<3500)');
     fprintf(fid,'%s\n','    example: -10,5,50 means -10dt to 50dt, step = 5dt, i.e. 12 shifts');
-    fprintf(fid,'%i %i %i\n',ifirst, istep, ilast);
+    fprintf(fid,'%u %u %u\n',ifirst, istep, ilast);
     fprintf(fid,'%s\n','    number of subevents to be searched (isubmax), max. 20');
     fprintf(fid,'%i\n',nsubevents);
     fprintf(fid,'%s\n','    filter (f1,f2,f3,f4); flat band-pass between f2, f3');
@@ -1130,7 +1195,7 @@ else
            fid = fopen('allstat.dat','w');
 
             for p=1:nostations
-              fprintf(fid,'%s %u %u %u %u %5.2f %5.2f %5.2f %5.2f\n',char(NS(p)),us1(p),us2(p),us3(p),us4(p),f1,f2,f3,f4);
+              fprintf(fid,'%s %u %u %u %u %8.4f %8.4f %8.4f %8.4f\n',char(NS(p)),us1(p),us2(p),us3(p),us4(p),f1,f2,f3,f4);
             end
            fclose(fid);
 
@@ -1176,10 +1241,39 @@ cd ..   %% back to main
 % check if we need new elementary seismograms
 % read what was used in green
 % 
-   stypeorig=handles.stypeorig;
-   stfdurorig=handles.stdurorig;
-   istype;
-   
+%    stypeorig=handles.stypeorig;
+%    stfdurorig=handles.stdurorig;
+%    istype;
+
+%% we will check the stype.isl file 
+% to find the subevent time function used...
+h=dir('stype.isl');
+
+if isempty(h)
+  disp('stype.isl file doesn''t exist. Error.');
+        stypeorig=1;
+else
+        fid = fopen('stype.isl','r');
+         stftype=fscanf(fid,'%s',1);
+        fclose(fid);    
+%
+  switch  stftype 
+    case 'delta'
+      disp('Delta source time function has been used.')
+      stypeorig=1;
+    case 'triangle'
+      disp('Triangle source time function has been used.')  
+      stypeorig=2;
+       fid = fopen('stype.isl','r');
+         tline = fgetl(fid);
+         tline = fgetl(fid);
+         stfdurorig=sscanf(tline,'%s',1);
+       fclose(fid);  
+  end
+end
+
+%%
+
    if stypeorig == 1 
        origstf='delta';
    elseif stypeorig == 2
@@ -1228,7 +1322,7 @@ if stypeorig~=istype
                      % prepare a new batch file    
                      fid = fopen('gre_ele.bat','w');
                    
-                     for i=1:nsources ;
+                     for i=1:nsources 
                        if ispc  
                               fprintf(fid,'%s\r\n',['copy gr' num2str(i,'%02d') '.hes gr.hes']);
                               fprintf(fid,'%s\r\n',['copy gr' num2str(i,'%02d') '.hea gr.hea']);
@@ -1275,14 +1369,15 @@ if stypeorig~=istype
                               
                            disp('Running gr_xyz')
 
-                           if ispc
-                              system('gre_ele.bat  &')
-                           else
-                               disp('Linux version')
-                              system('gre_ele.bat  &')
-                           end
+                              if ispc
+                                 system('gre_ele.bat  &')
+                              else
+                                 disp('Linux version')
+                                 system('gre_ele.bat  &')
+                              end
+                              
                            button = questdlg('Copy files in invert folder (BE VERY CAREFUL ..!! Green calculations should have finished. Check the command window and WAIT for the Finished with Green function calculation message to appear BEFORE pressing Yes','Continue Operation','Yes','No','Yes');
-                             if strcmp(button,'Yes')
+                            if strcmp(button,'Yes')
                               % copy files elem* to invert
                               disp('Removing elemse*.dat files from invert folder')
                               % return to ISOLA folder  
@@ -1298,7 +1393,7 @@ if stypeorig~=istype
                               [s,mess,messid]=copyfile('elemse*.dat','../invert')
                              end
                                 if s==1 
-                                  h=msgbox('Copied files in invert directory','Copy files');
+                                %  h=msgbox('Copied files in invert directory','Copy files');
                                      if ispc
                                          [status,message] = system('del elemse*.dat');  % remove from green
                                      else
@@ -1307,13 +1402,27 @@ if stypeorig~=istype
                                 else
                                   h=msgbox('Failed to copy files in invert directory','Copy files');
                                 end
-                             else
+                            else
                                disp('Abort Copy files')
+                            end
+% 
+%                   
+                             pwd       
+                             cd ..
+                            % update the stype.isl
+                             fid = fopen('stype.isl','w');
+                             if ispc
+                                   fprintf(fid,'%s\r\n','delta');
+                             else
+                                   fprintf(fid,'%s\n','delta');
                              end
-
+                             fclose(fid);
+                            
+                             cd green
                           elseif strcmp(button,'No')
                             disp('Green function generation canceled')
                           end
+                          
                         catch
                            cd ..
                         end
@@ -1322,16 +1431,7 @@ if stypeorig~=istype
                    catch   % first try
                       cd ..
                    end     % first try
-%%                   
-                   pwd       
-         % update the stype.isl
-                  fid = fopen('stype.isl','w');
-                    if ispc
-                       fprintf(fid,'%s\r\n','delta');
-                    else
-                       fprintf(fid,'%s\n','delta');
-                    end
-                  fclose(fid);
+
 %%                   
                case 2 % triangle
                       % go in green
@@ -1342,19 +1442,19 @@ if stypeorig~=istype
                        fid = fopen('soutype.dat','w');
                          if ispc 
                                fprintf(fid,'%s\r\n','4');
-                               fprintf(fid,'%4.1f\r\n',t0);
+                               fprintf(fid,'%6.3f\r\n',t0);
                                fprintf(fid,'%s\r\n','0.5');
                                fprintf(fid,'%s\r\n','1');
                          else
                                fprintf(fid,'%s\n','4');
-                               fprintf(fid,'%4.1f\n',t0);
+                               fprintf(fid,'%6.3f\n',t0);
                                fprintf(fid,'%s\n','0.5');
                                fprintf(fid,'%s\n','1');
                          end
                        fclose(fid);
                      % prepare a new batch file    
                      fid = fopen('gre_ele.bat','w');
-                     for i=1:nsources ;
+                     for i=1:nsources 
                          if ispc 
                                fprintf(fid,'%s\r\n',['copy gr' num2str(i,'%02d') '.hes gr.hes']);
                                fprintf(fid,'%s\r\n',['copy gr' num2str(i,'%02d') '.hea gr.hea']);
@@ -1422,7 +1522,7 @@ if stypeorig~=istype
                                   [s,mess,messid]=copyfile('elemse*.dat','../invert')
                                end
                                 if s==1 
-                                  h=msgbox('Copied files in invert directory','Copy files');
+                                 % h=msgbox('Copied files in invert directory','Copy files');
                                     if ispc
                                        [status,message] = system('del elemse*.dat');  %%% remove from green
                                     else
@@ -1434,7 +1534,21 @@ if stypeorig~=istype
                              else
                                disp('Abort Copy files')
                              end
-
+%% 
+                        %          update the stype.isl
+                            cd ..
+                            fid = fopen('stype.isl','w');
+                              if ispc
+                                  fprintf(fid,'%s\r\n','triangle');
+                                  fprintf(fid,'%4.1f\r\n',t0);
+                              else
+                                  fprintf(fid,'%s\n','triangle');
+                                  fprintf(fid,'%4.1f\n',t0);
+                              end
+                                  fclose(fid);
+                             cd green
+                             
+                             
                           elseif strcmp(button,'No')
                             disp('Green function generation canceled')
                           end
@@ -1449,37 +1563,52 @@ if stypeorig~=istype
                    
                    pwd
                    
-%% 
-%          update the stype.isl
-           fid = fopen('stype.isl','w');
-              if ispc
-                   fprintf(fid,'%s\r\n','triangle');
-                   fprintf(fid,'%4.1f\r\n',t0);
-              else
-                   fprintf(fid,'%s\n','triangle');
-                   fprintf(fid,'%4.1f\n',t0);
-              end
-           fclose(fid);
-                   
+
            end   % end of switch
 
         %%  now run inversion 
         %  RUN the batch files
-        button = questdlg('Run Inversion ?','Inversion ','Yes','No','Yes');
+        button = questdlg('Run Inversion ?','Inversion ','Yes','No','Use CSPS','Yes');
         if strcmp(button,'Yes')
            disp('Running inversion')
             cd invert
+            
+               % remove done file before running invert
+               delete done
+               
               if ispc 
-                  system('runisola.bat &') % return to ISOLA folder    
+                  % create the batch file and run
+                     fid = fopen('runisola.bat','w');
+                      fprintf(fid,'%s\r\n','isola.exe');
+                      fprintf(fid,'%s\r\n','norm.exe');
+                      fprintf(fid,'%s\r\n','done.exe');
+                     fclose(fid);                    
+                    system('runisola.bat &') % return to ISOLA folder    
               else
                  disp('Linux ')
-                   system('gnome-terminal -e "bash -c runisola.sh;bash"')            % return to ISOLA folder    
+                     fid = fopen('runisola.sh','w');
+                      fprintf(fid,'%s\n','#!/bin/bash');
+                      fprintf(fid,'%s\n','             ');
+                      fprintf(fid,'%s\n','isola.exe');
+                      fprintf(fid,'%s\n','norm.exe');
+                      fprintf(fid,'%s\n','done.exe');
+                     fclose(fid);                      
+                !chmod +x runisola.sh                 
+                %system('gnome-terminal -e "bash -c runisola.sh;bash"')            % return to ISOLA folder  
+                system('xterm -hold -pc -e ./runisola.sh')				
               end
             cd ..
             pwd
-       elseif strcmp(button,'No')
+        elseif strcmp(button,'No')
           disp('Canceled ')
-       end
+        elseif strcmp(button,'Use CSPS')
+           handles.nooftimesteps=iseqm;
+           % Update handles structure
+            guidata(hObject, handles);
+           close invert
+          csps
+          return
+        end
 
 %% same time function but duration could be different..!!
             
@@ -1488,20 +1617,44 @@ else   % if source time function IS NOT different
      % we can run inversion user doesn't want to change time function
         disp('Elementary seismograms were created for selected time function. Continue with inversion')
         % RUN the batch files
-        button = questdlg('Run Inversion ?','Inversion ','Yes','No','Yes');
+        button = questdlg('Run Inversion ?','Inversion ','Yes','No','Use CSPS','Yes');
         if strcmp(button,'Yes')
            disp('Running inversion')
             cd invert
+               % remove done file before running invert
+               delete done
+               
                if ispc 
-                   system('runisola.bat &')            % return to ISOLA folder    
+                   % create the batch file and run
+                     fid = fopen('runisola.bat','w');
+                      fprintf(fid,'%s\r\n','isola.exe');
+                      fprintf(fid,'%s\r\n','norm.exe');
+                      fprintf(fid,'%s\r\n','done.exe');
+                     fclose(fid);                    
+                     system('runisola.bat &') % return to ISOLA folder    
                else
-                   disp('Linux ')
-                   system('gnome-terminal -e "bash -c runisola.sh;bash"')            % return to ISOLA folder    
+                     fid = fopen('runisola.sh','w');
+                      fprintf(fid,'%s\n','#!/bin/bash');
+                      fprintf(fid,'%s\n','             ');
+                      fprintf(fid,'%s\n','isola.exe');
+                      fprintf(fid,'%s\n','norm.exe');
+                      fprintf(fid,'%s\n','done.exe');
+                     fclose(fid);                      
+                    !chmod +x runisola.sh                 
+                    %system('gnome-terminal -e "bash -c runisola.sh;bash"')            % return to ISOLA folder   
+                    system('xterm -hold -pc -e ./runisola.sh')					
                end
             cd ..
            pwd
         elseif strcmp(button,'No')
           disp('Canceled ')
+        elseif strcmp(button,'Use CSPS')
+            handles.nooftimesteps=iseqm;
+           % Update handles structure
+            guidata(hObject, handles);
+            close invert
+            csps
+            return
         end
     elseif istype ==2 % triangle
         if str2double(stfdurorig) ~= t0  % triangle   OF DIFFERENT DURATION
@@ -1516,19 +1669,19 @@ else   % if source time function IS NOT different
                         
                         if ispc 
                              fprintf(fid,'%s\r\n','4');
-                             fprintf(fid,'%4.1f\r\n',t0);
+                             fprintf(fid,'%6.3f\r\n',t0);
                              fprintf(fid,'%s\r\n','0.5');
                              fprintf(fid,'%s\r\n','1');
                         else
                              fprintf(fid,'%s\n','4');
-                             fprintf(fid,'%4.1f\n',t0);
+                             fprintf(fid,'%6.3f\n',t0);
                              fprintf(fid,'%s\n','0.5');
                              fprintf(fid,'%s\n','1');
                         end
                         fclose(fid);
                      % prepare a new batch file    
                      fid = fopen('gre_ele.bat','w');
-                     for i=1:nsources ;
+                     for i=1:nsources 
                        if ispc  
                            fprintf(fid,'%s\r\n',['copy gr' num2str(i,'%02d') '.hes gr.hes']);
                            fprintf(fid,'%s\r\n',['copy gr' num2str(i,'%02d') '.hea gr.hea']);
@@ -1634,40 +1787,92 @@ else   % if source time function IS NOT different
 %%
                    % run inv it is triangle with same duration
                    % RUN the batch files
-                   button = questdlg('Run Inversion ?','Inversion ','Yes','No','Yes');
+                   button = questdlg('Run Inversion ?','Inversion ','Yes','No','Use CSPS','Yes');
                     if strcmp(button,'Yes')
                        disp('Running inversion')
                           cd invert
+                          
+                          delete done
+                          
                              if ispc 
-                                 system('runisola.bat &')            % return to ISOLA folder    
+                                                                     % create the batch file and run
+                                fid = fopen('runisola.bat','w');
+                                   fprintf(fid,'%s\r\n','isola.exe');
+                                   fprintf(fid,'%s\r\n','norm.exe');
+                                   fprintf(fid,'%s\r\n','done.exe');
+                                fclose(fid);                    
+                                system('runisola.bat &') % return to ISOLA folder       
                              else
-                                 disp('Linux ')
-                                 system('gnome-terminal -e "bash -c runisola.sh;bash"')            % return to ISOLA folder    
+                               disp('Linux ')
+                               
+                                fid = fopen('runisola.sh','w');
+                                   fprintf(fid,'%s\n','#!/bin/bash');
+                                   fprintf(fid,'%s\n','             ');
+                                   fprintf(fid,'%s\n','isola.exe');
+                                   fprintf(fid,'%s\n','norm.exe');
+                                   fprintf(fid,'%s\n','done.exe');
+                                fclose(fid);                      
+                                !chmod +x runisola.sh                 
+                               % system('gnome-terminal -e "bash -c runisola.sh;bash"')            % return to ISOLA folder    
+							    system('xterm -hold -pc -e ./runisola.sh')
+							   
                              end
                           cd ..
                        pwd
                     elseif strcmp(button,'No')
                        disp('Canceled ')
+                    elseif strcmp(button,'Use CSPS')
+                        handles.nooftimesteps=iseqm;
+                      % Update handles structure
+                        guidata(hObject, handles);
+                        close invert
+                        csps
+                        return
                     end
 %%          
        else
              disp('Same STF triangle same duration no need to create new elementary seismograms')
         % run inv it is triangle with same duration
         % RUN the batch files
-            button = questdlg('Run Inversion ?','Inversion ','Yes','No','Yes');
+            button = questdlg('Run Inversion ?','Inversion ','Yes','No','Use CSPS','Yes');
              if strcmp(button,'Yes')
                disp('Running inversion')
                 cd invert
+                  
+                  delete done
+                  
                    if ispc 
-                        system('runisola.bat &')            % return to ISOLA folder    
+                       
+                      fid = fopen('runisola.bat','w');
+                        fprintf(fid,'%s\r\n','isola.exe');
+                        fprintf(fid,'%s\r\n','norm.exe');
+                        fprintf(fid,'%s\r\n','done.exe');
+                      fclose(fid);                    
+                      system('runisola.bat &') % return to ISOLA folder    
+                      
                    else
-                        disp('Linux ')
-                        system('gnome-terminal -e "bash -c runisola.sh;bash"')            % return to ISOLA folder    
+                      disp('Linux ')
+                      fid = fopen('runisola.sh','w');
+                        fprintf(fid,'%s\n','#!/bin/bash');
+                        fprintf(fid,'%s\n','             ');
+                        fprintf(fid,'%s\n','isola.exe');
+                        fprintf(fid,'%s\n','norm.exe');
+                        fprintf(fid,'%s\n','done.exe');
+                      fclose(fid);                      
+                      !chmod +x runisola.sh                 
+                      % system('gnome-terminal -e "bash -c runisola.sh;bash"')            % return to ISOLA folder    
+					  system('xterm -hold -pc -e ./runisola.sh')
                    end
                 cd ..
                pwd
              elseif strcmp(button,'No')
                disp('Canceled ')
+             elseif strcmp(button, 'Use CSPS')
+                 handles.nooftimesteps=iseqm;
+                % Update handles structure
+                 guidata(hObject, handles);
+                 csps
+                 return
              end
         end  % end of triangle IF
     
@@ -1680,14 +1885,69 @@ handles.nooftimesteps=iseqm;
 % Update handles structure
 guidata(hObject, handles);
 
+pwd
 
+%% wait here for fortran part to end
+      done = 0;
+        while done == 0
+            if ispc 
+              done=exist('.\invert\done','file');
+            else
+              done=exist('./invert/done','file');
+            end
+        end
+      disp('         ')
+      disp('Fortran invert code finished.')
+      disp('         ')
+   %   delete('.\invert\done');
+      
+%%  see if plotres GUI is open and try to update the s/d/r  values in Polarities
+     figure2handle = findall(0,'Tag','plotres');
+     
+  if ~isempty(figure2handle)
+    disp('  ')
+    disp('ok Plotres exists, SDR values will be updated.')
+    disp('  ')
+    % find NP1,NP2 in     figure2handle
+    n1=findobj(figure2handle,'Tag','NP1'); n2=findobj(figure2handle,'Tag','NP2');
+    
+    cd invert
+       [~,~,~,~,~,~,~,inv1_sdr1,inv1_sdr2,~]=readinv1(nsources,1);
+    cd ..
+    
+    NP1=[num2str(inv1_sdr1(1)) '/' num2str(inv1_sdr1(2)) '/' num2str(inv1_sdr1(3))];
+    NP2=[num2str(inv1_sdr2(1)) '/' num2str(inv1_sdr2(2)) '/' num2str(inv1_sdr2(3))];
 
+%   update values    
+    set(n1,'String',NP1);set(n2,'String',NP2);
+    set(n1,'ForegroundColor','r');set(n2,'ForegroundColor','r');  
+    
+  else
+    disp('Plotres wasn''t found. No worries..!!')
+  end
+  
+% end of invert run  
 
 % --- Executes on button press in cancel.
 function cancel_Callback(hObject, eventdata, handles)
 % hObject    handle to cancel (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+%% save options in file 
+
+fvalue=get(handles.freqcheck,'Value');
+
+        fid = fopen('invert.isl','w');
+           if ispc
+                fprintf(fid,'%d\r\n',fvalue);
+           else
+                fprintf(fid,'%d\n',fvalue);
+           end
+        fclose(fid);
+
+%%
+
 delete(handles.invert)
 
 % --- Executes during object creation, after setting all properties.
@@ -1752,8 +2012,8 @@ ifirst=round(stime/dtres);
 istep=round(tstep/dtres);
 ilast=round(etime/dtres);
 
-minimumd = -2500*dtres;
-maximumd = 2500*dtres;
+minimumd = -3500*dtres;
+maximumd = 3500*dtres;
 
 %%%%check how many steps...
 if (ifirst >= 0 && ilast > 0 )
@@ -1816,8 +2076,8 @@ ifirst=round(stime/dtres);
 istep=round(tstep/dtres);
 ilast=round(etime/dtres);
 
-minimumd = -2500*dtres;
-maximumd = 2500*dtres;
+minimumd = -3500*dtres;
+maximumd = 3500*dtres;
 
 %%%%check how many steps...
 if (ifirst >= 0 && ilast > 0 )
@@ -2584,8 +2844,8 @@ ifirst=round(stime/dtres);
 istep=round(tstep/dtres);
 ilast=round(etime/dtres);
 
-minimumd = -2500*dtres;
-maximumd = 2500*dtres;
+minimumd = -3500*dtres;
+maximumd =  3500*dtres;
 
 %%%%check how many steps...
 if (ifirst >= 0 && ilast > 0 )
@@ -2702,38 +2962,47 @@ function corelplot_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % 
+gmt_ver=handles.gmt_ver;
 
-%find out the current corr*.dat file
-%based on file time..!!
-
-% try
-% cd invert
-% files=dir('corr*.dat');
-% fileindex=length(files);
-% cd ..
-% catch
-%     cd ..
-%     pwd
-% end
+%% read how many subevents we have   
 if ispc
-   cname=findrecentfile('.\invert\corr*.dat');
+   [id,tstep,nsources,tshifts,nsub,freq,var] = readinpinv('.\invert\inpinv.dat');
 else
-   cname=findrecentfile('./invert/corr*.dat');
+   [id,tstep,nsources,tshifts,nsub,freq,var] = readinpinv('./invert/inpinv.dat');   
 end
 
+    q1=['Inversion was run with ' num2str(nsub) ' subevents. Select which one you want to use ?'];
+    
+    if nsub~=1
+       prompt = {q1}; dlg_title = 'Input subevent number for plotting.'; num_lines = 1; defaultans = {'1'};
+       answer = inputdlg(prompt,dlg_title,num_lines,defaultans);
+       disp(['Selected subevent is ' num2str(cell2mat(answer))])
+       selsub=str2double(cell2mat(answer));
+    else
+       selsub= 1;
+    end
+%%
+% if ispc
+%    cname=findrecentfile('.\invert\corr*.dat');
+% else
+%    cname=findrecentfile('./invert/corr*.dat');
+% end
 % cname=['corr' num2str(fileindex,'%02d') '.dat'];
 % psname= ['corr' num2str(fileindex,'%02d') '.ps'];
 
-psname=[cname(1:6) '.ps']
+%psname=[cname(1:6) '.ps']
 
+cname=['corr' num2str(selsub,'%02d')   '.dat']
+
+psname=[cname(1:6) '.ps']
 
 disp(['Now plotting  ' cname '   correlation file'])
 
-%%%%
+%%
 dtres=handles.dtres;
 nsources=handles.nsourcestext;
-distep=handles.distep;
-sdepth=handles.sdepth;
+distep=handles.distep 
+sdepth=handles.sdepth 
 conplane=handles.conplane;
 eventid=handles.eventid;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2741,7 +3010,8 @@ nooftimesteps=handles.nooftimesteps
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%  time step in seconds
-tstep = get(handles.timestep,'String');  
+tstep=get(handles.tsdt,'String');  
+%tstep = get(handles.timestep,'String');  
 %%%%%%%%%%%%%%%%%%%%
 
 %%%% check if we want fixed interval
@@ -2776,6 +3046,15 @@ val = get(handles.gmtpal,'Value');
 string_list = get(handles.gmtpal,'String');
 gmtpal = string_list{val};
 
+cpt_file={'cool','copper','drywet','gebco','globe','gray','haxby','hot','jet','no green','ocean','polar','rainbow','red2green','relief','sealand','seis','split','topo','wysiwyg'};
+
+if any(ismember(cpt_file,gmtpal))
+  disp('user picked GMT default palette')
+else
+  gmtpal=['c:\gmt\share\cpt\'  gmtpal '.cpt']
+end
+
+
 
 if drawcont == 1
      wline='-W0.5p';
@@ -2799,18 +3078,17 @@ fid = fopen('correl.isl','w');
          fprintf(fid,'%s\n',fsize);
    end
 fclose(fid);
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%check if we are in invert..??
+%%
+% check if we are in invert..??
 % try
 cd invert
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% here we find name of correl.dat 
-%%%%%
+%%
+% here we find name of correl.dat 
+%
 h=dir(cname);
 
-if isempty(h); 
+if isempty(h)
     errordlg([cname 'file doesn''t exist. Run Invert. '],'File Error');
     cd ..
   return    
@@ -2824,12 +3102,12 @@ else
               
                if length(tline) > 100
                     disp('New correlation file format')
-%                    correlage='new';
+%                  correlage='new';
                % read in new format
                  fid = fopen(cname,'r');
                  [srcpos,srctime,variance,str1,dip1,rake1,str2,dip2,rake2,dc,volume,misfit,moment] = textread(cname,'%f %f %f %f %f %f %f %f %f %f %f %f %f','headerlines',2);
                  fclose(fid);               
-               %% test plot
+                 % test plot
 %                   figure
 % %                   subplot(4,1,1);plot(srcpos,misfit,'+');xlabel('Source Position');ylabel('Misfit')
 % %                   subplot(4,1,2);plot(misfit,volume,'+');xlabel('Misfit');ylabel('Volume')
@@ -2853,15 +3131,17 @@ end
 % size(srcpos)
 % size(srctime)
 % size(variance)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% decide what to plot source no of distance...(depth..)
-%%% type of inversion
 
-%%%% Findout if we need Plane or line of sources....!!!
+%%
 
-if conplane == 0   %%%% Depth line
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %% decide what to plot source no of distance...(depth..)
+% %% type of inversion
+% %%% Findout if we need Plane or line of sources....!!!
 
-    %%% go on as line....
+if conplane == 0   % Depth line
+
+%% go on as line....
 if get(handles.udistdep,'Value') == get(handles.udistdep,'Max')   %%%% distance plot
 
 disp('Plotting correlation with Depth')
@@ -2875,19 +3155,13 @@ srcpos=((srcpos-1)*distep)+sdepth;
 [maxvar,index]=max(variance);
 %
 bbcut=get(handles.bbcut,'String');
-  cor_cut=maxvar*(str2num(bbcut)/100)
+cor_cut=maxvar*(str2num(bbcut)/100)
 
 %
-maxsource=srcpos(index);
-maxsrctime=srctime(index);
-maxstr1=str1(index);
-maxdip1=dip1(index);
-maxrake1=rake1(index);
-maxstr2=str2(index);
-maxdip2=dip2(index);
-maxrake2=rake2(index);
-maxdc=dc(index);
-%
+maxsource=srcpos(index);maxsrctime=srctime(index); maxstr1=str1(index);maxdip1=dip1(index);maxrake1=rake1(index);
+maxstr2=str2(index); maxdip2=dip2(index); maxrake2=rake2(index); maxdc=dc(index);
+
+%%
 disp('Maximum Correlation mechanism  STR1  DIP1  RAKE1  STR2  DIP2  RAKE2  DC%' )
 mstring=['        ' num2str(maxvar) '                 '  num2str(maxstr1) '    '  num2str(maxdip1) '    '  num2str(maxrake1) '    '  num2str(maxstr2) '    '  num2str(maxdip2) '   '  num2str(maxrake2) '   ' num2str(maxdc)];
 disp(mstring)
@@ -2915,13 +3189,14 @@ else
      end
   
      dc_cptstep=10;
-end        
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+end
+
+%% 
 %%%%%%%%%make batch file for GMT plotting
 % 
-stime = str2num(get(handles.starttime,'String'));
-dtstep = str2num(get(handles.tsdt,'String'));      %%%% time step in dt...
-etime = str2num(get(handles.endtime,'String'));
+% stime = str2num(get(handles.starttime,'String'));
+% dtstep = str2num(get(handles.tsdt,'String'));      %%%% time step in dt...
+% etime = str2num(get(handles.endtime,'String'));
 
 nsources=handles.nsourcestext;
 
@@ -2937,9 +3212,17 @@ nsources=handles.nsourcestext;
 %%% prepare a gmt style file for correlation
     fid = fopen('plcor.bat','w');
       if ispc
-        fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14');
+          if gmt_ver==4
+             fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14 PAPER_MEDIA A4');
+          else
+             fprintf(fid,'%s\r\n','gmtset FONT_ANNOT_PRIMARY 11 FONT_LABEL 14 PS_MEDIA A4');
+          end
       else
-        fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14');
+          if gmt_ver==4
+             fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14 PAPER_MEDIA A4');
+          else
+             fprintf(fid,'%s\n','gmtset FONT_ANNOT_PRIMARY 11 FONT_LABEL 14 PS_MEDIA A4');
+          end
       end
 
            
@@ -2966,11 +3249,8 @@ nsources=handles.nsourcestext;
          fprintf(fid,'%s\n',nd);
       end
     
-    
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 
 if dcplot == 1
-    
-    
        if invpal == 1
           if ispc
             fprintf(fid,'%s\r\n',['makecpt -C' gmtpal ' -T0/100/10 -I > dc.cpt']);
@@ -2986,8 +3266,7 @@ if dcplot == 1
           end
  
        end
-     
-     
+       
 else
     if ispc
      fprintf(fid,'%s\r\n','makecpt -Ccopper -T0/100/10 -I > dc.cpt');
@@ -2997,19 +3276,17 @@ else
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-if invpal == 1
-    
-           vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) ' -I  > cr.cpt'];
-else
-    
-           vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) '     > cr.cpt'];
-end
+    if invpal == 1
+       vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) ' -I  > cr.cpt'];
+    else
+       vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) '     > cr.cpt'];
+    end
 
-  if ispc
-    fprintf(fid,'%s\r\n',vstring);
-  else
-    fprintf(fid,'%s\n',vstring);
-  end
+    if ispc
+       fprintf(fid,'%s\r\n',vstring);
+    else
+       fprintf(fid,'%s\n',vstring);
+    end
     
 end
 
@@ -3018,9 +3295,11 @@ if dcplot == 1
 
     fdis=((str2num(fsrc)-1)*distep)+sdepth;
     ldis=((str2num(lsrc)-1)*distep)+sdepth;
-    
-gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(fdis-0.5) '/' num2str(ldis+0.5)  '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position (km)":WeSn -Cdc.cpt -K -I -A+a0+s' fsize ' > ' psname ];
-
+    if gmt_ver==4
+        gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(fdis-0.5) '/' num2str(ldis+0.5)  '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position (km)":WeSn -Cdc.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    else
+        gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(fdis-0.5) '/' num2str(ldis+0.5)  '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position (km)":WeSn -Cdc.cpt -K -I -A+a0+f' fsize ' > ' psname ];  
+    end
     if ispc
       fprintf(fid,'%s\r\n',gimstring);
     else
@@ -3033,7 +3312,12 @@ else
     ldis=((str2num(lsrc)-1)*distep)+sdepth;
     
 %num2str(sdepth-0.5) '/' num2str( (((nsources-1)*distep)+sdepth)+0.5    )    
-gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(fdis-0.5) '/' num2str(ldis+0.5)  '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position (km)":WeSn -Ccr.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    if gmt_ver==4
+        gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(fdis-0.5) '/' num2str(ldis+0.5)  '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position (km)":WeSn -Ccr.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    else
+        gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(fdis-0.5) '/' num2str(ldis+0.5)  '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position (km)":WeSn -Ccr.cpt -K -I -A+a0+f' fsize ' > ' psname ]; 
+    end
+
     if ispc
        fprintf(fid,'%s\r\n',gimstring);
     else
@@ -3045,11 +3329,16 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
       %%%%%%%
          if dcplot == 1
-          scalestr=['psscale -D' num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Cdc.cpt -K -L -B:DC: >> ' psname];
+          scalestr=['psscale -D' num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Cdc.cpt -K -L -B::/:DC\045: >> ' psname];
           scalestr2=[];
          else
-          scalestr=['psscale -D'   num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Ccr.cpt -K -L -B:Correlation: >> ' psname];
-          scalestr2=['psscale -D'  num2str(str2num(scalex)+1) 'c/13c/7c/0.2 -O -Cdc.cpt -K -L  -B::/:DC\045: >> ' psname ];
+             if gmt_ver==4
+                   scalestr=['psscale -D'   num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Ccr.cpt -K -L -B:Correlation: >> ' psname];
+             else
+                   scalestr=['psscale -D'   num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Ccr.cpt -K   -Bx0.1+lCorrelation >> ' psname];
+             end
+             
+             scalestr2=['psscale -D'  num2str(str2num(scalex)+1) 'c/13c/7c/0.2 -O -Cdc.cpt -K -L  -B::/:DC\045: >> ' psname ];
          end
          
    if ispc      
@@ -3059,6 +3348,8 @@ end
     fprintf(fid,'%s\n',scalestr);
     fprintf(fid,'%s\n',scalestr2);
    end
+   
+   
 % %%%time scale...!!
 %    tstring=['psxy -R' num2str((min(srctime)),'%5.2f') '/' num2str((max(srctime)),'%5.2f')  '/' num2str(sdepth-0.5) '/' num2str( (((nsources-1)*distep)+sdepth)+0.5    ) ' -JX' scalex '/' scaley  ' time.tmp -B1g1:"Time(sec)":/' num2str(distep/2) 'g' num2str(distep/2) ':"Source Position (km)":WeSn  -O -K >>  ' psname];
 %    fprintf(fid,'%s\r\n',tstring);
@@ -3070,7 +3361,11 @@ end
   else
     fprintf(fid,'%s\n',mecstring);
   end
-       mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.1) ' -O maxval.foc -G255/0/0 >> ' psname ];
+%       mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.1) ' -O maxval.foc -G255/0/0 >> ' psname ];
+%     change 04/07/2015  best solution will be larger but not red..
+
+      mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.3) ' -O maxval.foc -Zdc.cpt >> ' psname ];
+ 
   if ispc
     fprintf(fid,'%s\r\n',mecstringmax);
   else
@@ -3079,13 +3374,17 @@ end
 
 %%% add option to convert to PNG using ps2raster...26/10/09    
 if ispc
-    fprintf(fid,'%s\r\n',['ps2raster ' psname  ' -Tg -P -E75 -Qg2  -Qt2 -D..\output' ]);
+    if gmt_ver==4
+      fprintf(fid,'%s\r\n',['ps2raster ' psname  ' -Tg -P -E75 -Qg2  -Qt2 -D..\output' ]);
+    else
+      fprintf(fid,'%s\r\n',['psconvert ' psname  ' -Tg -P -E75 -Qg2  -Qt2 -D..\output' ]);
+    end
     fprintf(fid,'%s\r\n',['rename ..\output\' psname(1:6) '.png ' eventid '_' psname(1:6) '.png']);
-    fprintf(fid,'%s\r\n','del testfoc.dat corcon.dat dc.cpt cr.cpt  maxval.foc  ');
+   % fprintf(fid,'%s\r\n','del testfoc.dat corcon.dat dc.cpt cr.cpt  maxval.foc  ');
 else
     fprintf(fid,'%s\n',['ps2raster ' psname  ' -Tg -P -E75 -Qg2  -Qt2 -D../output -F'  eventid '_' psname(1:6)   ]);
 %    fprintf(fid,'%s\n',['mv ../output/' psname(1:6) '.png ' '../output/' eventid '_' psname(1:6) '.png']);
-    fprintf(fid,'%s\n','rm testfoc.dat corcon.dat dc.cpt cr.cpt  maxval.foc  ');
+ %  fprintf(fid,'%s\n','rm testfoc.dat corcon.dat dc.cpt cr.cpt  maxval.foc  ');
 end
     
 %%% add info for starting depth    
@@ -3176,7 +3475,13 @@ nsources=handles.nsourcestext;
            
     fprintf(fid,'%s\r\n',st);
     fprintf(fid,'%s\r\n',nd);
-    fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14');
+    
+    if gmt_ver==4
+        fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14  PAPER_MEDIA A4');
+    else
+        fprintf(fid,'%s\r\n','gmtset FONT_ANNOT_PRIMARY 11 FONT_LABEL 14 PS_MEDIA A4');
+    end
+    
   else
            st=['gawk ''{if (NR>2)  print $2,$1,$10,$4,$5,$6,"5","0","0"}'' ' cname ' > testfoc.dat'];   
            
@@ -3187,7 +3492,13 @@ nsources=handles.nsourcestext;
            end
     fprintf(fid,'%s\n',st);
     fprintf(fid,'%s\n',nd);
-    fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14');
+
+    if gmt_ver==4
+        fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14  PAPER_MEDIA A4');
+    else
+        fprintf(fid,'%s\n','gmtset FONT_ANNOT_PRIMARY 11 FONT_LABEL 14 PS_MEDIA A4');
+    end
+    
   end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if dcplot == 1
@@ -3240,9 +3551,17 @@ end
 %%% added time limits
 %gimstring=['pscontour corcon.dat -R'  num2str(min(srctime)-str2num(tstep)) '/' num2str(max(srctime)+str2num(tstep))  '/' '0' '/' num2str(nsources+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position":WeSn -Ccr.cpt -K -I -A+s' fsize ' > ' psname ];
 if dcplot == 1
-gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position":WeSn -Cdc.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    if gmt_ver==4
+       gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source number":WeSn -Cdc.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    else
+       gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source number":WeSn -Cdc.cpt -K -I -A+a0+f' fsize ' > ' psname ];
+    end
 else
-gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position":WeSn -Ccr.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    if gmt_ver==4
+         gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source number":WeSn -Ccr.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    else
+         gimstring=['pscontour corcon.dat -R'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source number":WeSn -Ccr.cpt -K -I -A+a0+f' fsize ' > ' psname ];
+    end
 end
 
 %%%%%%
@@ -3254,10 +3573,10 @@ end
 
 %%%%%%%
          if dcplot == 1
-          scalestr=['psscale -D' num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Cdc.cpt -K -L -B:DC: >> ' psname];
+          scalestr=['psscale -D' num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Cdc.cpt -K -L -B::/:DC\045: >> ' psname];
           scalestr2=[];
          else
-          scalestr=['psscale -D'   num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Ccr.cpt -K -L -B:Correlation: >> ' psname];
+          scalestr=['psscale -D'   num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Ccr.cpt -K   -Bx0.1+lCorrelation >> ' psname];
           scalestr2=['psscale -D'  num2str(str2num(scalex)+1) 'c/13c/7c/0.2 -O -Cdc.cpt -K -L  -B::/:DC\045: >> ' psname ];
          end
          
@@ -3279,7 +3598,10 @@ end
   else
     fprintf(fid,'%s\n',mecstring);
   end
-       mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.1) ' -O maxval.foc -G255/0/0 >> ' psname ];
+%     mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.1) ' -O maxval.foc -G255/0/0 >> ' psname ];
+%     change 04/07/2015  best solution will be larger but not red..
+      mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.3) ' -O maxval.foc -Zdc.cpt >> ' psname ];       
+
   if ispc
      fprintf(fid,'%s\r\n',mecstringmax);
   else
@@ -3290,7 +3612,7 @@ end
 if ispc    
     fprintf(fid,'%s\r\n',['ps2raster ' psname  ' -Tg -P -E75 -Qg2  -Qt2 -D..\output' ]);
     fprintf(fid,'%s\r\n',['rename ..\output\' psname(1:6) '.png ' eventid '_' psname(1:6) '.png']);
-    fprintf(fid,'%s\r\n','del testfoc.dat corcon.dat dc.cpt cr.cpt  maxval.foc  ');
+ %   fprintf(fid,'%s\r\n','del testfoc.dat corcon.dat dc.cpt cr.cpt  maxval.foc  ');
 else
     fprintf(fid,'%s\n',['ps2raster ' psname  ' -Tg -P -E75 -Qg2  -Qt2 -D../output' ]);
     fprintf(fid,'%s\n',['mv ../output/' psname(1:6) '.png ' eventid '_' psname(1:6) '.png']);
@@ -3472,9 +3794,9 @@ nsources=handles.nsourcestext;
 %%% prepare a meca gmt style file for maximum correlation
     fid = fopen('maxval.foc','w');
       if ispc
-          fprintf(fid,'%g  %g  %g  %g  %g  %g  %g  %g  %g\r\n',max_x,max_y,5,maxstr1,maxdip1,maxrake1,5,0,0);
+          fprintf(fid,'%g  %g  %g  %g  %g  %g  %g  %g  %g\r\n',max_x,max_y,maxdc,maxstr1,maxdip1,maxrake1,5,0,0);
       else
-          fprintf(fid,'%g  %g  %g  %g  %g  %g  %g  %g  %g\n',max_x,max_y,5,maxstr1,maxdip1,maxrake1,5,0,0);
+          fprintf(fid,'%g  %g  %g  %g  %g  %g  %g  %g  %g\n',max_x,max_y,maxdc,maxstr1,maxdip1,maxrake1,5,0,0);
       end
     fclose(fid);
 
@@ -3488,8 +3810,12 @@ if ispc
            else
            nd=['gawk "{ print $12,$13,$3}"  planecor.dat  > corcon.dat'];    
            end
-
-    fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14');
+           
+    if gmt_ver==4       
+           fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14  PAPER_MEDIA A4');
+    else
+           fprintf(fid,'%s\r\n','gmtset FONT_ANNOT_PRIMARY 11 FONT_LABEL 14  PS_MEDIA A4');
+    end
     fprintf(fid,'%s\r\n',st);
     fprintf(fid,'%s\r\n',nd);
 else
@@ -3500,7 +3826,12 @@ else
            else
            nd=['gawk ''{ print $12,$13,$3}''  planecor.dat  > corcon.dat'];    
            end
-    fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14');
+    if gmt_ver==4           
+         fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14  PAPER_MEDIA A4');
+    else
+         fprintf(fid,'%s\n','gmtset FONT_ANNOT_PRIMARY 11 FONT_LABEL 14  PS_MEDIA A4');
+    end
+    
     fprintf(fid,'%s\n',st);
     fprintf(fid,'%s\n',nd);
 end
@@ -3548,9 +3879,17 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if dcplot == 1
- gimstring=['pscontour corcon.dat -R'  num2str(stime) '/' num2str(etime)  '/' '0' '/' num2str(noSourcesstrike+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -Cdc.cpt -K -I -A+a0+s' fsize ' -B1g1:"Dip":/1g1:"Strike":WeSn > ' psname ];
+    if gmt_ver==4
+        gimstring=['pscontour corcon.dat -R'  num2str(stime) '/' num2str(etime)  '/' '0' '/' num2str(noSourcesstrike+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -Cdc.cpt -K -I -A+a0+s' fsize ' -B1g1:"Dip":/1g1:"Strike":WeSn > ' psname ];
+    else
+        gimstring=['pscontour corcon.dat -R'  num2str(stime) '/' num2str(etime)  '/' '0' '/' num2str(noSourcesstrike+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -Cdc.cpt -K -I -A+a0+f' fsize ' -B1g1:"Dip":/1g1:"Strike":WeSn > ' psname ];
+    end
 else
- gimstring=['pscontour corcon.dat -R'  num2str(stime) '/' num2str(etime)  '/' '0' '/' num2str(noSourcesstrike+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -Ccr.cpt -K -I -A+a0+s' fsize ' -B1g1:"Dip":/1g1:"Strike":WeSn > ' psname ];
+    if gmt_ver==4
+       gimstring=['pscontour corcon.dat -R'  num2str(stime) '/' num2str(etime)  '/' '0' '/' num2str(noSourcesstrike+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -Ccr.cpt -K -I -A+a0+s' fsize ' -B1g1:"Dip":/1g1:"Strike":WeSn > ' psname ];
+    else
+       gimstring=['pscontour corcon.dat -R'  num2str(stime) '/' num2str(etime)  '/' '0' '/' num2str(noSourcesstrike+1)  '   '   wline  ' -JX' scalex 'c/' scaley 'c -Ccr.cpt -K -I -A+a0+f' fsize ' -B1g1:"Dip":/1g1:"Strike":WeSn > ' psname ];
+    end
 end
  %%%%%%
  if ispc
@@ -3563,8 +3902,13 @@ end
           scalestr=['psscale -D' num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Cdc.cpt -K -L -B:DC: >> ' psname];
           scalestr2=[];
          else
-          scalestr=['psscale -D'   num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Ccr.cpt -K -L -B:Correlation: >> ' psname];
-          scalestr2=['psscale -D'  num2str(str2num(scalex)+1) 'c/13c/7c/0.2 -O -Cdc.cpt -K -L  -B::/:DC\045: >> ' psname ];
+         if gmt_ver==4
+             scalestr=['psscale -D'   num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Ccr.cpt -K -L -B:Correlation: >> ' psname];
+             scalestr2=['psscale -D'  num2str(str2num(scalex)+1) 'c/13c/7c/0.2 -O -Cdc.cpt -K -L  -B::/:DC\045: >> ' psname ];
+          else
+             scalestr=['psscale -D'   num2str(str2num(scalex)+1) 'c/4c/7c/0.2 -O -Ccr.cpt -K -Bxaf+l"Correlation" >> ' psname];
+             scalestr2=['psscale -D'  num2str(str2num(scalex)+1) 'c/13c/7c/0.2 -O -Cdc.cpt -K -L  -B::/:DC\045: >> ' psname ];
+          end
          end
 if ispc         
     fprintf(fid,'%s\r\n',scalestr);
@@ -3584,7 +3928,10 @@ if ispc
 else
     fprintf(fid,'%s\n',mecstring);
 end
-       mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.1) ' -O maxval.foc -G255/0/0 >> ' psname ];
+%     mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.1) ' -O maxval.foc -G255/0/0 >> ' psname ];
+%     change 04/07/2015  best solution will be larger but not red..
+      mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.3) ' -O maxval.foc -Zdc.cpt >> ' psname ];
+
 if ispc       
     fprintf(fid,'%s\r\n',mecstringmax);
     %%% add option to convert to PNG using ps2raster...26/10/09    
@@ -3610,25 +3957,17 @@ disp('Ploting Correlation on the line of sources with time  ...')
     %%% go on as line....
 if get(handles.udistdep,'Value') == get(handles.udistdep,'Max')   %%%% distance plot
 
-disp('Plotting correlation on line of sources with time')
+disp('Plotting correlation on line of sources with time vs source distance')
 
 %srcpos=((srcpos-distep)*distep); %+sdepth;
-srcpos=((srcpos-1)*distep)+sdepth;
+srcpos=((srcpos-1)*distep); %+sdepth;
 
-%%%%%%%%%%%%%%%%%%%%%    prepare for plotting
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%find variance maximum and index ...
+%%%%%%%%%%%%%%%%%%%%%    prepare for plotting %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% find variance maximum and index ...
 [maxvar,index]=max(variance);
 %
-maxsource=srcpos(index);
-maxsrctime=srctime(index);
-maxstr1=str1(index);
-maxdip1=dip1(index);
-maxrake1=rake1(index);
-maxstr2=str2(index);
-maxdip2=dip2(index);
-maxrake2=rake2(index);
-maxdc=dc(index);
+maxsource=srcpos(index);maxsrctime=srctime(index);maxstr1=str1(index);maxdip1=dip1(index);
+maxrake1=rake1(index);maxstr2=str2(index);maxdip2=dip2(index);maxrake2=rake2(index);maxdc=dc(index);
 %
 disp('Maximum Correlation mechanism  STR1  DIP1  RAKE1  STR2  DIP2  RAKE2  DC%' )
 mstring=['        ' num2str(maxvar) '                 '  num2str(maxstr1) '    '  num2str(maxdip1) '    '  num2str(maxrake1) '    '  num2str(maxstr2) '    '  num2str(maxdip2) '   '  num2str(maxrake2) '   ' num2str(maxdc)];
@@ -3661,47 +4000,59 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%make batch file for GMT plotting
 % 
-stime = str2num(get(handles.starttime,'String'));
-dtstep = str2num(get(handles.tsdt,'String'));      %%%% time step in dt...
-etime = str2num(get(handles.endtime,'String'));
+% stime = str2num(get(handles.starttime,'String'));
+% dtstep = str2num(get(handles.tsdt,'String'));      %%%% time step in dt...
+% etime = str2num(get(handles.endtime,'String'));
 
-nsources=handles.nsourcestext;
+stime = str2double(get(handles.stdt,'String'));
+tstep = str2double(get(handles.tsdt,'String'));  
+etime = str2double(get(handles.etdt,'String'));
+% 
+% nsources=handles.nsourcestext;
 
 %%% prepare a meca gmt style file for maximum correlation
     fid = fopen('maxval.foc','w');
       if ispc
-          fprintf(fid,'%g  %g  %g  %g  %g  %g  %g  %g  %g\r\n',maxsource,maxsrctime,maxdc,maxstr1,maxdip1,maxrake1,5,0,0);
+          fprintf(fid,'%g  %g  %g  %g  %g  %g  %g  %g  %g\r\n',maxsrctime,maxsource,maxdc,maxstr1,maxdip1,maxrake1,5,0,0);
       else
-          fprintf(fid,'%g  %g  %g  %g  %g  %g  %g  %g  %g\n',maxsource,maxsrctime,maxdc,maxstr1,maxdip1,maxrake1,5,0,0);
+          fprintf(fid,'%g  %g  %g  %g  %g  %g  %g  %g  %g\n',maxsrctime,maxsource,maxdc,maxstr1,maxdip1,maxrake1,5,0,0);
       end
     fclose(fid);
 
 %%% prepare a gmt style file for correlation
     fid = fopen('plcor.bat','w');
     if ispc    
-        fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14');
+        if gmt_ver==4
+            fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14  PAPER_MEDIA A4');
+        else
+            fprintf(fid,'%s\r\n','gmtset FONT_ANNOT_PRIMARY 11 FONT_LABEL 14  PS_MEDIA A4');
+        end
     else
-        fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14');
+        if gmt_ver==4
+            fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14  PAPER_MEDIA A4');
+        else
+            fprintf(fid,'%s\n','gmtset FONT_ANNOT_PRIMARY 11 FONT_LABEL 14  PS_MEDIA A4');
+        end
     end
-    
+
     
 if ispc
-           st=['gawk "{print '  num2str(sdepth) '+($1-1)*' num2str(distep) ',$2,$10,$4,$5,$6,"5","0","0"}" ' cname ' > testfoc.dat'];   
+           st=['gawk "{if (NR>2) print $2, ($1-1)*' num2str(distep) ',$10,$4,$5,$6,"5","0","0"}" ' cname ' > testfoc.dat'];   
            
            if dcplot == 1
-           nd=['gawk "{print '  num2str(sdepth) '+($1-1)*' num2str(distep) ',$2,$10}" ' cname ' > corcon.dat'];
+           nd=['gawk "{if (NR>2) print $2, ($1-1)*' num2str(distep) ',$10}" ' cname ' > corcon.dat'];
            else
-           nd=['gawk "{print '  num2str(sdepth) '+($1-1)*' num2str(distep) ',$2,$3}" ' cname ' > corcon.dat'];
+           nd=['gawk "{if (NR>2) print $2, ($1-1)*' num2str(distep) ',$3}" ' cname ' > corcon.dat'];
            end
     fprintf(fid,'%s\r\n',st);
     fprintf(fid,'%s\r\n',nd);
 else
-           st=['gawk ''{print '  num2str(sdepth) '+($1-1)*' num2str(distep) ',$2,$10,$4,$5,$6,"5","0","0"}'' ' cname ' > testfoc.dat'];   
+            st=['gawk ''{if (NR>2) print $2, ($1-1)*' num2str(distep) ',$10,$4,$5,$6,"5","0","0"}'' ' cname ' > testfoc.dat'];   
            
            if dcplot == 1
-           nd=['gawk ''{print '  num2str(sdepth) '+($1-1)*' num2str(distep) ',$2,$10}'' ' cname ' > corcon.dat'];
+           nd=['gawk ''{if (NR>2) print  $2, ($1-1)*' num2str(distep) ',$10}'' ' cname ' > corcon.dat'];
            else
-           nd=['gawk ''{print '  num2str(sdepth) '+($1-1)*' num2str(distep) ',$2,$3}'' ' cname ' > corcon.dat'];
+           nd=['gawk ''{IF (NR>2) print  $2, ($1-1)*' num2str(distep) ',$3}'' ' cname ' > corcon.dat'];
            end
     fprintf(fid,'%s\n',st);
     fprintf(fid,'%s\n',nd);
@@ -3709,66 +4060,68 @@ end
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if dcplot == 1
-    
-    
-       if invpal == 1
+   if invpal == 1
            if ispc
             fprintf(fid,'%s\r\n',['makecpt -C' gmtpal ' -T0/100/10 -I > dc.cpt']);
            else
             fprintf(fid,'%s\n',['makecpt -C' gmtpal ' -T0/100/10 -I > dc.cpt']);
            end
-       else
+   else
            if ispc 
             fprintf(fid,'%s\r\n',['makecpt -C' gmtpal ' -T0/100/10    > dc.cpt']);
            else
             fprintf(fid,'%s\n',['makecpt -C' gmtpal ' -T0/100/10    > dc.cpt']);
            end
-        end
-     
-     
+   end
 else
    if ispc
      fprintf(fid,'%s\r\n','makecpt -Ccopper -T0/100/10 -I > dc.cpt');
    else
      fprintf(fid,'%s\n','makecpt -Ccopper -T0/100/10 -I > dc.cpt');
    end
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   if invpal == 1
+     vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) ' -I  > cr.cpt'];
+   else
+     vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) '     > cr.cpt'];
+   end
 
-if invpal == 1
-    
-           vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) ' -I  > cr.cpt'];
-else
-    
-           vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) '     > cr.cpt'];
-end
-
-  if ispc
+   if ispc
     fprintf(fid,'%s\r\n',vstring);
-  else
+   else
     fprintf(fid,'%s\n',vstring);
-  end
-    
+   end
+   
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if dcplot == 1
 
-    fdis=((str2num(fsrc)-1)*distep)+sdepth;
-    ldis=((str2num(lsrc)-1)*distep)+sdepth;
-    
-gimstring=['pscontour corcon.dat -R'  num2str(fdis-0.5) '/' num2str(ldis+0.5) '/' num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep)) '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Source position (km)":/1:"Time(sec)":WeSn -Cdc.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    fdis=((str2num(fsrc)-1)*distep);
+    ldis=((str2num(lsrc)-1)*distep);
+     
+    if gmt_ver==4
+       gimstring=['pscontour corcon.dat -R' num2str(str2num(negtime)-tstep)  '/' num2str(str2num(postime)+tstep) '/' num2str(fdis-0.5) '/' num2str(ldis+0.5)  '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position (km)":WeSn -Cdc.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    else
+       gimstring=['pscontour corcon.dat -R' num2str(str2num(negtime)-tstep)  '/' num2str(str2num(postime)+tstep) '/' num2str(fdis-0.5) '/' num2str(ldis+0.5)  '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position (km)":WeSn -Cdc.cpt -K -I -A+a0+f' fsize ' > ' psname ];
+    end
   if ispc
     fprintf(fid,'%s\r\n',gimstring);
   else
     fprintf(fid,'%s\n',gimstring);
   end
+  
 else
 
-    fdis=((str2num(fsrc)-1)*distep)+sdepth;
-    ldis=((str2num(lsrc)-1)*distep)+sdepth;
+    fdis=((str2num(fsrc)-1)*distep);
+    ldis=((str2num(lsrc)-1)*distep);
     
 %num2str(sdepth-0.5) '/' num2str( (((nsources-1)*distep)+sdepth)+0.5    )    
-gimstring=['pscontour corcon.dat -R'  num2str(fdis-0.5) '/' num2str(ldis+0.5) '/'  num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))  '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Source position (km)":/1:"Time(sec)":WeSn -Ccr.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    if gmt_ver==4
+          gimstring=['pscontour corcon.dat -R' num2str(str2num(negtime)-tstep)  '/' num2str(str2num(postime)+tstep) '/' num2str(fdis-0.5)  '/' num2str(ldis+0.5)  '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position (km)":WeSn -Ccr.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    else
+          gimstring=['pscontour corcon.dat -R' num2str(str2num(negtime)-tstep)  '/' num2str(str2num(postime)+tstep) '/' num2str(fdis-0.5)  '/' num2str(ldis+0.5)  '  ' wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source position (km)":WeSn -Ccr.cpt -K -I -A+a0+f' fsize ' > ' psname ];
+    end
   if ispc
     fprintf(fid,'%s\r\n',gimstring);
   else
@@ -3796,7 +4149,10 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     mecstring=['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' fscale ' -O -K testfoc.dat -Zdc.cpt >> ' psname ];
-    mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.1) ' -O maxval.foc -: -G255/0/0 >> ' psname ];
+%   mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.1) ' -O maxval.foc -: -G255/0/0 >> ' psname ];
+%   change 04/07/2015  best solution will be larger but not red..
+    mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.3) ' -O maxval.foc -Zdc.cpt >> ' psname ];    
+    
  if ispc
     fprintf(fid,'%s\r\n',mecstring);
     fprintf(fid,'%s\r\n',mecstringmax);
@@ -3814,20 +4170,12 @@ end
 
 else
 
-disp('Plotting correlation with source number as x axis and time as y axis')    %%%%%% source number plot
+disp('Plotting correlation,  x axis time,  y axis  source number ')    %%%%%% source number plot
 
 %%%%find variance maximum and index ...
 [maxvar,index]=max(variance);
 %
-maxsource=srcpos(index);
-maxsrctime=srctime(index);
-maxstr1=str1(index);
-maxdip1=dip1(index);
-maxrake1=rake1(index);
-maxstr2=str2(index);
-maxdip2=dip2(index);
-maxrake2=rake2(index);
-maxdc=dc(index);
+maxsource=srcpos(index);maxsrctime=srctime(index);maxstr1=str1(index);maxdip1=dip1(index);maxrake1=rake1(index);maxstr2=str2(index);maxdip2=dip2(index);maxrake2=rake2(index);maxdc=dc(index);
 
 disp('Maximum Correlation mechanism  STR1  DIP1  RAKE1  STR2  DIP2  RAKE2  DC%' )
 mstring=['        ' num2str(maxvar) '                 '  num2str(maxstr1) '    '  num2str(maxdip1) '    '  num2str(maxrake1) '    '  num2str(maxstr2) '    '  num2str(maxdip2) '   '  num2str(maxrake2) '   ' num2str(maxdc)];
@@ -3838,9 +4186,7 @@ disp(ststring)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
     set(handles.selsrc,'String',num2str(maxsource))
-
 %%
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%annotation interval...
 if drcont == 1 
@@ -3875,83 +4221,87 @@ nsources=handles.nsourcestext;
     fid = fopen('plcor.bat','w');
 
 if ispc
-           st=['gawk "{print $1,$2,$10,$4,$5,$6,"5","0","0"}" ' cname ' > testfoc.dat'];   
+           st=['gawk "{if (NR>2) print $2,$1,$10,$4,$5,$6,"5","0","0"}" ' cname ' > testfoc.dat'];   
            
            if dcplot == 1
-           nd=['gawk "{ print $1,$2,$10}" ' cname ' > corcon.dat'];
+           nd=['gawk "{if (NR>2) print $2,$1,$10}" ' cname ' > corcon.dat'];
            else
-           nd=['gawk "{ print $1,$2,$3}" ' cname ' > corcon.dat'];    
+           nd=['gawk "{if (NR>2) print $2,$1,$3}" ' cname ' > corcon.dat'];    
            end
            
     fprintf(fid,'%s\r\n',st);
     fprintf(fid,'%s\r\n',nd);
-    fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14');
+    if gmt_ver==4
+      fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14  PAPER_MEDIA A4');
+    else
+      fprintf(fid,'%s\r\n','gmtset FONT_ANNOT_PRIMARY 11 FONT_LABEL 14  PS_MEDIA A4');
+    end
 else
-           st=['gawk ''{print $1,$2,$10,$4,$5,$6,"5","0","0"}'' ' cname ' > testfoc.dat'];   
+           st=['gawk ''{if (NR>2) print $2,$1,$10,$4,$5,$6,"5","0","0"}'' ' cname ' > testfoc.dat'];   
            
            if dcplot == 1
-           nd=['gawk ''{ print $1,$2,$10}'' ' cname ' > corcon.dat'];
+           nd=['gawk ''{if (NR>2) print $2,$1,$10}'' ' cname ' > corcon.dat'];
            else
-           nd=['gawk ''{ print $1,$2,$3}'' ' cname ' > corcon.dat'];    
+           nd=['gawk ''{if (NR>2) print $2,$1,$3}'' ' cname ' > corcon.dat'];    
            end
 
     fprintf(fid,'%s\n',st);
     fprintf(fid,'%s\n',nd);
-    fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14');
+    if gmt_ver==4
+       fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 11 LABEL_FONT_SIZE 14  PAPER_MEDIA A4');
+    else
+       fprintf(fid,'%s\n','gmtset FONT_ANNOT_PRIMARY 11 FONT_LABEL 14  PS_MEDIA A4');
+    end
 end
-
-
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if dcplot == 1
-    
-    
        if invpal == 1
            if ispc
             fprintf(fid,'%s\r\n',['makecpt -C' gmtpal ' -T0/100/10 -I > dc.cpt']);
            else
             fprintf(fid,'%s\n',['makecpt -C' gmtpal ' -T0/100/10 -I > dc.cpt']);
            end
- 
-        else
+       else
             if ispc 
             fprintf(fid,'%s\r\n',['makecpt -C' gmtpal ' -T0/100/10    > dc.cpt']);
            else
             fprintf(fid,'%s\n',['makecpt -C' gmtpal ' -T0/100/10    > dc.cpt']);
-           end
-
-        end
-     
-     
+            end
+       end
 else
-   if ispc
+    if ispc
      fprintf(fid,'%s\r\n','makecpt -Ccopper -T0/100/10 -I > dc.cpt');
-   else
+    else
      fprintf(fid,'%s\n','makecpt -Ccopper -T0/100/10 -I > dc.cpt');
-   end
+    end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-if invpal == 1
-    
-           vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) ' -I  > cr.cpt'];
-else
-    
-           vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) '     > cr.cpt'];
+    if invpal == 1
+       vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) ' -I  > cr.cpt'];
+    else
+       vstring=['makecpt -C' gmtpal ' -T0/' num2str(maxvar+0.05) '/' num2str(cptstep) '     > cr.cpt'];
+    end
+    if ispc
+       fprintf(fid,'%s\r\n',vstring);
+    else
+       fprintf(fid,'%s\n',vstring);
+    end
 end
 
-  if ispc
-    fprintf(fid,'%s\r\n',vstring);
-  else
-    fprintf(fid,'%s\n',vstring);
-  end
-    
-end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
 if dcplot == 1
-gimstring=['pscontour corcon.dat -R'  num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)  '/' num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))   '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Source position (km)":/1:"Time(sec)":WeSn -Cdc.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    if gmt_ver==4
+        gimstring=['pscontour corcon.dat -R' num2str(str2num(negtime)-str2num(tstep))  '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)   '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source number":WeSn -Cdc.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+    else
+        gimstring=['pscontour corcon.dat -R' num2str(str2num(negtime)-str2num(tstep))  '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)   '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source number":WeSn -Cdc.cpt -K -I -A+a0+f' fsize ' > ' psname ];
+    end
 else
-gimstring=['pscontour corcon.dat -R'  num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)  '/' num2str(str2num(negtime)-str2num(tstep)) '/' num2str(str2num(postime)+str2num(tstep))   '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Source position (km)":/1:"Time(sec)":WeSn -Ccr.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+     if gmt_ver==4
+         gimstring=['pscontour corcon.dat -R' num2str(str2num(negtime)-str2num(tstep))  '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)   '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source number":WeSn -Ccr.cpt -K -I -A+a0+s' fsize ' > ' psname ];
+     else
+         gimstring=['pscontour corcon.dat -R' num2str(str2num(negtime)-str2num(tstep))  '/' num2str(str2num(postime)+str2num(tstep))  '/' num2str(str2num(fsrc)-1) '/' num2str(str2num(lsrc)+1)   '   '   wline  ' -JX' scalex 'c/' scaley 'c -B1g1:"Time(sec)":/1:"Source number":WeSn -Ccr.cpt -K -I -A+a0+f' fsize ' > ' psname ];
+     end
 end
 
 %%%%%%
@@ -3978,8 +4328,10 @@ end
  end
    
        mecstring=['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' fscale ' -O -K testfoc.dat -Zdc.cpt >> ' psname ];
-       mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.1) ' -O maxval.foc -: -G255/0/0 >> ' psname ];
-
+%      mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.1) ' -O maxval.foc -: -G255/0/0 >> ' psname ];
+%      change 04/07/2015  best solution will be larger but not red..
+       mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.3) ' -O maxval.foc -Zdc.cpt >> ' psname ];
+       
  if ispc
     fprintf(fid,'%s\r\n',mecstring);
     fprintf(fid,'%s\r\n',mecstringmax);
@@ -4014,7 +4366,7 @@ end
 
 %%% run batch file...
 if ispc
-   [s,r]=system('plcor.bat'); 
+   [s,r]=system('plcor.bat');  
 else
     !chmod +x plcor.bat
     !./plcor.bat
@@ -4023,23 +4375,30 @@ end
 
 cd .. %%% return to main folder before plotting.... this should solve problems if user tried to plot waveforms before closing ps file...
 
-if ispc
-  system(['gsview32 .\invert\' psname]);
-else
-  system(['gv ./invert/' psname]);
+% if ispc
+%   system(['gsview32 .\invert\' psname]);
+% else
+%   system(['gv ./invert/' psname]);
+% 
+% end
 
+% read the gsview version from defaults
+psview=handles.psview;
+
+if ispc
+    try 
+      system([psview ' .\invert\' psname]);
+    catch exception 
+        disp(exception.message)
+    end
+else
+    try
+      system([psview ' ./invert/' psname]);
+    catch exception 
+        disp(exception.message)
+    end
 end
 
-%%% try to load in Matlab..!!! 
-% system('gswin32c -sDEVICE=png -sOUTPUTFILE=a.png -sDEVICE=png16m -dGraphicsAlphaBits=4 -dBATCH -dNOPROMPT -dNOPAUSE  a.ps');
-% [X,map] = imread('a.Correlationg');
-% disp('ok png')
-% figure
-% image(X)
-% axis off
-
-% %%%return to isola
-% cd ..
 pwd
 
 % catch
@@ -4164,11 +4523,14 @@ if (get(handles.freqcheck,'Value') == get(handles.freqcheck,'Max'))
    disp('Selected common frequency band option.')
    % we need to give the f1 f2 f3 f4 freq to stagui
    f1=str2double(get(handles.f1,'String'));
-   f2=str2double(get(handles.f2,'String'));
-   f3=str2double(get(handles.f3,'String'));
+%    f2=str2double(get(handles.f2,'String'));
+%    f3=str2double(get(handles.f3,'String'));
    f4=str2double(get(handles.f4,'String'));
   
-        stagui(f1,f2,f3,f4)
+   f2=f1;f3=f4;
+   
+     %stagui(f1,f2,f3,f4)
+     staguiweight(f1,f2,f3,f4)
 
    try
      v = evalin('base', 'snrvalue');
@@ -4180,7 +4542,8 @@ if (get(handles.freqcheck,'Value') == get(handles.freqcheck,'Max'))
 else
    disp('Selected different frequency band per station option.')
    
-      stagui
+    %  stagui
+       staguiweight
 
    try
      v = evalin('base', 'snrvalue');
@@ -4345,37 +4708,38 @@ function sliderstdt_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
-valst=get(handles.sliderstdt,'Value');
-set(handles.stdt,'String',num2str(round(valst)));
-
 dtres=handles.dtres;
-value = str2num(get(handles.stdt,'String'));
-set(handles.starttime,'String',num2str(dtres*value),'ForegroundColor','black')        
+
+valst=get(handles.sliderstdt,'Value');
+set(handles.stdt,'String',num2str((valst*dtres)));
+
+% value = str2num(get(handles.stdt,'String'));
+% set(handles.starttime,'String',num2str(dtres*value),'ForegroundColor','black')        
 
 %%%%%%%%%%%%%%%%%%%%%%%%
-ifirst = str2double(get(handles.stdt,'String'));
-istep = str2double(get(handles.tsdt,'String'));  
-ilast = str2double(get(handles.etdt,'String'));
+ifirst = str2double(get(handles.stdt,'String'))/dtres;
+istep = str2double(get(handles.tsdt,'String'))/dtres;
+ilast = str2double(get(handles.etdt,'String'))/dtres;
 %%%%%%%%%%%%%%%%%%%%
 
 %%%%check how many steps...
 if (ifirst >= 0 && ilast > 0 )
-  iseqm=(ilast-ifirst)/istep;
+  iseqm=round((ilast-ifirst)/istep);
 elseif  (ifirst < 0 && ilast <= 0 )
-  iseqm=(abs(ifirst)-abs(ilast))/istep;
+  iseqm=round((abs(ifirst)-abs(ilast))/istep);
 elseif (ifirst < 0 && ilast >= 0 )
-  iseqm=(ilast+abs(ifirst))/istep;
+  iseqm=round((ilast+abs(ifirst))/istep);
 else
     disp('check your time search inputs')
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        if iseqm <= 100  
-               set(handles.trialts,'String',num2str(round(iseqm)),...)
+        if iseqm < 100  
+               set(handles.trialts,'String',num2str(iseqm),...)
                         'ForegroundColor','black') 
                set(handles.many,'String','')        
-        elseif iseqm > 100 
-               set(handles.trialts,'String',num2str(round(iseqm)),...)
+        elseif iseqm >= 100 
+               set(handles.trialts,'String',num2str(iseqm),...)
                         'ForegroundColor','red')        
                set(handles.many,'String','too many shifts',...)
                         'ForegroundColor','red')        
@@ -4404,11 +4768,42 @@ function stdt_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of stdt as text
 %        str2double(get(hObject,'String')) returns contents of stdt as a double
+
 dtres=handles.dtres;
-value = str2num(get(handles.stdt,'String'));
-set(handles.starttime,'String',num2str(dtres*value),'ForegroundColor','black')        
+%value = str2num(get(handles.stdt,'String'));
+% set(handles.starttime,'String',num2str(dtres*value),'ForegroundColor','black')        
 
+%% find time shifts
 
+%%%%%%%%%%%%%%%%%%%%%%%%
+ifirst = str2double(get(handles.stdt,'String'))/dtres;
+istep = str2double(get(handles.tsdt,'String'))/dtres;
+ilast = str2double(get(handles.etdt,'String'))/dtres;
+%%%%%%%%%%%%%%%%%%%%
+
+%%%%check how many steps...
+if (ifirst >= 0 && ilast > 0 )
+  iseqm=round((ilast-ifirst)/istep);
+elseif  (ifirst < 0 && ilast <= 0 )
+  iseqm=round((abs(ifirst)-abs(ilast))/istep);
+elseif (ifirst < 0 && ilast >= 0 )
+  iseqm=round((ilast+abs(ifirst))/istep);
+else
+    disp('check your time search inputs')
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        if iseqm < 100  
+               set(handles.trialts,'String',num2str(iseqm),...)
+                        'ForegroundColor','black') 
+               set(handles.many,'String','')        
+        elseif iseqm >= 100 
+               set(handles.trialts,'String',num2str(iseqm),...)
+                        'ForegroundColor','red')        
+               set(handles.many,'String','too many shifts',...)
+                        'ForegroundColor','red')        
+        end
+                
 
 
 % --- Executes during object creation, after setting all properties.
@@ -4427,6 +4822,8 @@ else
 end
 
 
+
+
 % --- Executes on slider movement.
 function slidertsdt_Callback(hObject, eventdata, handles)
 % hObject    handle to slidertsdt (see GCBO)
@@ -4436,37 +4833,44 @@ function slidertsdt_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
-valts=get(handles.slidertsdt,'Value');
-set(handles.tsdt,'String',num2str(round(valts)));
+
+%  get(handles.slidertsdt,'Max')
+%  get(handles.slidertsdt,'Min')
+%  get(handles.slidertsdt,'Sliderstep')
+%  get(handles.slidertsdt,'Value')
 
 dtres=handles.dtres;
-value = str2num(get(handles.tsdt,'String'));
-set(handles.timestep,'String',num2str(dtres*value),'ForegroundColor','black')        
+% 
+valts=get(handles.slidertsdt,'Value');
+set(handles.tsdt,'String',num2str(round(valts)*dtres));
+
+% value = str2num(get(handles.tsdt,'String'));
+% set(handles.timestep,'String',num2str(dtres*value),'ForegroundColor','black')        
 
 %%%%%%%%%%%%%%%%%%%%%%%%
-ifirst = str2double(get(handles.stdt,'String'));
-istep = str2double(get(handles.tsdt,'String'));  
-ilast = str2double(get(handles.etdt,'String'));
+ifirst = str2double(get(handles.stdt,'String'))/dtres;
+istep = str2double(get(handles.tsdt,'String'))/dtres;  
+ilast = str2double(get(handles.etdt,'String'))/dtres;
 %%%%%%%%%%%%%%%%%%%%
 
 %%%%check how many steps...
 if (ifirst >= 0 && ilast > 0 )
-  iseqm=(ilast-ifirst)/istep;
+  iseqm=round((ilast-ifirst)/istep);
 elseif  (ifirst < 0 && ilast <= 0 )
-  iseqm=(abs(ifirst)-abs(ilast))/istep;
+  iseqm=round((abs(ifirst)-abs(ilast))/istep);
 elseif (ifirst < 0 && ilast >= 0 )
-  iseqm=(ilast+abs(ifirst))/istep;
+  iseqm=round((ilast+abs(ifirst))/istep);
 else
     disp('check your time search inputs')
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        if iseqm <= 100  
-               set(handles.trialts,'String',num2str(round(iseqm)),...)
+        if iseqm < 100  
+               set(handles.trialts,'String',num2str(iseqm),...)
                         'ForegroundColor','black') 
                set(handles.many,'String','')        
-        elseif iseqm > 100 
-               set(handles.trialts,'String',num2str(round(iseqm)),...)
+        elseif iseqm >= 100 
+               set(handles.trialts,'String',num2str(iseqm),...)
                         'ForegroundColor','red')        
                set(handles.many,'String','too many shifts',...)
                         'ForegroundColor','red')        
@@ -4498,9 +4902,39 @@ function tsdt_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of tsdt as a double
 
 dtres=handles.dtres;
-value = str2num(get(handles.tsdt,'String'));
-set(handles.timestep,'String',num2str(dtres*value),'ForegroundColor','black')        
+% value = str2num(get(handles.tsdt,'String'));
+% set(handles.timestep,'String',num2str(dtres*value),'ForegroundColor','black')        
+%% find time shifts
 
+%%%%%%%%%%%%%%%%%%%%%%%%
+ifirst = str2double(get(handles.stdt,'String'))/dtres;
+istep = str2double(get(handles.tsdt,'String'))/dtres;
+ilast = str2double(get(handles.etdt,'String'))/dtres;
+%%%%%%%%%%%%%%%%%%%%
+
+%%%%check how many steps...
+if (ifirst >= 0 && ilast > 0 )
+  iseqm=round((ilast-ifirst)/istep);
+elseif  (ifirst < 0 && ilast <= 0 )
+  iseqm=round((abs(ifirst)-abs(ilast))/istep);
+elseif (ifirst < 0 && ilast >= 0 )
+  iseqm=round((ilast+abs(ifirst))/istep);
+else
+    disp('check your time search inputs')
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        if iseqm < 100  
+               set(handles.trialts,'String',num2str(iseqm),...)
+                        'ForegroundColor','black') 
+               set(handles.many,'String','')        
+        elseif iseqm >= 100 
+               set(handles.trialts,'String',num2str(iseqm),...)
+                        'ForegroundColor','red')        
+               set(handles.many,'String','too many shifts',...)
+                        'ForegroundColor','red')        
+        end
+                
 
 % --- Executes during object creation, after setting all properties.
 function slideretdt_CreateFcn(hObject, eventdata, handles)
@@ -4527,37 +4961,44 @@ function slideretdt_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
-valet=get(handles.slideretdt,'Value');
-set(handles.etdt,'String',num2str(round(valet)));
-
 dtres=handles.dtres;
-value = str2num(get(handles.etdt,'String'));
-set(handles.endtime,'String',num2str(dtres*value),'ForegroundColor','black')        
+
+valet=get(handles.slideretdt,'Value');
+set(handles.etdt,'String',num2str(valet*dtres));
+
+% value = str2num(get(handles.etdt,'String'));
+% set(handles.endtime,'String',num2str(dtres*value),'ForegroundColor','black')        
+% iseqm=round((ilast-ifirst)/istep)
 
 %%%%%%%%%%%%%%%%%%%%%%%%
-ifirst = str2double(get(handles.stdt,'String'));
-istep = str2double(get(handles.tsdt,'String'));  
-ilast = str2double(get(handles.etdt,'String'));
+ifirst = str2double(get(handles.stdt,'String'))/dtres;
+istep = str2double(get(handles.tsdt,'String'))/dtres;  
+ilast = str2double(get(handles.etdt,'String'))/dtres;
 %%%%%%%%%%%%%%%%%%%%
 
 %%%%check how many steps...
 if (ifirst >= 0 && ilast > 0 )
-  iseqm=(ilast-ifirst)/istep;
+  %  iseqm=((ilast-ifirst)/istep);
+    iseqm=round((ilast-ifirst)/istep);
 elseif  (ifirst < 0 && ilast <= 0 )
-  iseqm=(abs(ifirst)-abs(ilast))/istep;
+ % iseqm=((abs(ifirst)-abs(ilast))/istep);
+  iseqm=round((abs(ifirst)-abs(ilast))/istep);
+
 elseif (ifirst < 0 && ilast >= 0 )
-  iseqm=(ilast+abs(ifirst))/istep;
+  %iseqm=((ilast+abs(ifirst))/istep);
+  iseqm=round((ilast+abs(ifirst))/istep);
+
 else
     disp('check your time search inputs')
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        if iseqm <= 100  
-               set(handles.trialts,'String',num2str(round(iseqm)),...)
+        if iseqm < 100  
+               set(handles.trialts,'String',num2str(iseqm),...)
                         'ForegroundColor','black') 
                set(handles.many,'String','')        
-        elseif iseqm > 100 
-               set(handles.trialts,'String',num2str(round(iseqm)),...)
+        elseif iseqm >= 100
+               set(handles.trialts,'String',num2str(iseqm),...)
                         'ForegroundColor','red')        
                set(handles.many,'String','too many shifts',...)
                         'ForegroundColor','red')        
@@ -4588,9 +5029,40 @@ function etdt_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of etdt as a double
 
 dtres=handles.dtres;
-value = str2num(get(handles.etdt,'String'));
-set(handles.endtime,'String',num2str(dtres*value),'ForegroundColor','black')        
+% value = str2num(get(handles.etdt,'String'));
+% set(handles.endtime,'String',num2str(dtres*value),'ForegroundColor','black')        
 
+%% find time shifts
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+ifirst = str2double(get(handles.stdt,'String'))/dtres;
+istep = str2double(get(handles.tsdt,'String'))/dtres;
+ilast = str2double(get(handles.etdt,'String'))/dtres;
+%%%%%%%%%%%%%%%%%%%%
+
+%%%%check how many steps...
+if (ifirst >= 0 && ilast > 0 )
+  iseqm=round((ilast-ifirst)/istep);
+elseif  (ifirst < 0 && ilast <= 0 )
+  iseqm=round((abs(ifirst)-abs(ilast))/istep);
+elseif (ifirst < 0 && ilast >= 0 )
+  iseqm=round((ilast+abs(ifirst))/istep);
+else
+    disp('check your time search inputs')
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        if iseqm < 100  
+               set(handles.trialts,'String',num2str(iseqm),...)
+                        'ForegroundColor','black') 
+               set(handles.many,'String','')        
+        elseif iseqm >= 100 
+               set(handles.trialts,'String',num2str(iseqm),...)
+                        'ForegroundColor','red')        
+               set(handles.many,'String','too many shifts',...)
+                        'ForegroundColor','red')        
+        end
+                
 
 % --- Executes on button press in interp.
 function interp_Callback(hObject, eventdata, handles)
@@ -4643,21 +5115,33 @@ function plot1source_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 
-%find out the current corr*.dat file
-try
-cd invert
-files=dir('corr*.dat');
-fileindex=length(files);
-cd ..
-catch
-    cd ..
-    pwd
+if ispc
+   cname=findrecentfile('.\invert\corr*.dat');
+else
+   cname=findrecentfile('./invert/corr*.dat');
 end
 
-cname=['corr' num2str(fileindex,'%02d') '.dat'];
-psname= ['corr' num2str(fileindex,'%02d') '.ps'];
+% cname=['corr' num2str(fileindex,'%02d') '.dat'];
+% psname= ['corr' num2str(fileindex,'%02d') '.ps'];
 
+psname=[cname(1:6) '.ps']
 disp(['Now plotting  ' cname '   correlation file'])
+
+%find out the current corr*.dat file
+% try
+% cd invert
+% files=dir('corr*.dat');
+% fileindex=length(files);
+% cd ..
+% catch
+%     cd ..
+%     pwd
+% end
+% 
+% cname=['corr' num2str(fileindex,'%02d') '.dat'];
+% psname= ['corr' num2str(fileindex,'%02d') '.ps'];
+% 
+% disp(['Now plotting  ' cname '   correlation file'])
 
 %%%%
 dtres=handles.dtres;
@@ -4676,7 +5160,7 @@ negtime=get(handles.negtime,'String');
 postime=get(handles.postime,'String');
 
 %%%%% time shift step
-tstep = str2double(get(handles.timestep,'String'));
+%tstep = str2double(get(handles.timestep,'String'));
 
 
 %%%%%cpt file
@@ -4684,10 +5168,13 @@ val = get(handles.gmtpal,'Value');
 string_list = get(handles.gmtpal,'String');
 gmtpal = string_list{val};
 
- 
+
+%% get gmtver 
+gmt_ver=handles.gmt_ver;
+
 %%check if we are in invert..??
 try
-cd invert
+ cd invert
 
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -4725,7 +5212,9 @@ for i=1:length(srcpos),
    end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    mw=(2/3)*(log10(selmoment)-9.1);         % mommag=(2/3)*(log10(mo(psrcpos)) - 9.1) %! Hanks & Kanamori (1979)
+%  mommag=(2.0/3.0)*log10(mo(psrcpos)) - 6.0333;  % changed 06/11/2020 
+ mw=(2.0/3.0)*log10(selmoment)-6.0333;         % mommag=(2/3)*(log10(mo(psrcpos)) - 9.1) %! Hanks & Kanamori (1979)
+    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%find variance maximum and index for selected source
@@ -4803,7 +5292,7 @@ disp('********************************************************************')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     fid2 = fopen('selsrc.foc','w');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%1  0.388029  67.834  142  79   93  5.37924  0  0  -5.28
-for i=1:length(seltime),
+for i=1:length(seltime) 
       if ispc
         fprintf(fid2,'%f %f %f %f %f %f %f %s %s\r\n', seltime(i),selvar(i),seldc(i),selstr1(i),seldip1(i),selrake1(i),mw(i),'0','0');
       else
@@ -4814,22 +5303,45 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%
   fid = fopen('plsel1.bat','w');
-    if ispc   
-      fprintf(fid,'%s\r\n','gmtset PAPER_MEDIA A4');
+    if ispc  
+        if gmt_ver==4
+           fprintf(fid,'%s\r\n','gmtset PAPER_MEDIA A4  PAPER_MEDIA A4');
+        else
+           fprintf(fid,'%s\r\n','gmtset PS_MEDIA A4  PS_MEDIA A4');
+        end
       fprintf(fid,'%s\r\n',['makecpt -C' gmtpal ' -T0/100/10 > invsel.cpt']);
       %%% plot all the solutions
 %     fprintf(fid,'%s\r\n',['psmeca -R' num2str(min(seltime)-0.2) '/' num2str(max(seltime)+0.2) '/' num2str(min(selvar)-0.1) '/' num2str(max(selvar)+0.1) ' -JX' scalex '/' scaley ' -Sa0.1i -K -B1g1:"Timeshift":/0.1g0.1:"Correlation":WeSn selsrc.foc -V -Zinv1.cpt  > invsel.ps']);
-      fprintf(fid,'%s\r\n',['psmeca -R' negtime '/' postime '/' num2str(min(selvar)-0.1) '/' num2str(max(selvar)+0.1) ' -JX' scalex 'c/' scaley 'c -Sa' fscale ' -K -B1g1:"Time shift (sec) ":/0.1g0.1:"Correlation":WeSn selsrc.foc -V -Zinvsel.cpt  > invsel.ps']);
+        if gmt_ver==4
+            fprintf(fid,'%s\r\n',['psmeca -R' negtime '/' postime '/' num2str(min(selvar)-0.1) '/' num2str(max(selvar)+0.1) ' -JX' scalex 'c/' scaley 'c -Sa' fscale ' -K -B1g1:"Time shift (sec) ":/0.1g0.1:"Correlation":WeSn selsrc.foc -V -Zinvsel.cpt  > invsel.ps']);
+        else
+            fprintf(fid,'%s\r\n',['psmeca -R' negtime '/' postime '/' num2str(min(selvar)-0.1) '/' num2str(max(selvar)+0.1) ' -JX' scalex 'c/' scaley 'c -Sa' fscale ' -K -B1g1:"Time shift (sec) ":/0.1g0.1:"Correlation":WeSn selsrc.foc -V -Cinvsel.cpt  > invsel.ps']);
+        end
       fprintf(fid,'%s\r\n',['psmeca -R -JX -Sa' fscale ' -K -O selsrc.foc -V -T >> invsel.ps']); 
       %%% plot the solutions with the best correlation
-      fprintf(fid,'%s\r\n',['psmeca -R -JX -Sa' num2str(str2num(fscale)+0.1) ' -K -O selfoc.foc -Zinvsel.cpt -C1p/255/0/0 >> invsel.ps']);
-      fprintf(fid,'%s\r\n',['psmeca -R -JX -Sa' num2str(str2num(fscale)+0.1) ' -K -O selfoc.foc -V -T      -C1p/255/0/0 >> invsel.ps']);
-      
-      fprintf(fid,'%s\r\n','psscale -D25c/4c/8c/0.5c -O -K -Cinvsel.cpt -B::/:DC\045: >> invsel.ps');
-      fprintf(fid,'%s\r\n','pstext -R selsrc.tmp -JX -O -G255/0/0 -N >> invsel.ps');
-      fprintf(fid,'%s\r\n','del selsrc.tmp selfoc.foc selsrc.foc invsel.cpt ');
+        if gmt_ver==4
+            fprintf(fid,'%s\r\n',['psmeca -R -JX -Sa' num2str(str2num(fscale)+0.1) ' -K -O selfoc.foc -Zinvsel.cpt -C1p/255/0/0 >> invsel.ps']);
+            fprintf(fid,'%s\r\n',['psmeca -R -JX -Sa' num2str(str2num(fscale)+0.1) ' -K -O selfoc.foc -V -T      -C1p/255/0/0 >> invsel.ps']);
+            
+            fprintf(fid,'%s\r\n','psscale -D25c/4c/8c/0.5c -O -K -Cinvsel.cpt -B::/:DC\045: >> invsel.ps');
+            fprintf(fid,'%s\r\n','pstext -R selsrc.tmp -JX -O -G255/0/0 -N >> invsel.ps');
+
+        else
+            fprintf(fid,'%s\r\n',['psmeca -R -JX -Sa' num2str(str2num(fscale)+0.1) ' -K -O selfoc.foc -Cinvsel.cpt -A+p1p,red >> invsel.ps']);
+            fprintf(fid,'%s\r\n',['psmeca -R -JX -Sa' num2str(str2num(fscale)+0.1) ' -K -O selfoc.foc -V -T        -A+p1p,red >> invsel.ps']);
+
+            fprintf(fid,'%s\r\n','psscale -D25c/4c/8c/0.5c -O -K -Cinvsel.cpt -B::/:DC\045: >> invsel.ps');
+            fprintf(fid,'%s\r\n','pstext -R selsrc.tmp -JX -O -F+f18p,Helvetica,red -N -a1,2,7,8,9 >> invsel.ps');
+
+        end
+     % fprintf(fid,'%s\r\n','del selsrc.tmp selfoc.foc selsrc.foc invsel.cpt ');
+     
     else
-      fprintf(fid,'%s\n','gmtset PAPER_MEDIA A4');
+        if gmt_ver==4
+           fprintf(fid,'%s\n','gmtset PAPER_MEDIA A4  PAPER_MEDIA A4');
+        else
+           fprintf(fid,'%s\n','gmtset PS_MEDIA A4  PS_MEDIA A4');
+        end
       fprintf(fid,'%s\n',['makecpt -C' gmtpal ' -T0/100/10 > invsel.cpt']);
       %%% plot all the solutions
 %     fprintf(fid,'%s\n',['psmeca -R' num2str(min(seltime)-0.2) '/' num2str(max(seltime)+0.2) '/' num2str(min(selvar)-0.1) '/' num2str(max(selvar)+0.1) ' -JX' scalex '/' scaley ' -Sa0.1i -K -B1g1:"Timeshift":/0.1g0.1:"Correlation":WeSn selsrc.foc -V -Zinv1.cpt  > invsel.ps']);
@@ -4856,18 +5368,35 @@ end
 %% display
 cd ..
 
+% if ispc 
+%   system('gsview32 .\invert\invsel.ps');
+% else
+%     system('gv ./invert/invsel.ps');  
+% end
 
-if ispc 
-  system('gsview32 .\invert\invsel.ps');
+% read the gsview version from defaults
+psview=handles.psview;
+
+if ispc
+    try 
+      system([psview ' .\invert\invsel.ps']);
+    catch exception 
+        disp(exception.message)
+    end
 else
-    system('gv ./invert/invsel.ps');  
+    try
+      system([psview ' ./invert/invsel.ps']);
+    catch exception 
+        disp(exception.message)
+    end
 end
 
 %%%%%%%%%%%%%%%%
 
-catch
-     cd ..
-     pwd
+catch exception 
+    disp(exception.message)
+    cd ..
+    pwd
 end
 
 pwd
@@ -5140,12 +5669,13 @@ function plgeocor_Callback(hObject, eventdata, handles)
 
 
 % call plotgeocor
-if ispc
-   plotgeocor
-else
-   disp('not for linux yet') 
-end
+% if ispc
+%    plotgeocor
+% else
+%    disp('not for linux yet') 
+% end
 
+plotgeocor
 
 % --- Executes on button press in delta.
 function delta_Callback(hObject, eventdata, handles)

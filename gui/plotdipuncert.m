@@ -5,23 +5,30 @@ f=figure;
 hist(elipsa_max(:,6),18);
 n=hist(elipsa_max(:,6),18);
 hold on
+
+%%
 x=[dip1 dip1];
 y=[0 max(n)];
+
+ax=gca;
+set(ax,'Linewidth',2,'FontSize',12)
+
 line(x,y,'Color','r','LineWidth',4,'ButtonDownFcn', @startDragFcn1);
 h1strike=line(x,y,'Color','r','LineWidth',3,'LineStyle','--','ButtonDownFcn', @startDragFcn1);
 set(h1strike,'UserData', 0)
 
-h1text=text(dip1+5,max(n),'\pm0\circ','FontSize',12);
+h1text=text(dip1,max(n)+(max(n)*0.02),[num2str(dip1,'%2.0f') '\pm0\circ'],'FontSize',12, 'HorizontalAlignment','center');
 
+%%
 x=[dip2 dip2];
 y=[0 max(n)];
 line(x,y,'Color','r','LineWidth',4,'ButtonDownFcn', @startDragFcn2);
 h2strike=line(x,y,'Color','r','LineWidth',4,'LineStyle','--','ButtonDownFcn', @startDragFcn2);
 set(h2strike,'UserData', 0)
 
-h2text=text(dip2+5,max(n),'\pm0\circ','FontSize',12);
+h2text=text(dip2,max(n)+(max(n)*0.02),[num2str(dip2,'%2.0f') '\pm0\circ'],'FontSize',12,'HorizontalAlignment','center');
 
-title('Dip')
+title('Dip','FontSize',18)
 h=axis;
 
 axis([h(1) 90 h(3) h(4)])
@@ -29,7 +36,7 @@ axis([h(1) 90 h(3) h(4)])
 aH=get(gcf,'CurrentAxes'); %('Xlim', [0 1], 'Ylim',[0 1]);
 set(f,'WindowButtonUpFcn',{@stopDragFcn,dip1,dip2,max(n)});
 
-
+%%
 function startDragFcn1(varargin)
      set(f,'WindowButtonMotionFcn', @draggingFcn1)
      set(h1strike,'Color','y')

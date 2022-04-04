@@ -22,7 +22,7 @@ function varargout = plsources(varargin)
 
 % Edit the above text to modify the response to help plsources
 
-% Last Modified by GUIDE v2.5 09-Nov-2012 00:45:45
+% Last Modified by GUIDE v2.5 31-Aug-2015 22:56:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -62,7 +62,6 @@ if a == 2
       disp('Found sources.isl file')
       
       fid = fopen('sources.isl','r');
-
            mapscale=fscanf(fid,'%s',1);
            maptics=fscanf(fid,'%s',1);
            lscale=fscanf(fid,'%s',1);
@@ -75,7 +74,7 @@ if a == 2
            xshift=fscanf(fid,'%s',1);
            bbscale=fscanf(fid,'%s',1);
            normfactor=fscanf(fid,'%s',1);
-fclose(fid);
+      fclose(fid);
 
 set(handles.scalev,'String',mapscale);        
 set(handles.tics,'String',maptics);        
@@ -121,7 +120,13 @@ else
     
 end
 
+%% read ISOLA defaults
+[gmt_ver,psview,npts] = readisolacfg;
 
+%%
+handles.gmt_ver=gmt_ver;
+handles.psview=psview;
+handles.npts=npts;
 
 % Update handles structure
 guidata(hObject, handles);
@@ -140,11 +145,12 @@ function varargout = plsources_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-disp('This is plsources 07/11/2011');
+disp('This is plsources 27/01/2018');
+disp('  ');
 
 % correct problem with waveform ploting  when source.ps file was
 % open....2/8/09
-
+% corrected problem with non integer spacing of sources....27/01/2018
 
 
 % --- Executes on button press in Plot.
@@ -171,7 +177,12 @@ fshiftor=fshift;
 
 snumber = get(handles.snumber,'Value');
 
+plstations = get(handles.plstations,'Value');
+
 psxyfile=get(handles.filetoadd,'String');
+
+% check if we have GMT 4 or 5
+gmt_ver=handles.gmt_ver;
 
 %%%%%%%%%find distance step
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -205,12 +216,12 @@ else
       disp('Inversion was done for a plane of sources.')
       nsources=fscanf(fid,'%i',1);
 %       distep=fscanf(fid,'%f',1);
-                noSourcesstrike=fscanf(fid,'%i',1);
-                strikestep=fscanf(fid,'%i',1);
-                noSourcesdip=fscanf(fid,'%i',1);
-                dipstep=fscanf(fid,'%i',1);
-                source_gmtfile=1;
-                nsources=noSourcesstrike*noSourcesdip;
+                noSourcesstrike=fscanf(fid,'%i',1)
+                strikestep=fscanf(fid,'%f',1)
+                noSourcesdip=fscanf(fid,'%i',1)
+                dipstep=fscanf(fid,'%f',1)
+                source_gmtfile=1
+                nsources=noSourcesstrike*noSourcesdip
 
            invtype='   Multiple Source line or plane ';%(Trial Sources on a plane or line)';
       
@@ -225,9 +236,11 @@ else
      
           fclose(fid);
           
- end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%read inversion files%%%%%%%%inv2.dat and inv3.dat
+end
+ 
+ source_gmtfile
+nsources
+ %%%%%%%%%%%%%%%%%%%%%%%%%%read inversion files%%%%%%%%inv2.dat and inv3.dat
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %check if INVERT exists..!
 h=dir('invert');
@@ -239,7 +252,7 @@ else
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-try
+%try
 
 cd invert
 
@@ -256,8 +269,8 @@ else
 %     cd ..
 end
 
-
-mommag=(2/3)*(log10(mom) - 9.1); %  mommag=(2/3)*(log10(mo(psrcpos)) - 9.1) Hanks & Kanamori (1979)
+%mommag=(2.0/3.0)*log10(mo(psrcpos)) - 6.0333;
+mommag=(2.0/3.0)*log10(mom) - 6.0333; %  mommag=(2/3)*(log10(mo(psrcpos)) - 9.1) Hanks & Kanamori (1979)
 
 
 %%read inv3.dat
@@ -279,14 +292,16 @@ end
 %%% go back
 cd ..
 
-catch
-    disp('error reading inv2 inv3 files...')
-    cd ..
-end
+%catch
+%     disp('error reading inv2 inv3 files...')
+%     cd ..
+%end
 
 %%%check the sources.gmt in gmtfiles
+
 pwd
 
+%%
 cd gmtfiles
 
 h=dir('sources.gmt');
@@ -305,9 +320,16 @@ else
 
  elseif source_gmtfile==1
      
+%      fid  = fopen('sources.gmt','r');
+%       [lon,lat,scale,depth,sourceno,char] = textread('sources.gmt','%f %f %f %f %f %s',nsources);
+%      fclose(fid);
      fid  = fopen('sources.gmt','r');
-      [lon,lat,scale,depth,sourceno,char] = textread('sources.gmt','%f %f %f %f %f %s',nsources);
+      C = textscan(fid,'%f %f %f %f %f %s',nsources);
+      lon=C{1};lat=C{2};sourceno=C{5};depth=C{4};
+      R = textscan(fid,'%f %f %f %f %s %s',1);
+      newref_lon=R{1};newref_lat=R{2};
      fclose(fid);
+
  end
 
 end
@@ -340,15 +362,9 @@ end
 
 
 %%%find map limits...
-wend=min(lon);
-eend=max(lon);
-send=min(lat);
-nend=max(lat);
+wend=min(lon);eend=max(lon);send=min(lat);nend=max(lat);
 
-w=(wend-border);
-e=(eend+border);
-s=(send-border);
-n=(nend+border);
+w=(wend-border);e=(eend+border);s=(send-border);n=(nend+border);
 
 
 %%%make -R
@@ -396,52 +412,112 @@ fclose(fid);
     fid = fopen('sources.txt','w');
      for i=1:length(lon)
           if length(srcpos3) == 1
-              fprintf(fid,'%g  %g  %g  %g  %g  %s %g\r\n',lon(i),lat(i),fontsize,0,1,'CM',sourceno(i));          %srcpos3(1));
+                if gmt_ver==4 
+                    fprintf(fid,'%g  %g  %g  %g  %g  %s %g\r\n',lon(i),lat(i),fontsize,0,1,'CM',sourceno(i));          %srcpos3(1));
+                else
+                    fprintf(fid,'%g  %g  %g\r\n',lon(i),lat(i),sourceno(i));          %srcpos3(1));
+                end
           else
-              fprintf(fid,'%g  %g  %g  %g  %g  %s %g\r\n',lon(i),lat(i),fontsize,0,1,'CM',sourceno(i));
+                if gmt_ver==4 
+                    fprintf(fid,'%g  %g  %g  %g  %g  %s %g\r\n',lon(i),lat(i),fontsize,0,1,'CM',sourceno(i));
+                else
+                    fprintf(fid,'%g  %g  %g\r\n',lon(i),lat(i),sourceno(i));          %srcpos3(1));
+                end
           end     
       end
       fclose(fid);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    fid = fopen('plsrc.bat','w');
-    
+ fid = fopen('plsrc.bat','w');
+  if gmt_ver==4 
     fprintf(fid,'%s\r\n','gmtset PLOT_DEGREE_FORMAT D ');
-
-      pscoastr=['pscoast ' r   j ' -G255/255/204 -Df -W0.7p -P -B' maptics '  -K -S104/204/255 ' lf ' > sources.ps' ];
+  else
+    fprintf(fid,'%s\r\n','gmtset FORMAT_GEO_MAP D ');
+  end
+    pscoastr=['pscoast ' r   j ' -G255/255/204 -Df -W0.7p -P -B' maptics '  -K -S104/204/255 ' lf ' > beachballs.ps' ];
     fprintf(fid,'%s\r\n', pscoastr);
-        sstring=['psxy -R ' j ' sources.gmt -S' symbolsize  ' -M  -W1p/0 -K -O -G255/0/0 >> sources.ps' ];
+  if   gmt_ver==4 
+    sstring=['psxy -R ' j ' sources.gmt -S' symbolsize  ' -M  -W1p/0 -K -O -G255/0/0 >> beachballs.ps' ];
+  else
+    sstring=['psxy -R ' j ' sources.gmt -S' symbolsize  '   -W1p  -K -O -G255/0/0 >> beachballs.ps' ];      
+  end
     fprintf(fid,'%s\r\n',sstring);
     
     if snumber == 1
-        stextstr=['pstext -R ' j ' sources.txt -N -O -K -D' dxdy ' >> sources.ps' ];
-    fprintf(fid,'%s\r\n',stextstr);
+        stextstr=['pstext -R ' j ' sources.txt -N -O -K -F+f10,Helvetica-Bold -D' dxdy ' >> beachballs.ps' ];
+         
+        fprintf(fid,'%s\r\n',stextstr);
     else
     end
     
-    %%%add extra psxy file here.....
-    %% check if needed...
+    %% add stations file
+    if plstations == 1
+        stat_text1='gawk "{print $3,$2,1}" selstat.gmt > sta.gmt';
+        fprintf(fid,'%s\r\n',stat_text1);
+        if gmt_ver==4
+            stat_text2='gawk "{print $3,$2,11,0,1,\"CB\",$1}" selstat.gmt > tsta.gmt';
+        else
+            stat_text2='gawk "{print $3,$2,$1}" selstat.gmt > tsta.gmt';
+        end
+        fprintf(fid,'%s\r\n',stat_text2);
+        if  gmt_ver==4 
+            stat_text3='psxy -R -J  sta.gmt -St.4c -M  -W1p/0 -K -O -G255/0/0 >>  beachballs.ps';
+        else
+            stat_text3='psxy -R -J  sta.gmt -St.4c     -W1p   -K -O -G255/0/0 >>  beachballs.ps';
+        end
+        fprintf(fid,'%s\r\n',stat_text3);
+        if  gmt_ver==4 
+            stat_text4='pstext -R -J  tsta.gmt  -D0/0.45c  -W255/255/255,o  -K -O  -G0/0/255 >>  beachballs.ps';
+        else
+            stat_text4='pstext -R -J  tsta.gmt  -D0/0.45c   -F+f10,Helvetica,blue -Gwhite -Wblack -K -O   >>  beachballs.ps';
+        end
+        fprintf(fid,'%s\r\n',stat_text4);
+        if gmt_ver==4
+            stat_text5='psxy -R -J notusedstat.gmt -St.4c  -W1p/0 -K  -O -G138/138/138 >>  beachballs.ps';
+        else
+            stat_text5='psxy -R -J notusedstat.gmt -St.4c  -W1p   -K  -O -G138/138/138 >>  beachballs.ps';
+        end
+        fprintf(fid,'%s\r\n',stat_text5);
+    else
+    end
     
-    if length(psxyfile) ~= 0
+    %% add extra psxy file here.....
+    % check if needed...
+    
+    if ~isempty(psxyfile)
         disp(['adding file ' psxyfile])
-            sstring=['psxy -R ' j '  ' psxyfile ' -S' symbolsize  ' -M  -W1p/0 -K -O -G0/0/255 >> sources.ps' ];
+            sstring=['psxy -R ' j '  ' psxyfile ' -S' symbolsize  ' -M  -W1p/0 -K -O -G0/0/255 >> beachballs.ps' ];
             fprintf(fid,'%s\r\n',sstring);
     
-            sstring=['gawk "{ print $1,$2,"10","0","1","0",$3}"  ' psxyfile ' >  ' psxyfile '.gmt'  ];
+            sstring=['gawk "{ print $1,$2,"16","0","1","0",$3}"  ' psxyfile ' >  ' psxyfile '.gmt'  ];
             fprintf(fid,'%s\r\n',sstring);
 
-            sstring=['pstext -R ' j '  ' psxyfile '.gmt -D0.2c/0c -K -O  >> sources.ps' ];
+            sstring=['pstext -R ' j '  ' psxyfile '.gmt -D0.2c/0c -K -O  >> beachballs.ps' ];
             fprintf(fid,'%s\r\n',sstring);
 
     else
          
     end
+%%
+    fprintf(fid,'%s\r\n',['echo  ' num2str(newref_lon,'%7.5f') '  '  num2str(newref_lat,'%7.5f')  '  | psxy  -R -J -Sa0.5c -W.7p -N  -K -O -Gred    >>   beachballs.ps']);
+    fprintf(fid,'%s\r\n',' ');
     
-    
-        fostring=['psmeca -R ' j ' -Sa' bbscale 'c beachb.foc -V -O -C1 -N >> sources.ps'];
+%% plot beachballs
+
+    fostring=['psmeca -R ' j ' -Sa' bbscale 'c beachb.foc -V -O -C1 -N >> beachballs.ps'];
     fprintf(fid,'%s\r\n',fostring);
-            
-         fclose(fid);
+
+%%    
+    fprintf(fid,'%s\r\n',' ');
+    
+    %%% add option to convert to PNG using ps2raster    
+    if  gmt_ver==4 
+        fprintf(fid,'%s\r\n','ps2raster beachballs.ps -Tg -P -A -D..\output');
+    else
+        fprintf(fid,'%s\r\n','psconvert beachballs.ps -Tg -P -A -D..\output');
+    end
+
+    fclose(fid);
 % 
 
 % %%% run batch file...
@@ -452,11 +528,22 @@ fclose(fid);
 cd ..     %%% return to main folder before plotting.... this should solve problems if user tried to plot waveforms before closing ps file...
 
 
-
-
-
 % 
-system('gsview32 .\gmtfiles\sources.ps');      
+%% read the gsview version from defaults
+psview=handles.psview;
+
+if ispc
+    try 
+      system([psview ' .\gmtfiles\beachballs.ps']);
+    catch exception 
+        disp(exception.message)
+    end
+else
+      system([psview ' .\gmtfiles\beachballs.ps']);
+end
+
+
+% system('gsview32 .\gmtfiles\beachballs.ps');      
 % 
 % 
 %%%%%%%%%%%%%%%%%%%output map values in isl file%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -902,7 +989,6 @@ fmoment=str2double(get(handles.fmoment,'String'));
 fshiftor=fshift;
 
 snumber = get(handles.snumber,'Value');
-
 psxyfile=get(handles.filetoadd,'String');
   
 if ~isempty(psxyfile)
@@ -910,10 +996,6 @@ if ~isempty(psxyfile)
 else
 end
   
-  
-normfactor=str2double(get(handles.normf,'String'));
-
-
 
 %%%%%cpt file
 val = get(handles.gmtpal,'Value');
@@ -922,12 +1004,16 @@ gmtpal = string_list{val};
 
 %%
 
+% check if we have GMT 4 or 5
+gmt_ver=handles.gmt_ver;
+
+
 %%%%%%%%%find distance step
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 h=dir('tsources.isl');
 source_gmtfile=0;
 
-if isempty(h); 
+if isempty(h) 
     errordlg('tsources.isl file doesn''t exist. Run Source create. ','File Error');
   return    
 else
@@ -955,9 +1041,9 @@ else
       nsources=fscanf(fid,'%i',1);
 %       distep=fscanf(fid,'%f',1);
                 noSourcesstrike=fscanf(fid,'%i',1);
-                strikestep=fscanf(fid,'%i',1);
+                strikestep=fscanf(fid,'%f',1);
                 noSourcesdip=fscanf(fid,'%i',1);
-                dipstep=fscanf(fid,'%i',1);
+                dipstep=fscanf(fid,'%f',1);
                 source_gmtfile=1;
                 nsources=noSourcesstrike*noSourcesdip;
 
@@ -981,7 +1067,7 @@ else
 %check if INVERT exists..!
 h=dir('invert');
 
-if isempty(h);
+if isempty(h)
     errordlg('Invert folder doesn''t exist. Please create it. ','Folder Error');
     return
 else
@@ -994,7 +1080,7 @@ cd invert
 
 h=dir('inv2.dat');
 
-if isempty(h); 
+if isempty(h) 
     errordlg(['Inv2.dat file doesn''t exist. Run Invert and norm. '],'File Error');
     cd ..
   return    
@@ -1005,7 +1091,8 @@ else
 %     cd ..
 end
 
-mommag=(2/3)*(log10(mom) - 9.1); %  mommag=(2/3)*(log10(mo(psrcpos)) - 9.1) Hanks & Kanamori (1979)
+%mommag=(2.0/3.0)*log10(mo(psrcpos)) - 6.0333;  % changed 06/11/2020 
+mommag=(2.0/3.0)*log10(mom) - 6.0333; %   Hanks & Kanamori (1979)
 
 disp(['Maximum moment is ' num2str(max(mom),'%11.4e') ])
 
@@ -1017,18 +1104,22 @@ catch
     cd ..
 end
 
-%%%check the sources.gmt in gmtfiles
-pwd
 
+
+
+
+%% check the sources.gmt in gmtfiles
+pwd
+%
 cd gmtfiles
 
 h=dir('sources.gmt');
 
-if isempty(h); 
+if isempty(h) 
   errordlg('Sources.gmt file doesn''t exist. Run Source definition. ','File Error');
   return
 else
-   
+
 %%%%read coordinates.....
  if source_gmtfile==0
 
@@ -1039,21 +1130,29 @@ else
  elseif source_gmtfile==1
      
      fid  = fopen('sources.gmt','r');
-      [lon,lat,scale,depth,sourceno,char] = textread('sources.gmt','%f %f %f %f %f %s',nsources);
+      C = textscan(fid,'%f %f %f %f %f %s',nsources);
+      lon=C{1};lat=C{2};sourceno=C{5};depth=C{4};
+      R = textscan(fid,'%f %f %f %f %s %s',1);
+      newref_lon=R{1};newref_lat=R{2};
      fclose(fid);
  end
 
 end
 
+%% last two lines are old and new ref 
+%oldref_lon=lon(end);oldref_lat=lat(end);
+% newref_lon=lon(end-1)
+% newref_lat=lat(end-1)
 
+%%
 %USE SOURCE COORDINATES AND SOURCE NUMBER TO FIND SUB  SOURCE
 %COORDINATES
 %[srcpos2,srctime2,mom,s1,di1,r1,s2,di2,r2,dc,varred] = textread('inv2.dat','%f %f %f %f %f %f %f %f %f %f %f',-1)
 
 % whos srcpos2 sourceno
 
- for i=1:length(srcpos2);
-     for j=1:length(sourceno);
+ for i=1:length(srcpos2)
+     for j=1:length(sourceno)
          if  srcpos2(i,1) == sourceno(j,1)
              srclon(i,1) = lon(j,1);   %%%%Longitude 
              srclat(i,1) = lat(j,1);   %%%%Longitude
@@ -1067,7 +1166,7 @@ fprintf('%s\t  %s\t  %s\t %s\t %s\t %s\t  %s\t  %s\t  %s\t  %s\n',' LON', '     
 
 cmom=0;
 cvar=0;
-for i=1:length(srcpos2);   
+for i=1:length(srcpos2)
     
 %disp([num2str(srclon(i,1)) ' ' num2str(srclat(i,1)) ' ' num2str(sourceno(i,1)) ' ' num2str(srcpos2(i,1)) ' ' num2str(srctime2(i,1)) ' ' num2str(mom(i,1),'%10.3e')])
 cmom=cmom+mom(i,1);
@@ -1123,30 +1222,51 @@ lf=['-Lf' num2str(centx,'%7.2f') '/' num2str(ly,'%7.4f') '/' num2str(centy,'%7.2
 xshift=-xshift;
 
   
-    fid = fopen('pltimspc.bat','w');
-    
+fid = fopen('pltimspc.bat','w');
+ if gmt_ver==4   
     fprintf(fid,'%s\r\n','gmtset PLOT_DEGREE_FORMAT D  ANNOT_FONT_SIZE_PRIMARY 12 ANNOT_FONT_SIZE_SECONDARY 12 HEADER_FONT_SIZE 14 LABEL_FONT_SIZE 14');
+ else
+    fprintf(fid,'%s\r\n','gmtset FORMAT_GEO_MAP D  FONT_ANNOT_PRIMARY 12 FONT_ANNOT_SECONDARY 12 FONT_TITLE 14 FONT_LABEL 14');
+ end
+ 
     fprintf(fid,'%s\r\n',' ');
     pscoastr=['pscoast ' r   j ' -G255/255/204 -Df -W0.7p -P -B' maptics '  -K -Slightblue ' lf ' > timspc.ps' ];
     fprintf(fid,'%s\r\n', pscoastr);
     fprintf(fid,'%s\r\n',' ');
+ if   gmt_ver==4  
     sstring=['psxy -R ' j ' sources.gmt -S' symbolsize  ' -M  -W1p/0 -K -O -G255/0/0 >> timspc.ps' ];
+ else
+    sstring=['psxy -R ' j ' sources.gmt -S' symbolsize  '     -W1p   -K -O -G255/0/0 >> timspc.ps' ];
+ end
     fprintf(fid,'%s\r\n',sstring);
     fprintf(fid,'%s\r\n',' ');
     
       if snumber == 1   % plot trial source number
               fid2 = fopen('sources.txt','w');
                   for i=1:length(lon)
-                       fprintf(fid2,'%g  %g  %g  %g  %g  %s %g\r\n',lon(i),lat(i),fontsize,0,1,'CM',sourceno(i));
+                     if gmt_ver==4 
+                          fprintf(fid2,'%g  %g  %g  %g  %g  %s %g\r\n',lon(i),lat(i),fontsize,0,1,'CM',sourceno(i));          %srcpos3(1));
+                     else
+                          fprintf(fid2,'%g  %g  %g\r\n',lon(i),lat(i),sourceno(i));          %srcpos3(1));
+                     end
                   end     
               fclose(fid2);
-              
-           stextstr=['pstext sources.txt -R ' j '  -N -O -K -D' dxdy ' >> timspc.ps' ];   % fixed ...
-           fprintf(fid,'%s\r\n',stextstr);
-           
+          if gmt_ver==4 
+             stextstr=['pstext sources.txt -R ' j '  -N -O -K -D' dxdy ' >> timspc.ps' ];   % fixed ...
+             fprintf(fid,'%s\r\n',stextstr);
+          else
+             stextstr=['pstext sources.txt -R ' j '  -N -O -K -D' dxdy ' -F+f' num2str(fontsize) ' >> timspc.ps' ];   % fixed ...
+             fprintf(fid,'%s\r\n',stextstr);
+          end
         else
       end
-    
+%% add ref points
+    %  
+   % fprintf(fid,'%s\r\n',['echo  ' num2str(oldref_lon,'%7.5f') '  '  num2str(oldref_lat,'%7.5f')  '  | psxy  -R -J -Sa0.5c -W.7p -N  -K -O -Gorange >>   timspc.ps']);
+   % fprintf(fid,'%s\r\n',' ');
+    fprintf(fid,'%s\r\n',['echo  ' num2str(newref_lon,'%7.5f') '  '  num2str(newref_lat,'%7.5f')  '  | psxy  -R -J -Sa0.5c -W.7p -N  -K -O -Gred    >>   timspc.ps']);
+    fprintf(fid,'%s\r\n',' ');
+      
     %%%add extra psxy file here.....
     %% check if needed...
     
@@ -1165,21 +1285,60 @@ xshift=-xshift;
 %        add legend 
         fprintf(fid,'%s\r\n',['echo  ' num2str(centx,'%7.5f') '  '  num2str(n-border/3,'%7.5f') '   '  num2str(maxmoment/normfactor,'%10.3e')   '  | psxy  -R -J -Scc -W3p -N  -K -O  >>   timspc.ps']);
         fprintf(fid,'%s\r\n',' ');
+      if gmt_ver==4 
         fprintf(fid,'%s\r\n',['echo  ' num2str(centx,'%7.5f') '  '  num2str(n-border/3,'%7.5f') '   '   '10 0 1 LT Max Mo='  num2str(maxmoment,'%10.3e')   'Nm | pstext -D1c/0c  -R -J -Wwhite,o  -N -K -O  >> timspc.ps']);  
+      else
+        fprintf(fid,'%s\r\n',['echo  ' num2str(centx,'%7.5f') '  '  num2str(n-border/3,'%7.5f') '   '   '  Max Mo='  num2str(maxmoment,'%10.3e')   'Nm | pstext -D1c/0c  -F+f10,Helvetica-Bold -R -J -Wwhite   -N -K -O  >> timspc.ps']);  
+      end
         fprintf(fid,'%s\r\n',' ');
 %     
        fprintf(fid,'%s\r\n',['makecpt -C' gmtpal ' -T' num2str(min(srctime2)-1) '/' num2str(max(srctime2)+1) '/1    > time.cpt']);
        fprintf(fid,'%s\r\n',' ');
+      if gmt_ver==4 
        fprintf(fid,'%s\r\n','psxy  timspc.dat  -R -J -Sc -Ctime.cpt -W-3p -N -V -O -K   >> timspc.ps');
+      else
+       fprintf(fid,'%s\r\n','psxy  timspc.dat  -R -J -Sc -Ctime.cpt -W3p+cl -N -V -O -K   >> timspc.ps');
+      end
        fprintf(fid,'%s\r\n',' ');
        fprintf(fid,'%s\r\n',['psscale -D' num2str(mapscale/2) 'c/' num2str(mapscale+4) 'c/7.5c/.5ch -O -Ctime.cpt   -B2:"Rupture Time (sec)":/:: >> timspc.ps']);
        fprintf(fid,'%s\r\n',' ');
-       fprintf(fid,'%s\r\n','ps2raster timspc.ps -Tg -P -E75 -Qg2  -Qt2 -D..\output' );
- 
-       
-       
+      if gmt_ver==4 
+       fprintf(fid,'%s\r\n','ps2raster timspc.ps -Tg -P -A -D..\output' );
+      else
+       fprintf(fid,'%s\r\n','psconvert timspc.ps -Tg -P -A -D..\output' );
+      end
             
        fclose(fid);
+
+%%
+% %%% run batch file...
+% % 
+[s,r]=system('pltimspc.bat');
+
+cd ..     %%% return to main folder before plotting.... this should solve problems if user tried to plot waveforms before closing ps file...
+% 
+
+%% read the gsview version from defaults
+psview=handles.psview;
+
+if ispc
+    try 
+      system([psview ' .\gmtfiles\timspc.ps']);
+    catch exception 
+        disp(exception.message)
+    end
+else
+      system([psview ' ./gmtfiles/timspc.ps']);
+end
+
+% system('gsview32 .\gmtfiles\timspc.ps');      
+
+%%%%%%%%%%%%%%%%
+% copy files
+pwd
+copyfile('.\gmtfiles\timspc.dat','.\output')
+copyfile('.\gmtfiles\timspc.ps','.\output')
+
 
 %% 
 %  map values in isl file%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1195,21 +1354,8 @@ fid = fopen('sources.isl','w');
          fprintf(fid,'%s\r\n',num2str(fshiftor));
          fprintf(fid,'%s\r\n',num2str(xshift));
          fprintf(fid,'%s\r\n',bbscale);
-         fprintf(fid,'%s\r\n',normfactor);
+         fprintf(fid,'%e\r\n',normfactor);
 fclose(fid);
-
-%%
-% %%% run batch file...
-% % 
-[s,r]=system('pltimspc.bat');
-
-cd ..     %%% return to main folder before plotting.... this should solve problems if user tried to plot waveforms before closing ps file...
-% 
-system('gsview32 .\gmtfiles\timspc.ps');      
-
-%%%%%%%%%%%%%%%%
-
-
 
 
 
@@ -1289,3 +1435,12 @@ function fmoment_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in plstations.
+function plstations_Callback(hObject, eventdata, handles)
+% hObject    handle to plstations (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of plstations

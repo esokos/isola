@@ -22,7 +22,7 @@ function varargout = moremodels(varargin)
 
 % Edit the above text to modify the response to help moremodels
 
-% Last Modified by GUIDE v2.5 26-Jun-2009 00:18:33
+% Last Modified by GUIDE v2.5 17-Nov-2020 20:00:46
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -86,7 +86,7 @@ function newmodel_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-crustmod2
+crustmodnew2
 
 
 % --- Executes on button press in stationmodel.

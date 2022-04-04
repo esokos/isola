@@ -63,6 +63,12 @@ if isempty(h);
     errordlg('Green folder doesn''t exist. Please create it. ','Folder Error');
     return
 else
+    % GREEN folder exists  ... delete previous  *.hea *.hes files...
+
+    delete .\green\*.hes .\green\*.hea
+    disp(' ')
+    disp('Previous *.hes *.hea files were deleted from .\green folder')
+    disp(' ')
 end
 
 %%% check if all ISOLA input file exist..
@@ -174,8 +180,8 @@ set(handles.fmax,'String',num2str(maxfreq))
 % nfreq=fmax/df
 
    else
-       maxfreq=0.1;
-set(handles.fmax,'String',num2str(maxfreq))        
+%        maxfreq=0.1;
+% set(handles.fmax,'String',num2str(maxfreq))        
    end
 
 set(handles.tltext,'String',num2str(tl))        
@@ -199,8 +205,8 @@ function varargout = greenpre_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-disp('This is greenpre 08/09/11');
-disp('Changes: Added multiple crustal models.');
+disp('This is greenpre 27/01/2019');
+disp('Changes: Automatic copy of elemse* files in invert folder.');
 %disp('Changes: Solved bug with soutype.dat and multiple crustal models');
 
 
@@ -272,19 +278,39 @@ else
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% find maximum station distance for calculating XL
+% xl will be defined as maximum distance * 20 (in meters)
+% this will make green function computation faster (in some cases!)
+% 25/08/2015
+
+% changed XL calculation based on 100km maximum distance 
+% 13/09/2016
+
+[Cstat,nostations] = readstationfile;
+
+max_stadist=max(Cstat{1,5});
+
+disp(['Found maximum epicentral distance = ' num2str(max(Cstat{1,5}))])
 
 
+if max_stadist > 100
+    XL=max_stadist*20*1000;
+else 
+    XL=2000000;
+end
+
+
+%%
 %%%%now we can create GRDAT.HED   cd in Green folder
 % try
     
 cd green
 
-%%% decide if it is single or multiple models...!!
-
+%% decide if it is single or multiple models...!!
 
 if modsel==0     %%% single crustal model
 
-%%%%%%%%check if crustal.dat is here.......
+% check if crustal.dat is here.......
 h=dir('crustal.dat');
 
 if isempty(h); 
@@ -298,6 +324,8 @@ else
       nlayers=fscanf(fid,'%i',1)
     fclose(fid);
 end
+
+
 %%%ok 
  if ispc
     fid = fopen('grdat.hed','w');
@@ -308,11 +336,12 @@ end
     fprintf(fid,'%i\r\n',round(nfreq));
     fprintf(fid,'%s','tl=');
     fprintf(fid,'%g\r\n',tl);
-    fprintf(fid,'%s\r\n','aw=0.1');
+    fprintf(fid,'%s\r\n','aw=1.0');
     fprintf(fid,'%s','nr=');
     fprintf(fid,'%i\r\n',nstations);
     fprintf(fid,'%s\r\n','ns=1');
-    fprintf(fid,'%s\r\n','xl=8000000.');
+    %fprintf(fid,'%s\r\n','xl=8000000.');
+    fprintf(fid,'xl=%u\r\n',XL);
     fprintf(fid,'%s\r\n','ikmax=100000');
     fprintf(fid,'%s\r\n','uconv=0.1E-03');
     fprintf(fid,'%s\r\n','fref=1.');
@@ -327,11 +356,12 @@ end
     fprintf(fid,'%i\n',round(nfreq));
     fprintf(fid,'%s','tl=');
     fprintf(fid,'%g\n',tl);
-    fprintf(fid,'%s\n','aw=0.1');
+    fprintf(fid,'%s\n','aw=1.0');
     fprintf(fid,'%s','nr=');
     fprintf(fid,'%i\n',nstations);
     fprintf(fid,'%s\n','ns=1');
-    fprintf(fid,'%s\n','xl=8000000.');
+    %fprintf(fid,'%s\n','xl=8000000.');
+    fprintf(fid,'xl=%u\n',XL);
     fprintf(fid,'%s\n','ikmax=100000');
     fprintf(fid,'%s\n','uconv=0.1E-03');
     fprintf(fid,'%s\n','fref=1.');
@@ -362,12 +392,12 @@ switch istype
            fid = fopen('soutype.dat','w');
               if ispc
                    fprintf(fid,'%s\r\n','4');
-                   fprintf(fid,'%4.1f\r\n',t0);
+                   fprintf(fid,'%6.3f\r\n',t0);
                    fprintf(fid,'%s\r\n','0.5');
                    fprintf(fid,'%s\r\n','1');
               else
                    fprintf(fid,'%s\n','4');
-                   fprintf(fid,'%4.1f\n',t0);
+                   fprintf(fid,'%6.3f\n',t0);
                    fprintf(fid,'%s\n','0.5');
                    fprintf(fid,'%s\n','1');
               end
@@ -419,7 +449,7 @@ end
                     fprintf(fid,'%s\r\n',['copy gr' num2str(i,'%02d') '.hes gr.hes']);
                     fprintf(fid,'%s\r\n',['copy gr' num2str(i,'%02d') '.hea gr.hea']);
                     fprintf(fid,'%s\r\n','elemse.exe');
-                    fprintf(fid,'%s\r\n',['copy elemse.dat elemse' num2str(i,'%02d') '.dat']);
+                    fprintf(fid,'%s\r\n',['copy elemse.dat ..\invert\elemse' num2str(i,'%02d') '.dat']);
                     fprintf(fid,'%s\r\n','    ');
               end
               fprintf(fid,'%s\r\n','del gr.hea');
@@ -428,7 +458,7 @@ end
               fprintf(fid,'%s\r\n','rem ******************************** ');
               fprintf(fid,'%s\r\n','rem ******************************** ');
               fprintf(fid,'%s\r\n','rem Finished with Green function calculation ');
-              fprintf(fid,'%s\r\n','rem you can go on with file copy.... ');
+              fprintf(fid,'%s\r\n','rem close this window and move to inversion. ');
               fclose(fid);
 
           else
@@ -458,7 +488,7 @@ end
                     fprintf(fid,'%s\n',['cp -v gr' num2str(i,'%02d') '.hes gr.hes']);
                     fprintf(fid,'%s\n',['cp -v gr' num2str(i,'%02d') '.hea gr.hea']);
                     fprintf(fid,'%s\n','elemse.exe');
-                    fprintf(fid,'%s\n',['cp -v elemse.dat elemse' num2str(i,'%02d') '.dat']);
+                    fprintf(fid,'%s\n',['cp -v elemse.dat ../invert/elemse' num2str(i,'%02d') '.dat']);
                     fprintf(fid,'%s\n','    ');
               end
               fprintf(fid,'%s\n','rm gr.hea');
@@ -468,7 +498,7 @@ end
               fprintf(fid,'%s\n','echo ----------------------------------------------- ');
               fprintf(fid,'%s\n','echo -----------------------------------------------');
               fprintf(fid,'%s\n','echo     Finished with Green function calculation ');
-              fprintf(fid,'%s\n','echo          you can go on with file copy.... ');
+              fprintf(fid,'%s\n','echo    close this window and move to inversion.... ');
               fprintf(fid,'%s\n','echo ----------------------------------------------- ');
               fprintf(fid,'%s\n','echo -----------------------------------------------');
               fprintf(fid,'%s\n','    ');
@@ -480,7 +510,7 @@ end
 %%%%%%%%%%%%%RUN the batch files
 
 %%%%%%%%%%%%%%%% try
-button = questdlg('Create Green Functions?',...
+button = questdlg('Create Green Functions? (You may now edit grdat.hed also))',...
 'Continue Operation','Yes','No','Yes');
 % 
 if strcmp(button,'Yes')
@@ -491,67 +521,69 @@ if strcmp(button,'Yes')
     end
    disp('Running gr_xyz')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
-if ispc
-    system('gre_ele.bat  &')
-else
-    disp('Linux ')
-    pwd
-    
-    !chmod +x gre_ele.sh
-    system(' gnome-terminal -e "bash -c ./gre_ele.sh;bash" ')
+    if ispc
+         system('gre_ele.bat  &')
+    else
+         disp('Linux ')
+         pwd
+         !chmod +x gre_ele.sh
+         system(' gnome-terminal -e "bash -c ./gre_ele.sh;bash" ')
     %gnome-terminal -e "bash -c ./gre_ele.sh;bash"
-
+    end
+elseif strcmp(button,'No')
+    disp('Green function generation canceled')
 end
+    
     
 %    system(filename1)
 %    system(filename2)
 
-button = questdlg('Copy files in invert folder (BE VERY CAREFUL ..!! Green calculations should have finished. Check the command window and WAIT for the Finished with Green function calculation message to appear BEFORE pressing Yes',...
-'Continue Operation','Yes','No','Yes');
+%% remove this part since elementary seismograms are automatically created in invert folder now..
+%
+% button = questdlg('Copy files in invert folder (BE VERY CAREFUL ..!! Green calculations should have finished. Check the command window and WAIT for the Finished with Green function calculation message to appear BEFORE pressing Yes',...
+% 'Continue Operation','Yes','No','Yes');
+% 
+% if strcmp(button,'Yes')
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
+% %%copy files elem* to invert
+% disp('Removing elemse*.dat files from invert folder')
+% % %%% return to ISOLA folder  
+% cd ..
+% if ispc
+% [status,message] = system('del .\invert\elemse*.dat');
+% else
+% [status,message] = system('rm ./invert/elemse*.dat');
+% end
+% disp('Copying files')
+%         if ispc
+%            [s,mess,messid]=copyfile('.\green\elemse*.dat','.\invert')
+%         else
+%            [s,mess,messid]=copyfile('./green/elemse*.dat','./invert')
+%         end
+% 
+%     if s==1 
+%         h=msgbox('Copied files in invert directory','Copy files');
+%          if ispc
+%            [status,message] = system('del .\green\elemse*.dat');  %%% remove from green
+%          else
+%            [status,message] = system('rm ./green/elemse*.dat');  %%% remove from green
+%          end
+%     else
+%         h=msgbox('Failed to copy files in invert directory','Copy files');
+%     end
+% 
+% else
+%     disp('Abort Copy files')
+%     cd ..
+% end
+% 
+%
 
-if strcmp(button,'Yes')
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
-%%copy files elem* to invert
-disp('Removing elemse*.dat files from invert folder')
-% %%% return to ISOLA folder  
-cd ..
-if ispc
-[status,message] = system('del .\invert\elemse*.dat');
-else
-[status,message] = system('rm ./invert/elemse*.dat');
-end
-disp('Copying files')
-        if ispc
-           [s,mess,messid]=copyfile('.\green\elemse*.dat','.\invert')
-        else
-           [s,mess,messid]=copyfile('./green/elemse*.dat','./invert')
-        end
+% catch
+%    cd ..
+% end
 
-    if s==1 
-        h=msgbox('Copied files in invert directory','Copy files');
-         if ispc
-           [status,message] = system('del .\green\elemse*.dat');  %%% remove from green
-         else
-           [status,message] = system('rm ./green/elemse*.dat');  %%% remove from green
-         end
-    else
-        h=msgbox('Failed to copy files in invert directory','Copy files');
-    end
-
-else
-    disp('Abort Copy files')
-    cd ..
-end
-
-elseif strcmp(button,'No')
-   disp('Green function generation canceled')
-   cd ..
-end
-%              
-%%% catch
-%%%    cd ..
-%%% end
-
+ cd ..  % out of Green folder
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  else multiple models
 else
@@ -592,12 +624,12 @@ switch istype
          fid = fopen('soutype.dat','w');
             if ispc
                 fprintf(fid,'%s\r\n','4');
-                fprintf(fid,'%4.1f\r\n',t0);
+                fprintf(fid,'%6.3f\r\n',t0);
                 fprintf(fid,'%s\r\n','0.5');
                 fprintf(fid,'%s\r\n','1');
             else
                 fprintf(fid,'%s\n','4');
-                fprintf(fid,'%4.1f\n',t0);
+                fprintf(fid,'%6.3f\n',t0);
                 fprintf(fid,'%s\n','0.5');
                 fprintf(fid,'%s\n','1');
             end
@@ -628,11 +660,12 @@ if ispc
     fprintf(fid,'%i\r\n',round(nfreq));
     fprintf(fid,'%s','tl=');
     fprintf(fid,'%g\r\n',tl);
-    fprintf(fid,'%s\r\n','aw=0.1');
+    fprintf(fid,'%s\r\n','aw=1.0');
     fprintf(fid,'%s','nr=');
     fprintf(fid,'%i\r\n',nstations);
     fprintf(fid,'%s\r\n','ns=1');
-    fprintf(fid,'%s\r\n','xl=8000000.');
+    %fprintf(fid,'%s\r\n','xl=8000000.');
+    fprintf(fid,'xl=%u\r\n',XL);
     fprintf(fid,'%s\r\n','ikmax=100000');
     fprintf(fid,'%s\r\n','uconv=0.1E-03');
     fprintf(fid,'%s\r\n','fref=1.');
@@ -647,11 +680,12 @@ else
     fprintf(fid,'%i\n',round(nfreq));
     fprintf(fid,'%s','tl=');
     fprintf(fid,'%g\n',tl);
-    fprintf(fid,'%s\n','aw=0.1');
+    fprintf(fid,'%s\n','aw=1.0');
     fprintf(fid,'%s','nr=');
     fprintf(fid,'%i\n',nstations);
     fprintf(fid,'%s\n','ns=1');
-    fprintf(fid,'%s\n','xl=8000000.');
+    %fprintf(fid,'%s\n','xl=8000000.');
+    fprintf(fid,'xl=%u\n',XL);
     fprintf(fid,'%s\n','ikmax=100000');
     fprintf(fid,'%s\n','uconv=0.1E-03');
     fprintf(fid,'%s\n','fref=1.');
@@ -876,6 +910,9 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 end  %%% end of multiple of single model IF
+
+
+
 
 %% prepare stype.isl for latter use by invert
 

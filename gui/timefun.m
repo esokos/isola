@@ -56,7 +56,7 @@ function timefun_OpeningFcn(hObject, eventdata, handles, varargin)
 handles.output = hObject;
 %%
 disp('This is timefun.m')
-disp('Ver.1, 12/07/2012')
+disp('Ver.1.1, 27/05/2017')
 % Update handles structure
 guidata(hObject, handles);
 %%
@@ -167,8 +167,8 @@ set(handles.nosourcepopup2,'String',src);
 set(handles.info_nsrc,'String',linetmp6);
 % set info text
 set(handles.info_freq,'String',regexprep(linetmp14,' ','-'));
-
-
+% find max freq
+maxfreq=sscanf(linetmp14,'%f %f %f %f');
 
 %% find duration of source time function used in elemse
 
@@ -179,8 +179,8 @@ set(handles.info_freq,'String',regexprep(linetmp14,' ','-'));
            
            if type == 7
               %  errordlg('Source type of elementary seismograms is delta. Use triangle','File Error');
-              disp('Source type of elementary seismograms is delta. Formal source duration is 0.1')
-               set(handles.tdur,'String',num2str(0.1));
+              disp('Source type of elementary seismograms is delta. Formal source duration is 1/maxfreq')
+              set(handles.tdur,'String',num2str(1/maxfreq(4)));
            elseif      type == 4
                set(handles.tdur,'String',num2str(dur));
            end
@@ -272,44 +272,59 @@ fid = fopen('.\timefunc\inpinv.dat','w');
           fprintf(fid,'%s\r\n',linetmp15);
           fprintf(fid,'%s\r\n',linetmp16);
 fclose(fid);
-
 %%
-% prepare the two acka files
-strike1 = str2double(get(handles.strike1,'String'));
-dip1 = str2double(get(handles.dip1,'String'));
-rake1 = str2double(get(handles.rake1,'String'));
-xmoment1 = str2double(get(handles.mo1,'String'));
+%
+% check if we need to constrain Mo
+if(get(handles.cMo,'Value')==1)
+    conMo=1;
+else
+    conMo=0;
+end
 
-[a1,a2,a3,a4,a5,a6]=sdr2as(strike1,dip1,rake1,1);  % constrain Mo to 1
+
+%% Decide how many sources we want ??   1 or 2   ??
+
+if(get(handles.radiobutton2,'Value')==1)
+    nsources=2;	
+    disp('Selected two sources option');
+
+    % prepare the two acka files
+       strike1 = str2double(get(handles.strike1,'String'));
+       dip1 = str2double(get(handles.dip1,'String'));
+       rake1 = str2double(get(handles.rake1,'String'));
+       xmoment1 = str2double(get(handles.mo1,'String'));
+
+       [a1,a2,a3,a4,a5,a6]=sdr2as(strike1,dip1,rake1,1);  % constrain Mo to 1
  
-fid = fopen('.\timefunc\acka1.dat','w');
-fprintf(fid,'%9.4e\r\n',a1);
-fprintf(fid,'%9.4e\r\n',a2);
-fprintf(fid,'%9.4e\r\n',a3);
-fprintf(fid,'%9.4e\r\n',a4);
-fprintf(fid,'%9.4e\r\n',a5);
-fprintf(fid,'%9.4e\r\n',a6);
-fclose(fid);
+        fid = fopen('.\timefunc\acka1.dat','w');
+        fprintf(fid,'%9.4e\r\n',a1);
+        fprintf(fid,'%9.4e\r\n',a2);
+        fprintf(fid,'%9.4e\r\n',a3);
+        fprintf(fid,'%9.4e\r\n',a4);
+        fprintf(fid,'%9.4e\r\n',a5);
+        fprintf(fid,'%9.4e\r\n',a6);
+        fclose(fid);
 
-strike2 = str2double(get(handles.strike2,'String'));
-dip2 = str2double(get(handles.dip2,'String'));
-rake2 = str2double(get(handles.rake2,'String'));
-xmoment2 = str2double(get(handles.mo2,'String'));
+        strike2 = str2double(get(handles.strike2,'String'));
+        dip2 = str2double(get(handles.dip2,'String'));
+        rake2 = str2double(get(handles.rake2,'String'));
+        xmoment2 = str2double(get(handles.mo2,'String'));
 
-[a1,a2,a3,a4,a5,a6]=sdr2as(strike2,dip2,rake2,1);  % constrain Mo to 1
+        [a1,a2,a3,a4,a5,a6]=sdr2as(strike2,dip2,rake2,1);  % constrain Mo to 1
 
-fid = fopen('.\timefunc\acka2.dat','w');
-fprintf(fid,'%9.4e\r\n',a1);
-fprintf(fid,'%9.4e\r\n',a2);
-fprintf(fid,'%9.4e\r\n',a3);
-fprintf(fid,'%9.4e\r\n',a4);
-fprintf(fid,'%9.4e\r\n',a5);
-fprintf(fid,'%9.4e\r\n',a6);
-fclose(fid);
+        fid = fopen('.\timefunc\acka2.dat','w');
+        fprintf(fid,'%9.4e\r\n',a1);
+        fprintf(fid,'%9.4e\r\n',a2);
+        fprintf(fid,'%9.4e\r\n',a3);
+        fprintf(fid,'%9.4e\r\n',a4);
+        fprintf(fid,'%9.4e\r\n',a5);
+        fprintf(fid,'%9.4e\r\n',a6);
+        fclose(fid);
+   
 
 %% get the selected source numbers
-src1 = get(handles.src1,'String')
-src2 = get(handles.src2,'String')
+src1 = get(handles.src1,'String');
+src2 = get(handles.src2,'String');
 
  elemfilename1=['elemse' src1 '.dat'];
  elemfilename2=['elemse' src2 '.dat'];
@@ -335,23 +350,7 @@ src2 = get(handles.src2,'String')
      cd ..
  end
  
-%% Prepare a file with options
-% read values
-
-% find if we have 1 or 2 sources
-if(get(handles.radiobutton2,'Value')==1)
-    nsources=2;
-else
-    nsources=1;
-end
-%
-% check if we need to constrain Mo
-if(get(handles.cMo,'Value')==1)
-    conMo=1;
-else
-    conMo=0;
-end
-
+%%
 %notriang = get(handles.notriang,'String');
 % notriang =12; %FIXED
 src1= get(handles.src1,'String');
@@ -361,19 +360,20 @@ src2shft=get(handles.tshift2,'String');
 tdur=get(handles.tdur,'String');
 trdist=get(handles.trdist,'String');
 
- fid = fopen('.\timefunc\casopt.dat','w');
+
+fid = fopen('.\timefunc\casopt.dat','w');
            fprintf(fid,'%d\r\n',nsources);
 %           fprintf(fid,'%s\r\n',notriang);
 
- if(nsources==2)
+% if(nsources==2)
            fprintf(fid,'%s\r\n',src1);
            fprintf(fid,'%s\r\n',src2);
            fprintf(fid,'%s\r\n',src1shft);
            fprintf(fid,'%s\r\n',src2shft);
- else
-           fprintf(fid,'%s\r\n',src1);
-           fprintf(fid,'%s\r\n',src1shft);
- end
+%  else
+%            fprintf(fid,'%s\r\n',src1);
+%            fprintf(fid,'%s\r\n',src1shft);
+%  end
            fprintf(fid,'%s\r\n',tdur);           
            fprintf(fid,'%s\r\n',trdist);        
  if(conMo==0)
@@ -384,16 +384,16 @@ trdist=get(handles.trdist,'String');
            fprintf(fid,'%e\r\n',xmoment2);
  else
  end
-     
-     
            
 fclose(fid);
 
 
 %%  Prepare a batch file for running the code..
  fid = fopen('.\timefunc\runtimfun.bat','w');
+           fprintf(fid,'%s\r\n','del timfun.dat timfun1.dat timfun2.dat');
+ 
            fprintf(fid,'%s\r\n','time_fixed.exe');
-           fprintf(fid,'%s\r\n','norm11b.exe');
+           fprintf(fid,'%s\r\n','norm.exe');
            fprintf(fid,'%s\r\n','timfuncas.exe');
  
            fprintf(fid,'%s\r\n','timfuncas1.exe');
@@ -413,6 +413,109 @@ fclose(fid);
        elseif strcmp(button,'No')
           disp('Canceled ')
        end 
+
+ 
+        
+%% One source
+else
+    nsources=1;
+    disp('Selected one source');
+
+    % prepare one acka files
+       strike1 = str2double(get(handles.strike1,'String'));
+       dip1 = str2double(get(handles.dip1,'String'));
+       rake1 = str2double(get(handles.rake1,'String'));
+       xmoment1 = str2double(get(handles.mo1,'String'));
+
+       [a1,a2,a3,a4,a5,a6]=sdr2as(strike1,dip1,rake1,1);  % constrain Mo to 1
+ 
+        fid = fopen('.\timefunc\acka1.dat','w');
+        fprintf(fid,'%9.4e\r\n',a1);
+        fprintf(fid,'%9.4e\r\n',a2);
+        fprintf(fid,'%9.4e\r\n',a3);
+        fprintf(fid,'%9.4e\r\n',a4);
+        fprintf(fid,'%9.4e\r\n',a5);
+        fprintf(fid,'%9.4e\r\n',a6);
+        fclose(fid);
+
+%%
+
+%% get the selected source numbers
+ src1 = get(handles.src1,'String');
+ elemfilename1=['elemse' src1 '.dat'];
+
+ % go in invert and copy 
+ try 
+    cd invert
+                   if exist(elemfilename1,'file')
+                      [s,m]=copyfile(elemfilename1,'..\timefunc');
+                   else
+                      disp(['File ' elemfilename1 ' is missing'])
+                      errordlg(['File ' elemfilename1 '  not found in invert folder. Run Green Preparation for this station' ] ,'File Error');    
+                   end
+    cd ..
+ catch
+     cd ..
+ end
+    
+%%
+%notriang = get(handles.notriang,'String');
+% notriang =12; %FIXED
+src1= get(handles.src1,'String');
+src1shft=get(handles.tshift1,'String');
+tdur=get(handles.tdur,'String');
+trdist=get(handles.trdist,'String');    
+    
+fid = fopen('.\timefunc\casopt.dat','w');
+           fprintf(fid,'%d\r\n',nsources);
+           fprintf(fid,'%s\r\n',src1);
+           fprintf(fid,'%s\r\n',src1shft);
+           fprintf(fid,'%s\r\n',tdur);           
+           fprintf(fid,'%s\r\n',trdist);        
+ if(conMo==0)
+           fprintf(fid,'%d\r\n',conMo);
+ elseif(conMo==1)
+           fprintf(fid,'%d\r\n',conMo);
+           fprintf(fid,'%e\r\n',xmoment1);
+ else
+ end
+           
+fclose(fid);
+
+%%  Prepare a batch file for running the code..
+ fid = fopen('.\timefunc\runtimfun.bat','w');
+           
+           fprintf(fid,'%s\r\n','del timfun.dat timfun1.dat timfun2.dat');
+           fprintf(fid,'%s\r\n','time_fixed.exe');
+           fprintf(fid,'%s\r\n','norm.exe');
+           fprintf(fid,'%s\r\n','timfuncas.exe');
+ 
+           fprintf(fid,'%s\r\n','timfuncas1.exe');
+           fprintf(fid,'%s\r\n','timfuncas2.exe');
+           
+ fclose(fid);
+  
+%%  RUN the batch file
+        button = questdlg('Run Inversion ?','Inversion ','Yes','No','Yes');
+        if strcmp(button,'Yes')
+           disp('Running inversion')
+            cd timefunc
+             system('runtimfun.bat &') % return to ISOLA folder    
+            cd ..
+            pwd
+       elseif strcmp(button,'No')
+          disp('Canceled ')
+       end 
+    
+end
+
+%% enable plot and file check
+set(handles.checkfiles,'enable','on')
+set(handles.plot,'enable','on')
+
+
+
+
 
 % --- Executes on button press in exit.
 function exit_Callback(hObject, eventdata, handles)
@@ -462,8 +565,10 @@ else
          C=textscan(fid,'%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f');
        fclose(fid);
        % find position in C that srcpos==srcnumber
-       inx=find(cell2mat(C(1,1))==srcn);  
+       inx=find(cell2mat(C(1,1))==srcn);
+
            if ~isempty(inx)
+             if length(inx)==1
                %update fields
                s=cell2mat(C(1,2));stime1=s(inx);
                s=cell2mat(C(1,3));mo=s(inx);
@@ -474,15 +579,30 @@ else
                 set(handles.dip1,'String',num2str(dip1));
                 set(handles.rake1,'String',num2str(rake1));
                 set(handles.mo1,'String',num2str(mo,'%3.1e'));
-                set(handles.tshift1,'String',num2str(stime1));
+                % set(handles.tshift1,'String',num2str(stime1));
+             else  % more than one source with same src number in inv2.dat !!
+                warndlg('Selected source appears more than once in inv2.dat. First occurrence will be selected.If you don''t like this edit inv2.dat manually.','!! Warning !!')
+               s=cell2mat(C(1,2));stime1=s(inx(1));
+               s=cell2mat(C(1,3));mo=s(inx(1));
+               s=cell2mat(C(1,4));str1=s(inx(1));
+               s=cell2mat(C(1,5));dip1=s(inx(1));
+               s=cell2mat(C(1,6));rake1=s(inx(1));
+                set(handles.strike1,'String',num2str(str1));
+                set(handles.dip1,'String',num2str(dip1));
+                set(handles.rake1,'String',num2str(rake1));
+                set(handles.mo1,'String',num2str(mo,'%3.1e'));
+            %    set(handles.tshift1,'String',num2str(stime1));
+                 
+             end
            else
-                disp('Source is not in inv2.dat')
+                warndlg('Source is not in inv2.dat. Select another source.','!! Warning !!')
                 set(handles.strike1,'String','');
                 set(handles.dip1,'String','');
                 set(handles.rake1,'String','');
                 set(handles.mo1,'String','');
-                set(handles.tshift1,'String','');
+           %     set(handles.tshift1,'String','');
            end
+
      else % old inv2
        disp('Old version of inv2.dat. Use new ISOLA.') 
      end
@@ -574,25 +694,51 @@ else
        fclose(fid);
        % find position in C that srcpos==srcnumber
        inx=find(cell2mat(C(1,1))==srcn);  
+       
            if ~isempty(inx)
+%                %update fields
+%                s=cell2mat(C(1,2));stime1=s(inx);
+%                s=cell2mat(C(1,3));mo=s(inx);
+%                s=cell2mat(C(1,4));str1=s(inx);
+%                s=cell2mat(C(1,5));dip1=s(inx);
+%                s=cell2mat(C(1,6));rake1=s(inx);
+%                 set(handles.strike2,'String',num2str(str1));
+%                 set(handles.dip2,'String',num2str(dip1));
+%                 set(handles.rake2,'String',num2str(rake1));
+%                 set(handles.mo2,'String',num2str(mo,'%3.1e'));
+%                 set(handles.tshift2,'String',num2str(stime1));
+              if length(inx)==1
                %update fields
-               s=cell2mat(C(1,2));stime1=s(inx);
-               s=cell2mat(C(1,3));mo=s(inx);
-               s=cell2mat(C(1,4));str1=s(inx);
-               s=cell2mat(C(1,5));dip1=s(inx);
-               s=cell2mat(C(1,6));rake1=s(inx);
+                s=cell2mat(C(1,2));stime1=s(inx);
+                s=cell2mat(C(1,3));mo=s(inx);
+                s=cell2mat(C(1,4));str1=s(inx);
+                s=cell2mat(C(1,5));dip1=s(inx);
+                s=cell2mat(C(1,6));rake1=s(inx);
                 set(handles.strike2,'String',num2str(str1));
                 set(handles.dip2,'String',num2str(dip1));
                 set(handles.rake2,'String',num2str(rake1));
                 set(handles.mo2,'String',num2str(mo,'%3.1e'));
-                set(handles.tshift2,'String',num2str(stime1));
+              %  set(handles.tshift2,'String',num2str(stime1));
+               else  % more than one source with same src number in inv2.dat !!
+                warndlg('Selected source appears more than once in inv2.dat. First occurrence will be selected.If you don''t like this edit inv2.dat manually.','!! Warning !!')
+                s=cell2mat(C(1,2));stime1=s(inx(1));
+                s=cell2mat(C(1,3));mo=s(inx(1));
+                s=cell2mat(C(1,4));str1=s(inx(1));
+                s=cell2mat(C(1,5));dip1=s(inx(1));
+                s=cell2mat(C(1,6));rake1=s(inx(1));
+                set(handles.strike2,'String',num2str(str1));
+                set(handles.dip2,'String',num2str(dip1));
+                set(handles.rake2,'String',num2str(rake1));
+                set(handles.mo2,'String',num2str(mo,'%3.1e'));
+           %     set(handles.tshift2,'String',num2str(stime1));
+               end
            else
-               disp('Source is not in inv2.dat')
+                warndlg('Source is not in inv2.dat. Select another source.','!! Warning !!')
                 set(handles.strike2,'String','');
                 set(handles.dip2,'String','');
                 set(handles.rake2,'String','');
                 set(handles.mo2,'String','');
-                set(handles.tshift2,'String','');
+             %   set(handles.tshift2,'String','');
            end
      else % old inv2
        disp('Old version of inv2.dat. Use new ISOLA.') 
@@ -947,17 +1093,21 @@ function plot_Callback(hObject, eventdata, handles)
 
 %decide about axis limits
 %notriang = str2double(get(handles.notriang,'String'));
-notriang = 12;% FIXED
-tdur=str2double(get(handles.trdist,'String'));
+
+%warndlg('Please be patient code is running.','!! Warning !!')
+
+notriang = 60;% FIXED changed 19/2/2017
+
+tdur=str2double(get(handles.tdur,'String'));
+trdist=str2double(get(handles.trdist,'String'));
+
 
 shift1=str2double(get(handles.tshift1,'String'));
 shift2=str2double(get(handles.tshift2,'String'));
  
-llimit=(min([shift1;shift2])-2);
-
+llimit=(min([shift1;shift2])-(tdur/2));
 %rlimit=(notriang*tdur);
-
-rlimit=(max([shift1;shift2])+(notriang*tdur)+1) ;
+rlimit=(max([shift1;shift2])+(notriang*trdist)+(tdur/2));
 
 
 
@@ -1003,6 +1153,8 @@ plot(tsum(:,1),tsum(:,2))
 title('Source 1+2')
 v=axis;
 axis([llimit rlimit v(3) v(4)])
+xlabel('Time (s)')
+ylabel('Moment Rate (Nm/s)')
 
 
 

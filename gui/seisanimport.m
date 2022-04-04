@@ -382,7 +382,7 @@ fsec=handles.fsec;
 
 
 %start_time=strrep(strrep(strrep(strrep(get(handles.nstime,'String'),':',' '),'-',' '),')',' '),'(',' ')
-start_time=[num2str(dday) ' ' mon ' ' num2str(dyear+1900) ' ' num2str(ddoy) ' ' num2str(fhour) ' ' num2str(fmin) ' ' num2str(fsec)]
+start_time=[num2str(dday) ' ' mon ' ' num2str(dyear+1900) ' ' num2str(ddoy) ' ' num2str(fhour) ' ' num2str(fmin) ' ' num2str(fsec,'%5.2f')]
 %%%
 disp(['Saving file start time info in file   ' stime_filename])
 fid = fopen(stime_filename,'w');

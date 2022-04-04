@@ -31,6 +31,6 @@ chan2=channel(21:21)
 
 samples = fscanf(fid,'%i');
 
-whos samples
+%whos samples
 
 fclose(fid);

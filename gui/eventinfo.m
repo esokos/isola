@@ -22,7 +22,7 @@ function varargout = eventinfo(varargin)
 
 % Edit the above text to modify the response to help eventinfo
 
-% Last Modified by GUIDE v2.5 28-Aug-2013 13:29:09
+% Last Modified by GUIDE v2.5 10-Sep-2015 01:05:04
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -169,31 +169,21 @@ end
 
 end
 
-%%% check rawinfo.isl files with event info
-%h=dir('rawinfo.isl');
 
-%if length(h) == 0;   
-    %%% first time put defaults...!!
-%        fid = fopen('rawinfo.isl','w');
-%         fprintf(fid,'%s\r\n','50');
-%         fprintf(fid,'%s\r\n','10');
-%         fprintf(fid,'%s\r\n','5');
-%         fprintf(fid,'%s\r\n','00.00');
-%        fclose(fid);
+%% read ISOLA defaults
+[~,~,npts] = readisolacfg
+
+% populate listbox
+if npts == 8192
+    
+     TLs = [cellstr(num2str(16.384)) ; cellstr(num2str(40.96))  ; cellstr(num2str(81.92))  ; ...
+            cellstr(num2str(163.84)) ; cellstr(num2str(245.76)) ; cellstr(num2str(327.68)) ; ...
+            cellstr(num2str(409.6))  ; cellstr(num2str(819.2))  ; cellstr(num2str(1638.4))];
  
-%        rawhour=10;
-%        rawmin=5;
-%        rawsec=00.00;
-        
-% else
-%    fid = fopen('rawinfo.isl','r');
-%    sfreq=fscanf(fid,'%g',1);
-%    rawhour=fscanf(fid,'%g',1);
-%    rawmin=fscanf(fid,'%g',1);
-%    rawsec=fscanf(fid,'%g',1);
-%    fclose(fid);
-%end
+        set(handles.listbox1,'String',TLs)   
 
+%% check duration.isl for default     
+%
 h=dir('duration.isl');
 
 %output record duration for inversion
@@ -234,7 +224,29 @@ else
         set(handles.listbox1,'Value',9)        
     end
 
-end     
+end          
+     
+elseif npts == 256
+          TLs = [cellstr(num2str(16.384)) ; cellstr(num2str(40.96))  ; cellstr(num2str(81.92))  ; ...
+            cellstr(num2str(163.84)) ; cellstr(num2str(245.76)) ; cellstr(num2str(327.68)) ; ...
+            cellstr(num2str(409.6))  ; cellstr(num2str(819.2))  ; cellstr(num2str(1638.4))];
+        
+     set(handles.listbox1,'String',TLs)   
+     set(handles.listbox1,'Value',5)
+
+elseif npts ==1024
+     TLs = [cellstr(num2str(16.384)) ; cellstr(num2str(40.96))  ; cellstr(num2str(81.92))  ; ...
+            cellstr(num2str(163.84)) ; cellstr(num2str(245.76)) ; cellstr(num2str(327.68)) ; ...
+            cellstr(num2str(409.6))  ; cellstr(num2str(819.2))  ; cellstr(num2str(1638.4))];
+        
+     set(handles.listbox1,'String',TLs)   
+     set(handles.listbox1,'Value',5)
+
+else
+    
+    errordlg('NPTS should be 8192, 1024 or 256')
+    
+end
 
 %%%% updata handles.....
 set(handles.lat,'String',num2str(eventcor(2,1)));        
@@ -246,6 +258,30 @@ set(handles.epihour,'String',num2str(orhour));
 set(handles.epimin,'String',num2str(ormin)) ;         
 set(handles.episec,'String',orsec);          
 set(handles.agency,'String',agency);          
+
+%% convert to degrees and minutes and update the form
+
+latcoord = eventcor(2,1);loncoord = eventcor(1,1);
+
+% get the integer part
+latdeg=fix(latcoord);londeg=fix(loncoord);
+
+if latcoord > 0
+  latmin=(latcoord-latdeg)*60;
+else
+  latmin=abs((latcoord+abs(latdeg))*60);    
+end
+
+if loncoord > 0
+  lonmin=(loncoord-londeg)*60;
+else
+  lonmin=abs((loncoord+abs(londeg))*60);    
+end
+
+
+set(handles.latdeg,'String',num2str(latdeg)); set(handles.londeg,'String',num2str(londeg)); 
+set(handles.latmin,'String',num2str(latmin,'%6.3f')); set(handles.lonmin,'String',num2str(lonmin,'%6.3f')); 
+
 
 %%%raw data ....
 %set(handles.rawhour,'String',num2str(rawhour));          
@@ -274,7 +310,7 @@ function varargout = eventinfo_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-disp('This is Eventinfo 28/08/2013');
+disp('This is Eventinfo 13/09/2015');
 % Layout Change 28/08/2013
 
 
@@ -351,6 +387,15 @@ function magnitude_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of magnitude as text
 %        str2double(get(hObject,'String')) returns contents of magnitude as a double
+
+
+mag=str2double(get(hObject,'String'));
+
+if mag <= 3.5
+   warndlg('This event, due to its low magnitude, will probably need the artificial decrease of origin time, e.g. by 30 seconds (see guides, manuals).','Warning');
+else
+    
+end
 
 
 % --- Executes during object creation, after setting all properties.
@@ -432,18 +477,44 @@ fid = fopen('duration.isl','w');
     fprintf(fid,'%s\n',tl);
   end
 fclose(fid);
+%%
+%output taper duration
+taper=str2double(get(handles.taperlength,'String'));
 
+fid = fopen('taper.isl','w');
+  if ispc
+    fprintf(fid,'%f\r\n',taper);
+  else
+    fprintf(fid,'%f\n',taper);
+  end
+fclose(fid);
+
+
+%%
 %output event coordinates
 %%%%%%EPICENTER
-epilat = get(handles.lat,'String')
-epilon = get(handles.lon,'String')
-epidepth = get(handles.depth,'String')
-magnitude = get(handles.magnitude,'String')
-edate = get(handles.date,'String')
-epihour = get(handles.epihour,'String')
-epimin = get(handles.epimin,'String')
-episec = get(handles.episec,'String')
-agency = get(handles.agency,'String')
+epilat = get(handles.lat,'String');
+epilon = get(handles.lon,'String');
+epidepth = get(handles.depth,'String');
+magnitude = get(handles.magnitude,'String');
+edate = get(handles.date,'String');
+epihour = get(handles.epihour,'String');
+epimin = get(handles.epimin,'String');
+episec = get(handles.episec,'String');
+agency = get(handles.agency,'String');
+
+
+%% we must calculate new Origin=OT-taper
+
+% OT=[str2double(edate(1:4)) str2double(edate(5:6)) str2double(edate(7:8)) str2double(epihour) str2double(epimin) str2double(episec)];
+% 
+% dt_or = datestr(OT, 'mmmm dd, yyyy HH:MM:SS.FFF AM')
+% 
+% RelativeTime = ([0, 0, taper] * [3600; 60; 1]) / 86400;
+% 
+% OTnew=datenum(OT)-RelativeTime;
+% 
+% dt_new = datestr(OTnew, 'mmmm dd, yyyy HH:MM:SS.FFF AM')
 
 
 %%%check if it is 2 digits
@@ -886,9 +957,20 @@ latmin = str2num(get(handles.latmin,'String'));
 londeg = str2num(get(handles.londeg,'String'));
 lonmin = str2num(get(handles.lonmin,'String'));
 
+%% take care of negative latitude longitude!!
 
-declat=latdeg+latmin/60;
-declon=londeg+lonmin/60;
+if latdeg > 0
+ declat=latdeg+latmin/60;
+else
+ declat=latdeg-latmin/60;
+end
+
+if londeg > 0
+  declon=londeg+lonmin/60;
+else
+  declon=londeg-lonmin/60;
+end
+
 
 set(handles.lat,'String',num2str(declat))        
 set(handles.lon,'String',num2str(declon))  
@@ -1106,3 +1188,26 @@ function uipanel2_ResizeFcn(hObject, eventdata, handles)
 % hObject    handle to uipanel2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+
+function taperlength_Callback(hObject, eventdata, handles)
+% hObject    handle to taperlength (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of taperlength as text
+%        str2double(get(hObject,'String')) returns contents of taperlength as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function taperlength_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to taperlength (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

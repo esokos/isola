@@ -90,6 +90,8 @@ end
 % % size(selectedstalon)
 % size(selectedstaname)
 
+staname
+
 %% output to stations.isl
         fid = fopen('stations.isl','w');
           if ispc
@@ -320,7 +322,6 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
 %% CHANGE 20/10/2011 of allstat.dat format
 % allstat will be index 1 1 1 1 name
-
        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%         
        cd green
         if ispc  
@@ -573,8 +574,8 @@ if ispc
     fprintf(fid,'%s\r\n',['copy ' eventidnew '_selsta.ps     ..\output\']);
     fprintf(fid,'%s\r\n',['copy ' eventidnew '_selsta.png     ..\output\']);
     fprintf(fid,'%s\r\n','  ');
-    fprintf(fid,'%s\r\n',['del ' eventidnew '_selsta.ps'] );
-    fprintf(fid,'%s\r\n',['del ' eventidnew '_selsta.png'] );
+%     fprintf(fid,'%s\r\n',['del ' eventidnew '_selsta.ps'] );
+%     fprintf(fid,'%s\r\n',['del ' eventidnew '_selsta.png'] );
    
 fclose(fid);
 
@@ -603,8 +604,8 @@ else %Linux
     fprintf(fid,'%s\n',['cp ' eventidnew '_selsta.ps     ../output/']);
     fprintf(fid,'%s\n',['cp ' eventidnew '_selsta.png     ../output/']);
     fprintf(fid,'%s\n','  ');
-    fprintf(fid,'%s\n',['rm ' eventidnew '_selsta.ps'] );
-    fprintf(fid,'%s\n',['rm ' eventidnew '_selsta.png'] );
+%     fprintf(fid,'%s\n',['rm ' eventidnew '_selsta.ps'] );
+%     fprintf(fid,'%s\n',['rm ' eventidnew '_selsta.png'] );
    
 fclose(fid);
     
@@ -626,4 +627,4 @@ catch
     cd ..
 end
  
-close map 
+

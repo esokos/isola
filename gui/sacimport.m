@@ -147,7 +147,7 @@ cd(datapath)
         end
 
 cd(mainpath)
-        
+%%        
 maxewsamples=length(ew(:,2));
 dt = lh(ew,'DELTA');
 staname=lh(ew,'KSTNM');
@@ -158,23 +158,18 @@ if compname(3)~='E'
     set(handles.ewname,'String',[staname ' ' compname])
     set(handles.ewname,'ForegroundColor','r')
     set(handles.ewname,'BackgroundColor','y')
-
 else
     set(handles.ewname,'String',[staname ' ' compname])
     set(handles.ewname,'ForegroundColor','k')
     set(handles.ewname,'BackgroundColor','w')
-
 end
 
-%%
-% find file start time....        
+%% Read Reference time
 startyearew=lh(ew,'NZYEAR');startjdayew=lh(ew,'NZJDAY');starthourew=lh(ew,'NZHOUR');
 startminew=lh(ew,'NZMIN');startsecew=lh(ew,'NZSEC');startmsecew=lh(ew,'NZMSEC');
 
-disp('  ')
-disp(['File start time: ' num2str(startyearew) ' (' num2str(startjdayew) ') ' num2str(starthourew) ':' num2str(startminew) ':' num2str(startsecew) '.' num2str(startmsecew)])
-disp(['Station ' staname 'Component ' compname])
-disp(['Sampling frequency ' num2str(1/dt) 'Hz. Number of samples  ' num2str(maxewsamples)])
+%% find file start time....        
+% check if B is set in header
 
 BVALUEEW=lh(ew,'B');
 
@@ -183,32 +178,35 @@ if (startmsecew==-12345)
     disp('warning ... msec not defined in sac header. set to 0')
 end
 
-
 if BVALUEEW ~= 0    %%% problem when file reference time is not the file start..!!   try to solve here...
-disp('Origin time mark found')
-
-[monthew,dayew]=jul2monthday(startyearew,startjdayew);
-
-n = datenum(startyearew,monthew,dayew,starthourew,startminew,((startsecew+startmsecew/1000)+BVALUEEW));   %% convert to Serial date number
-[Y,M,D,H,MI,S] = datevec(n);   %%% this is our new data start time
-mon=num2mon(M);
-nnew=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  '  ('  deblank(num2str(startjdayew)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S))];
-
-set(handles.ewtime,'String',nnew)
-istew = datenum([Y,M,D,H,MI,S]);
+  disp('Origin time mark found')
+  [monthew,dayew]=jul2monthday(startyearew,startjdayew);
+  n = datenum(startyearew,monthew,dayew,starthourew,startminew,((startsecew+startmsecew/1000)+BVALUEEW));   %% convert to Serial date number
+  [Y,M,D,H,MI,S] = datevec(n);   %%% this is our new data start time
+  mon=num2mon(M);
+  nnew=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  '  ('  deblank(num2str(startjdayew)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S,'%5.2f'))];
+  set(handles.ewtime,'String',nnew)
+  istew = datenum([Y,M,D,H,MI,S]);
 %istew = datenum([startyearew monthew dayew starthourew startminew startsecew+startmsecew/1000]);
+  disp('  ')
+  disp(['File start time: ' num2str(Y) '-' num2str(M) '-' num2str(D) ', ' num2str(H) ':' num2str(MI) ':' num2str(S)])
+  disp(['Station ' staname 'Component ' compname])
+  disp(['Sampling frequency ' num2str(1/dt) 'Hz. Number of samples  ' num2str(maxewsamples)])
 
 else   %%% BVALUE ==0 start of data file....
-disp('no B')
-[monthew,dayew]=jul2monthday(startyearew,startjdayew);
-monew=num2mon(monthew);
-smilew=startsecew+(startmsecew/1000);
-istew = datenum([startyearew monthew dayew starthourew startminew smilew]);
-
-nnew=[deblank(num2str(dayew)) '-' deblank(monew) '-'  deblank(num2str(startyearew))  '  ('  deblank(num2str(startjdayew)) ')  '  '  ' deblank(num2str(starthourew)) ':'...
-        deblank(num2str(startminew)) ':'  deblank(num2str(startsecew+startmsecew/1000))];
-set(handles.ewtime,'String',nnew)
-
+  disp('No offset') 
+  [monthew,dayew]=jul2monthday(startyearew,startjdayew);
+  monew=num2mon(monthew);
+  smilew=startsecew+(startmsecew/1000);
+  istew = datenum([startyearew monthew dayew starthourew startminew smilew]);
+  nnew=[deblank(num2str(dayew)) '-' deblank(monew) '-'  deblank(num2str(startyearew))  '  ('  deblank(num2str(startjdayew)) ')  '  '  ' deblank(num2str(starthourew)) ':'...
+        deblank(num2str(startminew)) ':'  deblank(num2str(startsecew+startmsecew/1000,'%5.2f'))];
+  set(handles.ewtime,'String',nnew)
+%
+  disp(['File start time: ' num2str(startyearew) ' (' num2str(startjdayew) ') ' num2str(starthourew) ':' num2str(startminew) ':' num2str(startsecew) '.' num2str(startmsecew)])
+  disp(['Station ' staname 'Component ' compname])
+  disp(['Sampling frequency ' num2str(1/dt) 'Hz. Number of samples  ' num2str(maxewsamples)])
+  
 end
 %%
 if timerefns ~= istew
@@ -251,7 +249,6 @@ function readns_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 %%%%% isola path
 
-
 %% type of sac file
 if get(handles.ascii,'Value') == get(handles.ascii,'Max')
     disp('Ascii Format')
@@ -275,13 +272,11 @@ end
 %%
 path1=handles.path1;
 mainpath=handles.mainpath;
-
 % check if raw folder exists
 h=dir('raw');
 
 if isempty(h);
       cd(path1)
-      
       datapath=pwd;
 else
      if ispc
@@ -292,13 +287,9 @@ else
       
       datapath=pwd;
 end
-
 %%
-
 [file1,path1] = uigetfile('*.sac','Import Sac file');
-     
    lopa = [path1 file1]; 
-   
         if format ==2 
           try 
               ns = rsac(lopa,endian);
@@ -316,12 +307,12 @@ end
         end
 
 cd(mainpath)
-        
+%%
+datapath=path1;
+%%
 maxnssamples=length(ns(:,2));
 dt = lh(ns,'DELTA');
-
 set(handles.sfreq,'String',num2str(1/dt))
-
 startTYPEns=lh(ns,'IZTYPE');
 staname=lh(ns,'KSTNM');
 compname=lh(ns,'KCMPNM');
@@ -337,72 +328,52 @@ else
     set(handles.nsname,'BackgroundColor','w')
 end
 
+%%  Read Reference time
+startyearns=lh(ns,'NZYEAR'); startjdayns=lh(ns,'NZJDAY');
+starthourns=lh(ns,'NZHOUR'); startminns=lh(ns,'NZMIN');
+startsecns=lh(ns,'NZSEC'); startmsecns=lh(ns,'NZMSEC');
 %% find file start time....        
-startyearns=lh(ns,'NZYEAR');
-startjdayns=lh(ns,'NZJDAY');
-starthourns=lh(ns,'NZHOUR');
-startminns=lh(ns,'NZMIN');
-startsecns=lh(ns,'NZSEC');
-startmsecns=lh(ns,'NZMSEC');
-
-disp(['File start time: ' num2str(startyearns) ' (' num2str(startjdayns) ') ' num2str(starthourns) ':' num2str(startminns) ':' num2str(startsecns) '.' num2str(startmsecns)])
-disp(['Station ' staname 'Component ' compname])
-disp(['Sampling frequency ' num2str(1/dt) 'Hz. Number of samples  ' num2str(maxnssamples)])
-%% 
-
+% check if B is set in header
 BVALUENS=lh(ns,'B');
 
 if (startmsecns==-12345)
-    startmsecns=0;
-      disp('warning ... msec not defined in sac header. set to 0')
+    startmsecns=0.0;
+    disp('warning ... msec not defined in sac header. set to 0')
 end
-
-
-if BVALUENS ~= 0    %%% problem when file reference time is not the file start..!!   try to solve here...
-disp('Origin time mark found')
-
-[monthns,dayns]=jul2monthday(startyearns,startjdayns);
-
-n = datenum(startyearns,monthns,dayns,starthourns,startminns,((startsecns+startmsecns/1000)+BVALUENS));   %% convert to Serial date number
-[Y,M,D,H,MI,S] = datevec(n);   %%% this is our new data start time
-mon=num2mon(M);
-nn=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  '  ('  deblank(num2str(startjdayns)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S))];
-set(handles.nstime,'String',nn)
-istns = datenum([Y,M,D,H,MI,S]);
-%timerefns=datestr(istns)
-%timerefns=istns;
-% n=[deblank(num2str(startyearns)) '-' deblank(num2str(startjdayns)) '  ' deblank(num2str(starthourns)) ':'...
-%         deblank(num2str(startminns)) ':'  deblank(num2str(startsecns+startmsecns/1000))];
-% set(handles.nstime,'String',n)
-% 
-% [monthns,dayns]=jul2monthday(startyearns,startjdayns);
-% 
-  istns = datenum([startyearns monthns dayns starthourns startminns startsecns+startmsecns/1000]);
-  
-  
+%
+if BVALUENS ~= 0    %%% problem when file has offser ..!!   try to solve here...
+ disp('Offset time mark found')
+ [monthns,dayns]=jul2monthday(startyearns,startjdayns);
+ n = datenum(startyearns,monthns,dayns,starthourns,startminns,((startsecns+startmsecns/1000)+BVALUENS));   %% convert to Serial date number
+ [Y,M,D,H,MI,S] = datevec(n);   %%% this is our new data start time
+ mon=num2mon(M);
+ nn=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  '  ('  deblank(num2str(startjdayns)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S,'%5.2f'))];
+ set(handles.nstime,'String',nn)
+ istns = datenum([Y,M,D,H,MI,S]);
+ %istns = datenum([startyearns monthns dayns starthourns startminns startsecns+startmsecns/1000]);
+ %
+ disp(['File start time: ' num2str(Y) '-' num2str(M) '-' num2str(D) ', ' num2str(H) ':' num2str(MI) ':' num2str(S)])
+ disp(['Station ' staname 'Component ' compname])
+ disp(['Sampling frequency ' num2str(1/dt) 'Hz. Number of samples  ' num2str(maxnssamples)])
+ 
 else   %%% BVALUE ==0 start of data file....
+ disp('No offset');
+ [monthns,dayns]=jul2monthday(startyearns,startjdayns);
+ mon=num2mon(monthns);
+ n=[deblank(num2str(dayns)) '-' deblank(mon) '-'  deblank(num2str(startyearns))  '  ('  deblank(num2str(startjdayns)) ')  '  '  ' deblank(num2str(starthourns)) ':'...
+        deblank(num2str(startminns)) ':'  deblank(num2str(startsecns+startmsecns/1000,'%5.2f'))];
+ set(handles.nstime,'String',n)
+ istns = datenum([startyearns monthns dayns starthourns startminns startsecns+startmsecns/1000]);
+ %
+ disp(['File start time: ' num2str(startyearns) ' (' num2str(startjdayns) ') ' num2str(starthourns) ':' num2str(startminns) ':' num2str(startsecns) '.' num2str(startmsecns)])
+ disp(['Station ' staname 'Component ' compname])
+ disp(['Sampling frequency ' num2str(1/dt) 'Hz. Number of samples  ' num2str(maxnssamples)])
 
-[monthns,dayns]=jul2monthday(startyearns,startjdayns);
-mon=num2mon(monthns);
-n=[deblank(num2str(dayns)) '-' deblank(mon) '-'  deblank(num2str(startyearns))  '  ('  deblank(num2str(startjdayns)) ')  '  '  ' deblank(num2str(starthourns)) ':'...
-        deblank(num2str(startminns)) ':'  deblank(num2str(startsecns+startmsecns/1000))];
-set(handles.nstime,'String',n)
-istns = datenum([startyearns monthns dayns starthourns startminns startsecns+startmsecns/1000]);
-%set(handles.nstime,'String',datestr(istns));
-
-%timerefns=datestr(istns)
-%timerefns=istns;
-%%% NSserialdate = datenum(startyearns monthns dayns starthourns startminns (startsecns+startmsecns/1000))
 end
-  
-% N = datenum(Y,M,D,H,MI,S)
-% set(handles.nstime,'String',datestr(istns));
-% startdatens=lh(ns,'KZDATE')
-% starttimens=lh(ns,'KZTIME')
+%% 
 
 %%%%plotting
-ns(1:1,1);
-ns(1:1,2);
+ns(1:1,1);ns(1:1,2);
 axes(handles.nsaxis)
 plot(ns(:,1),ns(:,2),'k')
 set(handles.nsaxis,'XMinorTick','on')
@@ -417,11 +388,12 @@ handles.stanameonly=staname;
 %handles.path1=path1;
 %handles.mainpath=mainpath;
 
+disp(['Selected data path ' datapath])
+
 mainpath=pwd;
 path1=pwd;
 handles.path1=path1;
 handles.mainpath=mainpath;
-
 %path1
 
 handles.ns = ns(:,2);
@@ -497,7 +469,7 @@ cd(datapath)
 
 cd(mainpath)
        
-maxewsamples=length(ver(:,2));
+maxversamples=length(ver(:,2));
 dt = lh(ver,'DELTA');
 staname=lh(ver,'KSTNM');
 compname=lh(ver,'KCMPNM');
@@ -507,24 +479,18 @@ if compname(3)~='Z'
     set(handles.vername,'String',[staname ' ' compname])
     set(handles.vername,'ForegroundColor','r')
     set(handles.vername,'BackgroundColor','y')
-
 else
     set(handles.vername,'String',[staname ' ' compname])
     set(handles.vername,'ForegroundColor','k')
     set(handles.vername,'BackgroundColor','w')
-
 end
 
-
-%%%%find file start time....        
+%%  Read Reference time       
 startyearver=lh(ver,'NZYEAR');startjdayver=lh(ver,'NZJDAY');starthourver=lh(ver,'NZHOUR');
 startminver=lh(ver,'NZMIN');startsecver=lh(ver,'NZSEC');startmsecver=lh(ver,'NZMSEC');
 
-disp('  ')
-disp(['File start time: ' num2str(startyearver) ' (' num2str(startjdayver) ') ' num2str(starthourver) ':' num2str(startminver) ':' num2str(startsecver) '.' num2str(startmsecver)])
-disp(['Station ' staname 'Component ' compname])
-disp(['Sampling frequency ' num2str(1/dt) 'Hz. Number of samples  ' num2str(maxewsamples)])
-
+%% find file start time....        
+% check if B is set in header
 
 BVALUEVER=lh(ver,'B');
 
@@ -534,42 +500,35 @@ if (startmsecver==-12345)
 end
 
 if BVALUEVER ~= 0    %%% problem when file reference time is not the file start..!!   try to solve here...
-disp('Origin time mark found')
-
-[monthver,dayver]=jul2monthday(startyearver,startjdayver);
-
-n = datenum(startyearver,monthver,dayver,starthourver,startminver,((startsecver+startmsecver/1000)+BVALUEVER));   %% convert to Serial date number
-[Y,M,D,H,MI,S] = datevec(n);   %%% this is our new data start time
-mon=num2mon(M);
-nnew=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  '  ('  deblank(num2str(startjdayver)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S))];
-
-set(handles.vertime,'String',nnew)
-istver = datenum([Y,M,D,H,MI,S]);
-
+  disp('Offset time mark found')
+  [monthver,dayver]=jul2monthday(startyearver,startjdayver);
+  n = datenum(startyearver,monthver,dayver,starthourver,startminver,((startsecver+startmsecver/1000)+BVALUEVER));   %% convert to Serial date number
+  [Y,M,D,H,MI,S] = datevec(n);   %%% this is our new data start time
+  mon=num2mon(M);
+  nnew=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  '  ('  deblank(num2str(startjdayver)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S,'%5.2f'))];
+  set(handles.vertime,'String',nnew)
+  istver = datenum([Y,M,D,H,MI,S]);
+ %
+  disp(['File start time: ' num2str(Y) '-' num2str(M) '-' num2str(D) ', ' num2str(H) ':' num2str(MI) ':' num2str(S)])
+  disp(['Station ' staname 'Component ' compname])
+  disp(['Sampling frequency ' num2str(1/dt) 'Hz. Number of samples  ' num2str(maxversamples)])  
+  
 else   %%% BVALUE ==0 start of data file....
-disp('no B')
-[monthver,dayver]=jul2monthday(startyearver,startjdayver);
-monver=num2mon(monthver);
-smilver=startsecver+(startmsecver/1000);
-istver = datenum([startyearver monthver dayver starthourver startminver smilver]);
-
-nnew=[deblank(num2str(dayver)) '-' deblank(monver) '-'  deblank(num2str(startyearver))  '  ('  deblank(num2str(startjdayver)) ')  '  '  ' deblank(num2str(starthourver)) ':'...
-        deblank(num2str(startminver)) ':'  deblank(num2str(startsecver+startmsecver/1000))];
-set(handles.vertime,'String',nnew)
+  disp('No offset');
+  [monthver,dayver]=jul2monthday(startyearver,startjdayver);
+  monver=num2mon(monthver);
+  smilver=startsecver+(startmsecver/1000);
+  istver = datenum([startyearver monthver dayver starthourver startminver smilver]);
+  nnew=[deblank(num2str(dayver)) '-' deblank(monver) '-'  deblank(num2str(startyearver))  '  ('  deblank(num2str(startjdayver)) ')  '  '  ' deblank(num2str(starthourver)) ':'...
+        deblank(num2str(startminver)) ':'  deblank(num2str(startsecver+startmsecver/1000,'%5.2f'))];
+  set(handles.vertime,'String',nnew)
+  
+disp('  ')
+disp(['File start time: ' num2str(startyearver) ' (' num2str(startjdayver) ') ' num2str(starthourver) ':' num2str(startminver) ':' num2str(startsecver) '.' num2str(startmsecver)])
+disp(['Station ' staname 'Component ' compname])
+disp(['Sampling frequency ' num2str(1/dt) 'Hz. Number of samples  ' num2str(maxversamples)])  
 end
 %%
-
-% % N = datenum(startyearver,M,D,H,startminver,S)
-% n=[deblank(num2str(startyearver)) '-' deblank(num2str(startjdayver)) '  ' deblank(num2str(starthourver)) ':' deblank(num2str(startminver)) ':'  deblank(num2str(startsecver+startmsecver/1000))]
-% whos n
-% [monthver,dayver]=jul2monthday(startyearver,startjdayver);
-% istver = datenum([startyearver monthver dayver starthourver startminver startsecver+startmsecver/1000]);
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% tt1=strcmp(datestr(istver),timerefns);
-% tt2=strcmp(datestr(istver),timerefew);
-% if tt1 ~= 1 || tt2 ~=1 
-
 if istver ~= timerefns || istver ~= timerefew
 set(handles.vertime,'String',nnew,'ForegroundColor','red')
 set(handles.ewtime,'ForegroundColor','red')
@@ -597,14 +556,11 @@ grid on
 % title('Ver')
 xlabel('Time (sec)')
 ylabel('Counts')
- 
 
 %save RAW data to handles 
 handles.ver = ver(:,2);
 handles.istver=istver;
 guidata(hObject,handles)
-
-
 
 % --- Executes on button press in saveascii.
 function saveascii_Callback(hObject, eventdata, handles)
@@ -623,8 +579,6 @@ vercounts=handles.ver;
 % handles.stanameonly=staname;
 
 stname=deblank(handles.stanameonly);
-
-
 %%% read sampling rate
 sfreq = str2double(get(handles.sfreq,'String'));
 %%%%dt
@@ -643,7 +597,7 @@ alld=[time_sec'; nscounts' ; ewcounts' ; vercounts'];    %%% Changed to N,E,Z
 %check if DATA exists..!
 h=dir('data');
 
-if isempty(h);
+if isempty(h)
     button=questdlg('Data folder doesn''t exist. ISOLA uses DATA folder to store data files. Create it..?',...
                     'Folder Error','Yes','No','Yes');
                 

@@ -24,7 +24,7 @@ function varargout = timefun_twop(varargin)
 
 % Edit the above text to modify the response to help timefun_twop
 
-% Last Modified by GUIDE v2.5 08-Feb-2014 22:42:26
+% Last Modified by GUIDE v2.5 01-Dec-2020 10:36:49
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -58,13 +58,13 @@ handles.output = hObject;
 
 %%
 disp('This is timefun_twop.m')
-disp('Ver.1, 12/07/2012')
+disp('Ver.1.5, 26/11/2020')
 
 %%
 %check if timefun folder exists..!
 fh=exist('timefunc','dir');
 
-if (fh~=7);
+if (fh~=7)
     errordlg('Timefunc folder doesn''t exist. ISOLA will create it. ','Folder warning');
     mkdir('timefunc');
 end
@@ -72,20 +72,20 @@ end
 %check if GREEN exists..!
 fh2=exist('green','dir');
 
-if (fh2~=7);
+if (fh2~=7)
     errordlg('Green folder doesn''t exist. Please create it. ','Folder Error');
 end
 
 %check if INVERT exists..!
 fh2=exist('invert','dir');
 
-if (fh2~=7);
+if (fh2~=7)
     errordlg('Invert folder doesn''t exist. Please create it. ','Folder Error');
 end
 %
 %check if INPINV.DAT exists..!
 fh2=exist('.\invert\inpinv.dat','file');
-if (fh2~=2);
+if (fh2~=2)
     errordlg('Invert folder doesn''t contain inpinv.dat. Please run inversion. ','File Error');
     delete(handles.timefun)
 end
@@ -119,7 +119,7 @@ end
 %% check allstat and station raw files
 
 h=dir('.\invert\allstat.dat');
-if isempty(h);
+if isempty(h)
     errordlg('allstat.dat file doesn''t exist in invert folder. Run Station Selection. ','File Error');
     return
 else
@@ -167,20 +167,20 @@ set(handles.info_nsrc,'String',linetmp6);
 % set info text
 set(handles.info_freq,'String',regexprep(linetmp14,' ','-'));
 
-
+% find max freq
+maxfreq=sscanf(linetmp14,'%f %f %f %f');
 
 %% find duration of source time function used in elemse
-
 fid = fopen('.\green\soutype.dat','r');
-type=fscanf(fid,'%d',1);   %01 line
-dur=fscanf(fid,'%f',1);   %14        %02 line
+ type=fscanf(fid,'%d',1);   %01 line
+  dur=fscanf(fid,'%f',1);   %14        %02 line
 fclose(fid);
 
 if type == 7
     %  errordlg('Source type of elementary seismograms is delta. Use
     %  triangle','File Error');
-    disp('Source type of elementary seismograms is delta. Formal source duration is 0.1')
-    set(handles.tdur,'String',num2str(0.1));
+    disp('Source type of elementary seismograms is delta. Formal source duration is 1/maxfreq')
+    set(handles.tdur,'String',num2str(1/maxfreq(4)));
 elseif      type == 4
     set(handles.tdur,'String',num2str(dur));
 end
@@ -188,7 +188,7 @@ end
 
 h=dir('tsources.isl');
 
-if isempty(h);
+if isempty(h)
     errordlg('tsources.isl file doesn''t exist. Run Source create. ','File Error');
     return
 else
@@ -205,6 +205,14 @@ else
         conplane=2;   %%% Line
         % dummy sdepth
         sdepth=-333;
+        
+        
+        handles.nsources=nsources;
+        handles.distep=distep;
+        handles.sdepth=sdepth;
+        
+        % Update handles structure
+        guidata(hObject, handles);
         
     elseif strcmp(tsource,'depth')
         disp('Inversion was done for a line of sources under epicenter.')
@@ -230,14 +238,23 @@ else
         conplane=1;
         
         % dummy sdepth
-        sdepth=-333;
-        distep=-333;
-        
+        sdepth=3;
+        distep=3;
+%%      if strike or dip sources =1 then we have a line!!
+        if  noSourcesstrike==1 || noSourcesdip==1
+            conplane=2;   %%% Line
+             disp('Inversion was done for a (formal!!) plane of sources.')
+        end
         %%%%%%%%%%%%%%%%%write to handles
+        handles.nsources=nsources;
         handles.noSourcesstrike=noSourcesstrike;
         handles.strikestep=strikestep;
         handles.noSourcesdip=noSourcesdip;
         handles.dipstep=dipstep;
+        handles.conplane=conplane;
+        
+        handles.distep=distep;
+        handles.sdepth=sdepth;
         % Update handles structure
         guidata(hObject, handles);
         
@@ -255,32 +272,43 @@ else
     fclose(fid);
     
 end
-
 %%
 %set(handles.sourceno,'String',num2str(srcpos2(1,1)));
 % set(handles.strike,'String',num2str(str1(1,1)));
 % set(handles.dip,'String',num2str(dip1(1,1)));
 % set(handles.rake,'String',num2str(rake1(1,1)));
 % set(handles.moment,'String',num2str(mo(1,1),'%3.1e'));
-
 %% check if we have defaults
-if exist('timefun_twop.isl','file');
+h=dir('timefun_twop.isl');
+if ~isempty(h)
     
     fid = fopen('timefun_twop.isl','r');
-    strike=fscanf(fid,'%s',1);
-    dip=fscanf(fid,'%s',1);
-    rake=fscanf(fid,'%s',1);
-    mom=fscanf(fid,'%s',1);
+    strike1=fscanf(fid,'%s',1);
+    dip1=fscanf(fid,'%s',1);
+    rake1=fscanf(fid,'%s',1);
+    mom1=fscanf(fid,'%s',1);
+
+    strike2=fscanf(fid,'%s',1);
+    dip2=fscanf(fid,'%s',1);
+    rake2=fscanf(fid,'%s',1);
+    mom2=fscanf(fid,'%s',1);
+    
     tshift=fscanf(fid,'%s',1);
     trdist=fscanf(fid,'%s',1);
     conornot=fscanf(fid,'%s',1);
     tdur=fscanf(fid,'%s',1);
     fclose(fid);
     % update handles
-    set(handles.strike1,'String',strike);
-    set(handles.dip1,'String',dip);
-    set(handles.rake1,'String',rake);
-    set(handles.mo1,'String',mom);
+    set(handles.strike1,'String',strike1);
+    set(handles.dip1,'String',dip1);
+    set(handles.rake1,'String',rake1);
+    set(handles.mo1,'String',mom1);
+
+    set(handles.strike2,'String',strike2);
+    set(handles.dip2,'String',dip2);
+    set(handles.rake2,'String',rake2);
+    set(handles.mo2,'String',mom2);
+
     set(handles.tshift,'String',tshift);
     set(handles.trdist,'String',trdist);
     if str2double(conornot)==1
@@ -294,6 +322,17 @@ else
 end
 %%
 
+mo1=str2double(get(handles.mo1,'String'));
+mo2=str2double(get(handles.mo2,'String'));
+
+set(handles.totalmo,'String',num2str(mo1+mo2, '%6.2e'));
+
+%% read ISOLA defaults
+[gmt_ver,psview,npts] = readisolacfg;
+
+handles.gmt_ver=gmt_ver;
+handles.psview=psview;
+handles.npts=npts;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 handles.linetmp1=linetmp1;         %01 line
@@ -314,7 +353,7 @@ handles.linetmp15=linetmp15;         %01 line
 handles.linetmp16=linetmp16;         %01 line
 handles.vrp=-1;  % defaults
 handles.thresh=-1;
-
+ handles.conplane=conplane;
 % Update handles structure
 guidata(hObject, handles);
 
@@ -341,10 +380,16 @@ function exit_Callback(hObject, eventdata, handles)
 
 
 %% read values
-strike=get(handles.strike1,'String');
-dip=get(handles.dip1,'String');
-rake=get(handles.rake1,'String');
-mom=get(handles.mo1,'String');
+strike1=get(handles.strike1,'String');
+dip1=get(handles.dip1,'String');
+rake1=get(handles.rake1,'String');
+mom1=get(handles.mo1,'String');
+
+strike2=get(handles.strike2,'String');
+dip2=get(handles.dip2,'String');
+rake2=get(handles.rake2,'String');
+mom2=get(handles.mo2,'String');
+
 tshift=get(handles.tshift,'String');
 trdist=get(handles.trdist,'String');
 cMo=get(handles.cMo,'Value');
@@ -352,19 +397,31 @@ tdur=get(handles.tdur,'String');
 
 fid = fopen('timefun_twop.isl','w');
 if ispc
-    fprintf(fid,'%s\r\n',strike);
-    fprintf(fid,'%s\r\n',dip);
-    fprintf(fid,'%s\r\n',rake);
-    fprintf(fid,'%s\r\n',mom);
+    fprintf(fid,'%s\r\n',strike1);
+    fprintf(fid,'%s\r\n',dip1);
+    fprintf(fid,'%s\r\n',rake1);
+    fprintf(fid,'%s\r\n',mom1);
+
+    fprintf(fid,'%s\r\n',strike2);
+    fprintf(fid,'%s\r\n',dip2);
+    fprintf(fid,'%s\r\n',rake2);
+    fprintf(fid,'%s\r\n',mom2);
+    
     fprintf(fid,'%s\r\n',tshift);
     fprintf(fid,'%s\r\n',trdist);
     fprintf(fid,'%u\r\n',cMo);
     fprintf(fid,'%s\r\n',tdur);
 else
-    fprintf(fid,'%s\n',strike);
-    fprintf(fid,'%s\n',dip);
-    fprintf(fid,'%s\n',rake);
-    fprintf(fid,'%s\n',mom);
+    fprintf(fid,'%s\n',strike1);
+    fprintf(fid,'%s\n',dip1);
+    fprintf(fid,'%s\n',rake1);
+    fprintf(fid,'%s\n',mom1);
+    
+    fprintf(fid,'%s\n',strike2);
+    fprintf(fid,'%s\n',dip2);
+    fprintf(fid,'%s\n',rake2);
+    fprintf(fid,'%s\n',mom2);
+
     fprintf(fid,'%s\n',tshift);
     fprintf(fid,'%s\n',trdist);
     fprintf(fid,'%u\n',cMo);
@@ -381,6 +438,8 @@ function plot_Callback(hObject, eventdata, handles)
 % in a future version of MATLAB handles    structure with handles and user
 % data (see GUIDATA)
 
+warndlg('Please be patient code is running.','!! Warning !!')
+
 % check if we have inv111.dat
 pwd
 if ispc
@@ -388,7 +447,7 @@ fh2=exist('.\timefunc\sel_pairs.dat','file');
 else
 fh2=exist('./timefunc/sel_pairs.dat','file');
 end
-if (fh2~=2);
+if (fh2~=2)
     errordlg('Timefunc folder doesn''t contain sel_pairs.dat. Please Press Select first ','File Error');
     return
 else
@@ -415,17 +474,337 @@ sumomsel=C{1,5};
 ratmomsel=C{1,6};
 VRsel=C{1,7};
 
-%how many sources
-noSourcesstrike=handles.noSourcesstrike;
-strikestep=handles.strikestep;
-noSourcesdip=handles.noSourcesdip;
-dipstep=handles.dipstep;
+%% find geographical coordinates of sources
+[srclon1,srclat1,depth1,srclon2,srclat2,depth2]=get_geo_coor(source1sel,source2sel);
+
+%% find maximum time !! (we need to change this to take into account the duration !!)
+% for i=1:length(source1sel);
+%    [src1time(i),src2time(i)]=inv222time(source1sel(i),source2sel(i));
+% end
+
+% change 03/09/2016 to take into account the duration 
+
+for i=1:length(source1sel)
+   [src1time(i),src2time(i)]=get_src_pair_subevent_times(source1sel(i),source2sel(i));
+end
+whos
+%%
+%% moment scale
+
+mscale1=mean(mom1sel)
+mscale2=mean(mom2sel)
+mscale=(mscale1+mscale1)/2
+
+%%   for sub 1 
+if ispc
+    fid = fopen('.\timefunc\timspc1.dat','w');
+else
+    fid = fopen('./timefunc/timspc1.dat','w');
+end
+ for i=1:length(srclon1)                                                   
+      fprintf(fid,'%g  %g  %g %e\r\n',srclon1(i),srclat1(i),src1time(i),mom1sel(i)/mscale); 
+  end
+fclose(fid);
+
+%%   for sub 2 
+if ispc
+    fid = fopen('.\timefunc\timspc2.dat','w');
+else
+    fid = fopen('./timefunc/timspc2.dat','w');
+end
+ for i=1:length(srclon2)                                                   
+      fprintf(fid,'%g  %g  %g %e\r\n',srclon2(i),srclat2(i),src2time(i),mom2sel(i)/mscale); 
+  end
+fclose(fid);
+
+%% plot in map mode in GMT 
+
+gmt_ver=handles.gmt_ver;
+
+%%%find map limits...it will be based on ALL sources !!
+[wend,eend,send,nend]=get_source_map_coor;
+border=0.1;
+%wend=min(srclon1);eend=max(srclon1);send=min(srclat1);nend=max(srclat1);
+w=(wend-border);e=(eend+border);s=(send-border);n=(nend+border);
+r=['-R' num2str(w,'%7.5f') '/' num2str(e,'%7.5f') '/' num2str(s,'%7.5f') '/' num2str(n,'%7.5f') ' '];
+j=' -JM18c+ ';
+centy=((nend-send)/2)+send; centx=((eend-wend)/2)+wend;
+% find min max in time 
+min1=min(src1time);min2=min(src2time);max1=max(src1time);max2=max(src2time);
+gmin=min([min1 min2]);gmax=max([max1 max2]);
+% ly=s+scaleshift;
+% 
+% %%%make -L
+% lf=['-Lf' num2str(centx,'%7.2f') '/' num2str(ly,'%7.4f') '/' num2str(centy,'%7.2f') '/' lscale '+l'];
+% 
+% xshift=-xshift;
+nsrc=get(handles.info_nsrc,'String');
+
+ if ispc 
+    fid = fopen('.\timefunc\pltimspc.bat','w');
+ else
+    fid = fopen('./timefunc/pltimspc.bat','w'); 
+ end
+ 
+    fprintf(fid,'%s\r\n','del .gmt* ');
+    
+    
+ if gmt_ver==4
+    fprintf(fid,'%s\r\n','gmtset PLOT_DEGREE_FORMAT D  ANNOT_FONT_SIZE_PRIMARY 12 ANNOT_FONT_SIZE_SECONDARY 12 HEADER_FONT_SIZE 14 LABEL_FONT_SIZE 14');
+ else
+    fprintf(fid,'%s\r\n','gmtset FORMAT_GEO_MAP D  FONT_ANNOT_PRIMARY 12  FONT_ANNOT_SECONDARY 12 FONT_TITLE 14 FONT_LABEL 14');
+ end
+    fprintf(fid,'%s\r\n',' ');
+    pscoastr=['pscoast ' r   j ' -G255/255/204 -Df -W0.7p -P -B.1  -K -Slightblue   > timspc.ps' ];
+    fprintf(fid,'%s\r\n', pscoastr);
+    fprintf(fid,'%s\r\n',' ');
+
+ if gmt_ver==4
+    sstring=['psxy -R ' j ' ..\gmtfiles\sources.gmt -Sd.2c  -M  -W.2p/0 -K -O -Gred >> timspc.ps' ];
+ else
+    sstring=['psxy -R ' j ' ..\gmtfiles\sources.gmt -Sd.2c  -W.2p -K -O -Gred >> timspc.ps' ];
+ end
+    fprintf(fid,'%s\r\n',sstring);
+    fprintf(fid,'%s\r\n',' ');  
+     
+       fprintf(fid,'%s\r\n',['makecpt -Ccool -T' num2str(gmin-1) '/' num2str(gmax+1) '/1    > time.cpt']);
+       fprintf(fid,'%s\r\n',' ');
+ if gmt_ver==4
+       fprintf(fid,'%s\r\n','psxy  timspc1.dat  -R -J -Sc -Ctime.cpt -W-3p -N -V -O -K   >> timspc.ps');
+ else
+       fprintf(fid,'%s\r\n','psxy  timspc1.dat  -R -J -Sc -Ctime.cpt -W3p+cl -N -V -O -K   >> timspc.ps');
+ end
+       fprintf(fid,'%s\r\n',' ');
+
+ if gmt_ver==4
+       fprintf(fid,'%s\r\n','psxy  timspc2.dat  -R -J -Sc -Ctime.cpt -W-3p -N -V -O -K   >> timspc.ps');
+ else
+       fprintf(fid,'%s\r\n','psxy  timspc2.dat  -R -J -Sc -Ctime.cpt -W3p+cl -N -V -O -K   >> timspc.ps');
+ end      
+       
+       fprintf(fid,'%s\r\n',' ');
+       
+       fprintf(fid,'%s\r\n','rem plot source numbers');
+ if gmt_ver==4
+       fprintf(fid,'%s\r\n',['gawk "{if (NR<=' nsrc ') print $1,$2,9,0,0,\"LM\",$5}" ..\gmtfiles\sources.gmt | pstext -R -J -K -O -D0.1c/0c >> timspc.ps']);
+ else
+        fprintf(fid,'%s\r\n',['gawk "{if (NR<=' nsrc ') print $1,$2,$5}" ..\gmtfiles\sources.gmt | pstext -R -J -K -O -D0.1c/0c -F+f9p >> timspc.ps']);
+ end
+       fprintf(fid,'%s\r\n','rem plot color scale');
+       
+       fprintf(fid,'%s\r\n','psscale -D4.5c/22c/7.5c/.5ch -O -Ctime.cpt   -B1:"Maximum moment-rate time (s)":/:: >> timspc.ps');
+       
+
+       fprintf(fid,'%s\r\n',' ');
+       
+ if gmt_ver==4
+       fprintf(fid,'%s\r\n','ps2raster timspc.ps -Tg -P -A -D..\output' );
+ else
+        fprintf(fid,'%s\r\n','psconvert timspc.ps -Tg -P -A -D..\output' );
+ end
+       fclose(fid);
+
+
+%% sources can be in line or plane..!!
+conplane=handles.conplane;
+if conplane==2 
+        disp('Inversion was done for a line of sources.')
+     
+        nsources=handles.nsources;
+        distep=handles.distep;
+        sdepth=handles.sdepth;
+
+        %  total number
+        nsources=str2double(get(handles.info_nsrc,'String'));
+        % selected sources
+        sel_sou=length(source1sel);
+        % we need to convert source name to actual coordinates based on number of
+        % sources in strike,dip
+        noSourcesstrike=nsources;
+        noSourcesdip=1;
+        
+        for i=1:length(source1sel)
+                [src1_x(i),src1_y(i)]=findsrccoord(source1sel(i),noSourcesstrike,noSourcesdip);
+                [src2_x(i),src2_y(i)]=findsrccoord(source2sel(i),noSourcesstrike,noSourcesdip);
+        end
+
+        % find timing of the two sources
+        for i=1:length(source1sel)
+             [src1time(i),src2time(i)]=inv222time(source1sel(i),source2sel(i));
+              disp(['Source 1 no  ' num2str(source1sel(i)) ' time '   num2str(src1time(i))  ' Source 2 no ' num2str(source2sel(i))  ' time '   num2str(src2time(i))    ])
+        end
+
+% read thresh from handles
+        thresh=handles.thresh; 
+        vrp=handles.vrp; 
+
+        if thresh==-1
+            errordlg('Run Select first','Error');
+        return
+        else
+            disp(['Using VR threshold ' num2str(thresh) ' or ' num2str(vrp) '%']);
+        end
+
+%% Ploting
+% reference frame
+        figure;  %1 
+        subplot(1,2,1)
+% plot plane
+% rectangle('Position', [1 1 noSourcesdip+5  noSourcesstrike-1],'FaceColor', [170/255 170/255 170/255]);
+% axis equal
+        axis([noSourcesdip-2 noSourcesdip+2 0 noSourcesstrike+1]); grid on;
+        xlabel('X');ylabel('Y');
+        hold on;
+% plot grid of sources
+        sourceindex=0;
+        for j=1:noSourcesdip
+            for i=1:noSourcesstrike
+                xytext(j,i)={num2str(i+sourceindex,'%02d')};
+                plot(j,i,'+','MarkerSize',3)
+                text(j,i,xytext{j,i},'VerticalAlignment','middle','HorizontalAlignment','center','FontWeight','bold','FontSize',12) %,'HorizontalAlignment','center');
+            end
+            sourceindex=sourceindex+i;
+        end
+        ppp=get(gca,'Position');        
+%% plot vs Mo
+        subplot(1,2,2)
+% plot plane
+  %  rectangle('Position', [1 1 noSourcesdip+5  noSourcesstrike-1],'FaceColor', [170/255 170/255 170/255]);
+  %  axis equal
+        axis([noSourcesdip-2 noSourcesdip+2 0 noSourcesstrike+1]); grid on;
+        hold on;
+
+% plot grid of sources
+        for j=1:noSourcesdip
+            for i=1:noSourcesstrike
+                plot(j,i,'+','MarkerSize',3)
+            end
+        end
+
+        ex=floor(log10(max(mom1sel)));
+        mom1selnorm=mom1sel/(10^(ex-3));
+        mom2selnorm=mom2sel/(10^(ex-3));
+        
+%%  if mom=0 the plotting fails.!!
+        mom1selnorm(mom1selnorm==0)=0.00000001;
+        mom2selnorm(mom2selnorm==0)=0.00000001;
+%
+ 
+% src1time src2time whos
+        scatter(src1_x,src1_y,mom1selnorm,src1time','LineWidth',2)
+        scatter(src2_x,src2_y,mom2selnorm,src2time','LineWidth',2)
+
+%V=caxis;
+%caxis([0 V(2)]);
+        cb=colorbar('location','SouthOutside');
+        xlabel('X');ylabel('Y');xlabel(cb,'Time (s)')
+        hold off
+        ppp4=get(gca,'Position');
+
+% ppp=get(gca,'Position')
+        subplot(1,2,1) % make all axis equal
+        set(gca,'Position',[ppp(1) ppp4(2) ppp(3) ppp4(4)]);
+
+%% additional plot  source no vs source and VR
+        figure  %2
+        axis([0 noSourcesdip*noSourcesstrike+1  0 noSourcesdip*noSourcesstrike+1]); grid on;
+        hold on;
+        scatter(source1sel,source2sel,60,VRsel,'filled')
+%scatter(src2_x,src2_y,60,VRsel,'filled')
+        V=caxis;
+        caxis([thresh V(2)]);
+        cb=colorbar;
+        xlabel('Trial source number');ylabel('Trial source number');ylabel(cb,'VR')
+        hold off
+
+% %% plot 2 point time evolution  commented 03-09-2016
+% % how many pairs
+%     selpairs=handles.selectedpairs;
+%     disp(['Ploting ' num2str(selpairs) ' pairs'])
+% % read sel_pairs2.dat 
+% if ispc
+% fid = fopen('.\timefunc\sel_pairs2.dat','r');
+% else
+% fid = fopen('./timefunc/sel_pairs2.dat','r');
+% end
+% for i=1:selpairs
+%     tline = fgets(fid);
+%     srcpair(i,:) = sscanf(tline,'%f');
+%     tline = fgets(fid); % not used
+%     for j=1:24
+%         tline = fgets(fid);
+%         srcpairtf(i,j,:) = sscanf(tline,'%f');
+%     end
+%     
+% end
+% 
+% fclose(fid);
+% 
+% %% plot pairs
+% figure  %3
+% hold
+% 
+% for i=1:selpairs
+% % first event    
+%     plot(srcpairtf(i,1:12,2),srcpairtf(i,1:12,3),'r')
+% % second event
+%     plot(srcpairtf(i,13:24,2),srcpairtf(i,13:24,3),'r')
+% 
+% end
+% 
+% %% 
+% figure  %4
+% hold
+% 
+% dur=str2double(get(handles.tdur,'String'));
+% 
+% for i=1:selpairs
+% % first event  
+%    for j=1:12
+%           x=srcpairtf(i,j,2);y=srcpairtf(i,j,3);
+%           
+%           if y~=0
+%           [vX,vY]=maketriangle(x,y,dur);
+%           zdata = ones(1,3);
+%           p1=patch(vX,vY,zdata);
+%           else
+%           end
+% 
+%    end
+%    
+% %    [vX(j,:),vY(j,:)]=maketriangle(x,y,dur);
+% %    zdata = ones(12,3);
+% %    p1=patch(vX,vY,zdata);%,'FaceColor','flat')   
+% %   set(p1,'FaceColor','r')
+% % % second event
+%    for j=13:24
+%           x=srcpairtf(i,j,2);y=srcpairtf(i,j,3);
+%           
+%           if y~=0
+%           [vX,vY]=maketriangle(x,y,dur);
+%           zdata = ones(1,3);
+%           p2=patch(vX,vY,zdata);
+%           else
+%           end
+%    end
+%    
+% end
+    
+     
+%%     
+elseif conplane==1 
+     disp('Inversion was done for a plane of sources.')   
+     %how many sources
+    noSourcesstrike=handles.noSourcesstrike;
+    strikestep=handles.strikestep;
+    noSourcesdip=handles.noSourcesdip;
+    dipstep=handles.dipstep;
 
 %  total number
-nsources=str2double(get(handles.info_nsrc,'String'));
+    nsources=str2double(get(handles.info_nsrc,'String'));
 
 % selected sources
-sel_sou=length(source1sel);
+    sel_sou=length(source1sel);
 
 % we need to convert source name to actual coordinates based on number of
 % sources in strike,dip
@@ -441,10 +820,9 @@ for i=1:length(source1sel);
       disp(['Source 1 no  ' num2str(source1sel(i)) ' time '   num2str(src1time(i))  ' Source 2 no ' num2str(source2sel(i))  ' time '   num2str(src2time(i))    ])
 end
 
-
 % read thresh from handles
-thresh=handles.thresh; 
-vrp=handles.vrp; 
+    thresh=handles.thresh; 
+    vrp=handles.vrp; 
 
 if thresh==-1
     errordlg('Run Select first','Error');
@@ -510,12 +888,12 @@ ppp=get(gca,'Position');
 
 %disp('Ploting')
 %% plot vs Mo
-subplot(1,2,2)
+    subplot(1,2,2)
 % plot plane
-rectangle('Position', [1 1 noSourcesdip-1  noSourcesstrike-1],'FaceColor', [170/255 170/255 170/255]);
-axis equal
-axis([0 noSourcesdip+1 0 noSourcesstrike+1]); grid on;
-hold on;
+    rectangle('Position', [1 1 noSourcesdip-1  noSourcesstrike-1],'FaceColor', [170/255 170/255 170/255]);
+    axis equal
+    axis([0 noSourcesdip+1 0 noSourcesstrike+1]); grid on;
+    hold on;
 
 % plot grid of sources
 for j=1:noSourcesdip
@@ -524,110 +902,186 @@ for j=1:noSourcesdip
     end
 end
 
-ex=floor(log10(max(mom1sel)));
-mom1selnorm=mom1sel/(10^(ex-3));
-mom2selnorm=mom2sel/(10^(ex-3));
+    ex=floor(log10(max(mom1sel)));
+    mom1selnorm=mom1sel/(10^(ex-3));
+    mom2selnorm=mom2sel/(10^(ex-3));
 %
+%%  if mom=0 the plotting fails.!!
+        mom1selnorm(mom1selnorm==0)=0.00000001;
+        mom2selnorm(mom2selnorm==0)=0.00000001;
+        
+        
 % src1time src2time whos
-scatter(src1_x,src1_y,mom1selnorm,src1time','LineWidth',2)
-scatter(src2_x,src2_y,mom2selnorm,src2time','LineWidth',2)
+    scatter(src1_x,src1_y,mom1selnorm,src1time','LineWidth',2)
+    scatter(src2_x,src2_y,mom2selnorm,src2time','LineWidth',2)
 
 %V=caxis;
 %caxis([0 V(2)]);
-cb=colorbar('location','SouthOutside');
-xlabel('X');ylabel('Y');xlabel(cb,'Time (s)')
-hold off
-ppp4=get(gca,'Position');
+    cb=colorbar('location','SouthOutside');
+    xlabel('X');ylabel('Y');xlabel(cb,'Time (s)')
+    hold off
+    ppp4=get(gca,'Position');
 
 % ppp=get(gca,'Position')
-subplot(1,2,1) % make all axis equal
-set(gca,'Position',[ppp(1) ppp4(2) ppp(3) ppp4(4)]);
-
+    subplot(1,2,1) % make all axis equal
+    set(gca,'Position',[ppp(1) ppp4(2) ppp(3) ppp4(4)]);
 %% additional plot
-figure
-axis([0 noSourcesdip*noSourcesstrike+1  0 noSourcesdip*noSourcesstrike+1]); grid on;
-
-hold on;
-
-scatter(source1sel,source2sel,60,VRsel,'filled')
-%scatter(src2_x,src2_y,60,VRsel,'filled')
-V=caxis;
-caxis([thresh V(2)]);
-cb=colorbar;
-xlabel('Trial source number');ylabel('Trial source number');ylabel(cb,'VR')
-hold off
-%% plot 2 point time evolution
-% how many pairs
-selpairs=handles.selectedpairs;
-
-% read sel_pairs2.dat 
-if ispc
-fid = fopen('.\timefunc\sel_pairs2.dat','r');
-else
-fid = fopen('./timefunc/sel_pairs2.dat','r');
-end
-for i=1:selpairs
-    tline = fgets(fid);
-    srcpair(i,:) = sscanf(tline,'%f');
-    tline = fgets(fid); % not used
-    for j=1:24
-        tline = fgets(fid);
-        srcpairtf(i,j,:) = sscanf(tline,'%f');
-    end
-    
-end
-
-fclose(fid);
-%%
-figure
-
-for i=1:12
-    
-    subtightplot(4,3,i,[0.08,0.01],[0.05 0.05],[0.001, 0.001]) % 12 subplots 1 per second
-    
-    title(['Time ' num2str(i)])
-    
-    % plot plane
-    rectangle('Position', [1 1 noSourcesdip-1  noSourcesstrike-1],'FaceColor', [170/255 170/255 170/255]);
-    axis equal
-    axis([0 noSourcesdip+1 0 noSourcesstrike+1]); grid on;
+    figure
+    axis([0 noSourcesdip*noSourcesstrike+1  0 noSourcesdip*noSourcesstrike+1]); grid on;
     hold on;
-    
-    % srcpairtf(k,1,3)
-    
-    stf1=srcpairtf(:,i,3);
-    stf2=srcpairtf(:,i+12,3);
-    
-    % loop through selpais
-    for k=1:selpairs;
-        [src1_x(k),src1_y(k)]=findsrccoord(srcpair(k,1),noSourcesstrike,noSourcesdip);
-        [src2_x(k),src2_y(k)]=findsrccoord(srcpair(k,2),noSourcesstrike,noSourcesdip);
+    scatter(source1sel,source2sel,60,VRsel,'filled')
+%scatter(src2_x,src2_y,60,VRsel,'filled')
+    V=caxis;
+    caxis([thresh V(2)]);
+    cb=colorbar;
+    xlabel('Trial source number');ylabel('Trial source number');ylabel(cb,'VR')
+    hold off
+% %% plot 2 point time evolution
+% % how many pairs
+%     selpairs=handles.selectedpairs;
+%     disp(['Ploting ' num2str(selpairs) ' pairs'])
+% % read sel_pairs2.dat 
+% if ispc
+% fid = fopen('.\timefunc\sel_pairs2.dat','r');
+% else
+% fid = fopen('./timefunc/sel_pairs2.dat','r');
+% end
+% for i=1:selpairs
+%     tline = fgets(fid);
+%     srcpair(i,:) = sscanf(tline,'%f');
+%     tline = fgets(fid); % not used
+%     for j=1:24
+%         tline = fgets(fid);
+%         srcpairtf(i,j,:) = sscanf(tline,'%f');
+%     end
+%     
+% end
+% 
+% fclose(fid);
+% % whos srcpair srcpairtf
+% % 
+% % srcpair(1,:)
+% % srcpairtf(1,:,:)
+% 
+% 
+% %% plot pairs
+% figure
+% hold
+% 
+% for i=1:selpairs
+% % first event    
+%     plot(srcpairtf(i,1:12,2),srcpairtf(i,1:12,3),'r')
+% % second event
+%     plot(srcpairtf(i,13:24,2),srcpairtf(i,13:24,3),'r')
+% 
+% end
+% 
+% %% 
+% figure
+% hold
+% 
+% dur=str2double(get(handles.tdur,'String'));
+% 
+% for i=1:selpairs
+% % first event  
+%    for j=1:12
+%           x=srcpairtf(i,j,2);y=srcpairtf(i,j,3);
+%           
+%           if y~=0
+%           [vX,vY]=maketriangle(x,y,dur);
+%           zdata = ones(1,3);
+%           p1=patch(vX,vY,zdata);
+%           else
+%           end
+% 
+%    end
+%    
+% %    [vX(j,:),vY(j,:)]=maketriangle(x,y,dur);
+% %    zdata = ones(12,3);
+% %    p1=patch(vX,vY,zdata);%,'FaceColor','flat')   
+% %   set(p1,'FaceColor','r')
+% % % second event
+%    for j=13:24
+%           x=srcpairtf(i,j,2);y=srcpairtf(i,j,3);
+%           
+%           if y~=0
+%           [vX,vY]=maketriangle(x,y,dur);
+%           zdata = ones(1,3);
+%           p2=patch(vX,vY,zdata);
+%           else
+%           end
+%    end
+%    
+% end
+% 
+% %set(p1,'FaceColor',[1 0 0])
+% %set(p2,'FaceColor',[.17 .17 .17])
+% 
+  
+     
+%% end of source configuration line or plane..!!        
+end   
+disp(' ')
+disp(' ')
+disp(' ')
+disp('************* ')
+disp('Use e.g. get_src_pair (7, 11) in command window to get time function for trial source 7 and 11')
+disp(' ')
+disp(' ')
+disp(' ')
+disp(' ')
 
-    disp(['Src ' num2str(srcpair(k,1)) ' slip rate ' num2str(stf1(k),'%10.5e')  '  Src ' num2str(srcpair(k,2)) ' slip rate ' num2str(stf2(k),'%10.5e') ' at time ' num2str(i) ])
-    
-    end
-    %disp(['Time ' num2str(i) ' src1' num2str(stf1(i)) ' src2 ' num2str(stf2)])
-    %            scatter(src1_x',src1_y',15,srcpairtf(:,1:12,3),'LineWidth',2)
-    %            scatter(src2_x',src2_y',15,srcpairtf(:,13:24,3),'LineWidth',2)
-    scatter(src1_x',src1_y',25,stf1,'LineWidth',5)
-    scatter(src2_x',src2_y',25,stf2,'LineWidth',5)
-
-    if i==12
-             ppp12=get(gca,'Position');
-    else
-    end
-    
-end
-    %colorbar
-    %min(srcpairtf(:,:,3))
-    maxsl=max(max(srcpairtf(:,:,3)));
-
-    % fix the size of last panel 
-V=caxis;
-caxis([V(1) maxsl]);
-colorbar;
-ppp13=get(gca,'Position');
-set(gca,'Position',[ppp13(1) ppp13(2) ppp12(3) ppp13(4)]);
+%%
+% figure
+% 
+% for i=1:12
+%     
+%     subtightplot(4,3,i,[0.08,0.01],[0.05 0.05],[0.001, 0.001]) % 12 subplots 1 per second
+%     
+%     title(['Time ' num2str(i)])
+%     
+%     % plot plane
+%     rectangle('Position', [1 1 noSourcesdip-1  noSourcesstrike-1],'FaceColor', [170/255 170/255 170/255]);
+%     axis equal
+%     axis([0 noSourcesdip+1 0 noSourcesstrike+1]); grid on;
+%     hold on;
+%     
+%     % srcpairtf(k,1,3)
+%     
+%     stf1=srcpairtf(:,i,3);
+%     stf2=srcpairtf(:,i+12,3);
+%     
+%     % loop through selpais
+%     for k=1:selpairs;
+%         [src1_x(k),src1_y(k)]=findsrccoord(srcpair(k,1),noSourcesstrike,noSourcesdip);
+%         [src2_x(k),src2_y(k)]=findsrccoord(srcpair(k,2),noSourcesstrike,noSourcesdip);
+% 
+%     disp(['Src ' num2str(srcpair(k,1)) ' slip rate ' num2str(stf1(k),'%10.5e')  '  Src ' num2str(srcpair(k,2)) ' slip rate ' num2str(stf2(k),'%10.5e') ' at time ' num2str(i) ])
+%     
+%     end
+%     %disp(['Time ' num2str(i) ' src1' num2str(stf1(i)) ' src2 ' num2str(stf2)])
+%     %            scatter(src1_x',src1_y',15,srcpairtf(:,1:12,3),'LineWidth',2)
+%     %            scatter(src2_x',src2_y',15,srcpairtf(:,13:24,3),'LineWidth',2)
+%     scatter(src1_x',src1_y',25,stf1,'LineWidth',5)
+%     scatter(src2_x',src2_y',25,stf2,'LineWidth',5)
+% 
+%     if i==12
+%              ppp12=get(gca,'Position');
+%     else
+%     end
+%     
+% end
+%     %colorbar
+%     %min(srcpairtf(:,:,3))
+%     maxsl=max(max(srcpairtf(:,:,3)));
+% 
+%     % fix the size of last panel 
+% V=caxis;
+% caxis([V(1) maxsl]);
+% cb3=colorbar;
+% ppp13=get(gca,'Position');
+% ylabel(cb3,'Nm')
+% set(gca,'Position',[ppp13(1) ppp13(2) ppp12(3) ppp13(4)]);
 
 
 % --- Executes on button press in calculate.
@@ -674,6 +1128,20 @@ fprintf(fid,'%s\r\n',linetmp15);
 fprintf(fid,'%s\r\n',linetmp16);
 fclose(fid);
 
+%% decide if we need same or different focal mechanims
+
+if get(handles.samesources,'Value') == 1
+   disp('Same FM') 
+   
+   fcode='time_loop_twosame.exe';
+   
+else
+    
+   disp('Different  FM') 
+   fcode='time_loop_twodiff.exe';
+   
+end
+
 %%
 % prepare the two acka files
 strike1 = str2double(get(handles.strike1,'String'));
@@ -681,7 +1149,7 @@ dip1 = str2double(get(handles.dip1,'String'));
 rake1 = str2double(get(handles.rake1,'String'));
 xmoment1 = str2double(get(handles.mo1,'String'));
 
-[a1,a2,a3,a4,a5,a6]=sdr2as(strike1,dip1,rake1,1);  % constrain Mo to 1
+[a1,a2,a3,a4,a5,a6]=sdr2as(strike1,dip1,rake1,xmoment1);  %  
 
 fid = fopen('.\timefunc\acka1.dat','w');
 fprintf(fid,'%9.4e\r\n',a1);
@@ -692,12 +1160,12 @@ fprintf(fid,'%9.4e\r\n',a5);
 fprintf(fid,'%9.4e\r\n',a6);
 fclose(fid);
 
-strike2 = str2double(get(handles.strike1,'String'));
-dip2 = str2double(get(handles.dip1,'String'));
-rake2 = str2double(get(handles.rake1,'String'));
-xmoment2 = str2double(get(handles.mo1,'String'));
+strike2 = str2double(get(handles.strike2,'String'));
+dip2 = str2double(get(handles.dip2,'String'));
+rake2 = str2double(get(handles.rake2,'String'));
+xmoment2 = str2double(get(handles.mo2,'String'));
 
-[a1,a2,a3,a4,a5,a6]=sdr2as(strike2,dip2,rake2,1);  % constrain Mo to 1
+[a1,a2,a3,a4,a5,a6]=sdr2as(strike2,dip2,rake2,xmoment2);  %  
 
 fid = fopen('.\timefunc\acka2.dat','w');
 fprintf(fid,'%9.4e\r\n',a1);
@@ -751,7 +1219,7 @@ close(h)
 % read values check if we need to constrain Mo
 if(get(handles.cMo,'Value')==1)
     conMo=1;
-    moment=str2double(get(handles.mo1,'String'));
+    moment=str2double(get(handles.totalmo,'String'));
 else
     conMo=0;
 end
@@ -778,15 +1246,20 @@ end
 
 fprintf(fid,'%u\r\n',nsources);
 
-
 fclose(fid);
 
 
 %%  Prepare a batch file for running the code..
-fid = fopen('.\timefunc\runtimloop.bat','w');
-fprintf(fid,'%s\r\n','time_loop_two.exe');
-fclose(fid);
-
+if ispc
+   fid = fopen('.\timefunc\runtimloop.bat','w');
+      %fprintf(fid,'%s\r\n','time_loop_two.exe');
+      fprintf(fid,'%s\r\n',fcode);
+   fclose(fid);
+else
+   fid = fopen('./timefunc/runtimloop.bat','w');
+      fprintf(fid,'%s\n',fcode);
+   fclose(fid);
+end
 
 %%  RUN the batch file
 button = questdlg('Run Inversion ?','Inversion ','Yes','No','Yes');
@@ -1074,6 +1547,13 @@ function mo2_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of mo2 as a
 %        double
 
+% update total moment
+mo1=str2double(get(handles.mo1,'String'));
+mo2=str2double(get(handles.mo2,'String'));
+
+set(handles.totalmo,'String',num2str(mo1+mo2, '%6.2e'));
+
+
 
 % --- Executes during object creation, after setting all properties.
 function mo2_CreateFcn(hObject, eventdata, handles)
@@ -1194,6 +1674,15 @@ function mo1_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of mo1 as text
 %        str2double(get(hObject,'String')) returns contents of mo1 as a
 %        double
+
+
+% update total moment
+mo1=str2double(get(handles.mo1,'String'));
+mo2=str2double(get(handles.mo2,'String'));
+
+set(handles.totalmo,'String',num2str(mo1+mo2, '%6.2e'));
+
+
 
 
 % --- Executes during object creation, after setting all properties.
@@ -1349,7 +1838,14 @@ thresh=VRmax-percvar;
 
 ind=find(VR > thresh);
 
-%% select based on thresh
+%%
+if length(ind)==1
+
+    warndlg('Only 1 solution found. Use another threshold')
+
+else
+
+% select based on thresh
 source1sel=source1(ind);
 source2sel=source2(ind);
 mom1sel=mom1(ind);
@@ -1408,7 +1904,7 @@ else
             pp(i,:,npair) = [0 ; sscanf(tline,'%f')];
         end
         
-        for j=1:24
+        for j=1:120
             %   disp(tline)
             tline = fgetl(fid); % second
             pp(j+2,:,npair) = [sscanf(tline,'%f')];
@@ -1432,7 +1928,7 @@ if ispc
         for j=1:2
             fprintf(fid,'%u %u \r\n',ppsel(j,2:3,i));
         end
-        for j=3:26
+        for j=3:122
             fprintf(fid,'%u %e %e\r\n',ppsel(j,:,i));
         end
     end
@@ -1441,9 +1937,9 @@ else
     
     
 end
-%
 
-%%
+
+%
 % how many sources
 % noSourcesstrike=handles.noSourcesstrike;
 % strikestep=handles.strikestep;
@@ -1481,3 +1977,116 @@ guidata(hObject, handles);
 set(handles.plot,'Enable','On')
 
 helpdlg('You can now continue with plotting','Selection')
+
+end %% this is end of if about number of solutions
+
+
+
+function edit13_Callback(hObject, eventdata, handles)
+% hObject    handle to strike2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of strike2 as text
+%        str2double(get(hObject,'String')) returns contents of strike2 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit13_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to strike2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function edit14_Callback(hObject, eventdata, handles)
+% hObject    handle to dip2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of dip2 as text
+%        str2double(get(hObject,'String')) returns contents of dip2 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit14_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to dip2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function totalmo_Callback(hObject, eventdata, handles)
+% hObject    handle to totalmo (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of totalmo as text
+%        str2double(get(hObject,'String')) returns contents of totalmo as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function totalmo_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to totalmo (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in plottfun4pair.
+function plottfun4pair_Callback(hObject, eventdata, handles)
+% hObject    handle to plottfun4pair (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+%pwd
+
+prompt = {'1st Source number:','2nd Source number:'};
+dlgtitle = 'Give the two source numbers';
+dims = [1 35];
+definput = {'',''};
+answer = inputdlg(prompt,dlgtitle,dims,definput);
+
+srcA=str2num(char(answer(1)))
+srcB=str2num(char(answer(2)))
+%whos
+%% plot
+ get_src_pair(srcA,srcB);
+
+
+% --- Executes on button press in samesources.
+function samesources_Callback(hObject, eventdata, handles)
+% hObject    handle to samesources (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of samesources
+
+if (get(hObject,'Value') == get(hObject,'Max'))
+    	disp('Same Focal mechanisms.');
+    	disp('Removing acka2.dat.');
+        delete('.\timefunc\acka2.dat')
+        set(handles.uipanel8,'Visible','Off');
+
+else
+        disp('Different focal mechanisms.');
+        set(handles.uipanel8,'Visible','On');
+    
+end

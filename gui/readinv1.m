@@ -1,7 +1,7 @@
 function [inv1_isour_shift,inv1_eigen,inv1_mom,inv1_mag,inv1_vol,inv1_dc,inv1_clvd,inv1_sdr1,inv1_sdr2,inv1_varred]=readinv1(nsources,subevent_needed)
 %% look for inv1.dat file 
 fh2=exist('inv1.dat','file');
-if (fh2~=2);
+if (fh2~=2)
     disp('Invert folder doesn''t contain inv1.dat.');
 inv1life=0;    
 else

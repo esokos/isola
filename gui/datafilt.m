@@ -22,7 +22,7 @@ function varargout = datafilt(varargin)
 
 % Edit the above text to modify the response to help datafilt
 
-% Last Modified by GUIDE v2.5 03-Jan-2007 23:06:12
+% Last Modified by GUIDE v2.5 07-Oct-2019 19:00:06
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -53,7 +53,7 @@ function datafilt_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin   unrecognized PropertyName/PropertyValue pairs from the
 %            command line (see VARARGIN)
 
-disp('This is datafilt 20/04/08')
+disp('This is datafilt 07/10/2019')
 
 % corrected bug with integrate, after restart it kept filter option 23/10/09
 
@@ -133,16 +133,26 @@ function loadfile_Callback(hObject, eventdata, handles)
 % samfreq=handles.samfreq;
 % def{1,1} =num2str(samfreq);
 
+% messtext=...
+%    ['Please select a datafile.                      '
+%     'This file should be a text file with           '
+%     'four columns separated by spaces.              '
+%     'Each column should contain one data channel and'
+%     'the succession should be time, NS, EW and Z    '];
+
 messtext=...
-   ['Please select a datafile.                      '
-    'This file should be a text file with           '
-    'four columns separated by spaces.              '
-    'Each column should contain one data channel and'
-    'the succession should be time, NS, EW and Z    '];
+   ['Please load an instrumentally corrected (*raw.dat) file'
+    'from the INVERT folder. These files are good for       '
+    'selection of frequency range of inversion.             '];
 
 uiwait(msgbox(messtext,'Message','warn','modal'));
 
-[file1,path1] = uigetfile([ '*.dat'],' Earthquake Datafile',400,400);
+if ispc
+    [file1,path1] = uigetfile('.\invert\*raw.dat',' Select an instumentally corrected data file');
+else
+    [file1,path1] = uigetfile('./invert/*raw.dat',' Select an instumentally corrected data file');
+end
+
 
    lopa = [path1 file1];
    name = file1
@@ -174,8 +184,7 @@ dt=1/sfreq
 set(handles.sfreq,'String',num2str(sfreq))
 
 %%%%we  suppose we read velocity
-set(handles.datatype,'String','Velocity')
-
+set(handles.datatype,'String','Instrumentally Corrected Data')
 
 % srate = str2double(get(handles.sfreq,'String'));
 %%%
@@ -201,11 +210,24 @@ handles.vercur=ver;
 handles.file=file1;
 guidata(hObject,handles)
 
-%%%%%%%%%%%%%%Update labels of components on graph based on file name
-set(handles.verlabel,'string',[file1(1:3) 'z'])
-set(handles.ewlabel,'string',[file1(1:3) 'e'])
-set(handles.nslabel,'string',[file1(1:3) 'n'])
+%% decide if file is *raw , *.unc or something else...
+fnd_raw=strfind(file1,'raw');
+fnd_unc=strfind(file1,'unc');
 
+if fnd_raw
+    set(handles.verlabel,'string',[file1(1:fnd_raw-1) ' Z'])
+    set(handles.ewlabel,'string', [file1(1:fnd_raw-1) ' E'])
+    set(handles.nslabel,'string', [file1(1:fnd_raw-1) ' N'])
+elseif fnd_unc
+    set(handles.verlabel,'string',[file1(1:fnd_unc-1) ' Z'])
+    set(handles.ewlabel,'string', [file1(1:fnd_unc-1) ' E'])
+    set(handles.nslabel,'string', [file1(1:fnd_unc-1) ' N'])
+else % some other file select the first 3 characters as station name
+%%%%%%%%%%%%%%Update labels of components on graph based on file name
+set(handles.verlabel,'string',[file1(1:3) ' Z'])
+set(handles.ewlabel, 'string',[file1(1:3) ' E'])
+set(handles.nslabel, 'string',[file1(1:3) ' N'])
+end
 
 %%%%%%%%%%%%%%%%%%PLOT RAW  DATA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %plot CORRECTED data
@@ -214,12 +236,14 @@ plot(time_sec,ew,'r')
 set(handles.ewaxis,'XMinorTick','on')
 grid on
 % title('EW')
+ylabel('m/s')
 
 axes(handles.nsaxis)
 plot(time_sec,ns,'r')
 set(handles.nsaxis,'XMinorTick','on')
 grid on
 % title('NS')
+ylabel('m/s')
 
 axes(handles.veraxis)
 plot(time_sec,ver,'r')
@@ -227,7 +251,7 @@ set(handles.veraxis,'XMinorTick','on')
 grid on
 % title('Ver')
 xlabel('Time (sec)')
-%ylabel('Counts')
+ylabel('m/s')
 
 % --- Executes on button press in Exit.
 function Exit_Callback(hObject, eventdata, handles)
@@ -269,7 +293,7 @@ handles.verdis=verdis;
 guidata(hObject,handles)
 
 %%%%we  suppose we read velocity
-set(handles.datatype,'String','Displacement','ForegroundColor','blue')
+set(handles.datatype,'String','Integrated Data','ForegroundColor','blue')
 
 %%%%%%%%%%%%%%%%%%PLOT RAW  DATA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %plot Displacement data
@@ -291,9 +315,13 @@ set(handles.veraxis,'XMinorTick','on')
 grid on
 % title('Ver')
 xlabel('Time (sec)')
-ylabel('m')
+% ylabel('m')
 
 disp('Integrating current filter data')
+
+% disable filters
+off =[handles.fil1,handles.fil2,handles.fil3,handles.fil4,handles.fil5,handles.fil6,handles.fil7,handles.select,handles.forder,handles.lfreq,handles.hfreq];
+enableoff(off)
 
 % --- Executes during object creation, after setting all properties.
 function sfreq_CreateFcn(hObject, eventdata, handles)
@@ -337,22 +365,22 @@ ns=handles.ns;
 ver=handles.ver;
 tim=handles.newsamples;
 dtime=handles.dt;
-%prepare time axis in sec
+%prepare time axis in sec 
 time_sec=((tim.*dtime)-dtime);
 
 nptsew=length(ew);
-ewf=bandpass(ew,1,5,nptsew,dtime);
+ewf=bandpass2(ew,1,5,nptsew,dtime);
 nptsns=length(ns);
-nsf=bandpass(ns,1,5,nptsns,dtime);
+nsf=bandpass2(ns,1,5,nptsns,dtime);
 nptsver=length(ver);
-verf=bandpass(ver,1,5,nptsver,dtime);
+verf=bandpass2(ver,1,5,nptsver,dtime);
 
 handles.ewcur = ewf;
 handles.nscur = nsf;
 handles.vercur=verf;
 guidata(hObject,handles)
 
-set(handles.datatype,'String','Velocity','ForegroundColor','Red')
+set(handles.datatype,'String','Filtered Data','ForegroundColor','Red')
 
 
 disp('Filtering 1 - 5 Hz')
@@ -424,7 +452,7 @@ guidata(hObject,handles)
 time_sec=((tim.*dtime)-dtime);
 
 
-set(handles.datatype,'String','Velocity','ForegroundColor','Red')
+set(handles.datatype,'String','Instrumentally Corrected Data','ForegroundColor','Red')
 
 
 %%%%%%%%%%%%%%%%%PLOT RAW  DATA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -434,13 +462,13 @@ plot(time_sec,ew,'r')
 set(handles.ewaxis,'XMinorTick','on')
 grid on
 % title('EW')
-
+ylabel('m/s')
 axes(handles.nsaxis)
 plot(time_sec,ns,'r')
 set(handles.nsaxis,'XMinorTick','on')
 grid on
 % title('NS')
-
+ylabel('m/s')
 axes(handles.veraxis)
 plot(time_sec,ver,'r')
 set(handles.veraxis,'XMinorTick','on')
@@ -448,6 +476,11 @@ grid on
 % title('Ver')
 xlabel('Time (sec)')
 %ylabel('m/sec')
+ylabel('m/s')
+
+% enable
+on =[handles.fil1,handles.fil2,handles.fil3,handles.fil4,handles.fil5,handles.fil6,handles.fil7,handles.select,handles.forder,handles.lfreq,handles.hfreq];
+enableon(on)
 
 
 % --- Executes on button press in fil2.
@@ -464,18 +497,18 @@ dtime=handles.dt;
 time_sec=((tim.*dtime)-dtime);
 
 nptsew=length(ew);
-ewf=bandpass(ew,0.2,1,nptsew,dtime);
+ewf=bandpass2(ew,0.2,1,nptsew,dtime);
 nptsns=length(ns);
-nsf=bandpass(ns,0.2,1,nptsns,dtime);
+nsf=bandpass2(ns,0.2,1,nptsns,dtime);
 nptsver=length(ver);
-verf=bandpass(ver,0.2,1,nptsver,dtime);
+verf=bandpass2(ver,0.2,1,nptsver,dtime);
 
 handles.ewcur = ewf;
 handles.nscur = nsf;
 handles.vercur=verf;
 guidata(hObject,handles)
 
-set(handles.datatype,'String','Velocity','ForegroundColor','Red')
+set(handles.datatype,'String','Filtered Data','ForegroundColor','Red')
 
 
 disp('Filtering 0.2 - 1 Hz')
@@ -520,18 +553,18 @@ dtime=handles.dt;
 time_sec=((tim.*dtime)-dtime);
 
 nptsew=length(ew);
-ewf=bandpass(ew,0.08,0.2,nptsew,dtime);
+ewf=bandpass2(ew,0.08,0.2,nptsew,dtime);
 nptsns=length(ns);
-nsf=bandpass(ns,0.08,0.2,nptsns,dtime);
+nsf=bandpass2(ns,0.08,0.2,nptsns,dtime);
 nptsver=length(ver);
-verf=bandpass(ver,0.08,0.2,nptsver,dtime);
+verf=bandpass2(ver,0.08,0.2,nptsver,dtime);
 
 handles.ewcur = ewf;
 handles.nscur = nsf;
 handles.vercur=verf;
 guidata(hObject,handles)
 
-set(handles.datatype,'String','Velocity','ForegroundColor','Red')
+set(handles.datatype,'String','Filtered Data','ForegroundColor','Red')
 
 
 disp('Filtering 0.08 - 0.2 Hz')
@@ -574,18 +607,18 @@ dtime=handles.dt;
 time_sec=((tim.*dtime)-dtime);
 
 nptsew=length(ew);
-ewf=bandpass(ew,0.06,0.08,nptsew,dtime);
+ewf=bandpass2(ew,0.06,0.08,nptsew,dtime);
 nptsns=length(ns);
-nsf=bandpass(ns,0.06,0.08,nptsns,dtime);
+nsf=bandpass2(ns,0.06,0.08,nptsns,dtime);
 nptsver=length(ver);
-verf=bandpass(ver,0.06,0.08,nptsver,dtime);
+verf=bandpass2(ver,0.06,0.08,nptsver,dtime);
 
 handles.ewcur = ewf;
 handles.nscur = nsf;
 handles.vercur=verf;
 guidata(hObject,handles)
 
-set(handles.datatype,'String','Velocity','ForegroundColor','Red')
+set(handles.datatype,'String','Filtered Data','ForegroundColor','Red')
 
 disp('Filtering 0.06 - 0.08 Hz')
 
@@ -630,18 +663,18 @@ dtime=handles.dt;
 time_sec=((tim.*dtime)-dtime);
 
 nptsew=length(ew);
-ewf=bandpass(ew,0.05,0.07,nptsew,dtime);
+ewf=bandpass2(ew,0.05,0.07,nptsew,dtime);
 nptsns=length(ns);
-nsf=bandpass(ns,0.05,0.07,nptsns,dtime);
+nsf=bandpass2(ns,0.05,0.07,nptsns,dtime);
 nptsver=length(ver);
-verf=bandpass(ver,0.05,0.07,nptsver,dtime);
+verf=bandpass2(ver,0.05,0.07,nptsver,dtime);
 
 handles.ewcur = ewf;
 handles.nscur = nsf;
 handles.vercur=verf;
 guidata(hObject,handles)
 
-set(handles.datatype,'String','Velocity','ForegroundColor','Red')
+set(handles.datatype,'String','Filtered Data','ForegroundColor','Red')
 
 disp('Filtering 0.05 - 0.07 Hz')
 
@@ -685,18 +718,18 @@ dtime=handles.dt;
 time_sec=((tim.*dtime)-dtime);
 
 nptsew=length(ew);
-ewf=bandpass(ew,0.03,0.06,nptsew,dtime);
+ewf=bandpass2(ew,0.03,0.06,nptsew,dtime);
 nptsns=length(ns);
-nsf=bandpass(ns,0.03,0.06,nptsns,dtime);
+nsf=bandpass2(ns,0.03,0.06,nptsns,dtime);
 nptsver=length(ver);
-verf=bandpass(ver,0.03,0.06,nptsver,dtime);
+verf=bandpass2(ver,0.03,0.06,nptsver,dtime);
 
 handles.ewcur = ewf;
 handles.nscur = nsf;
 handles.vercur=verf;
 guidata(hObject,handles)
 
-set(handles.datatype,'String','Velocity','ForegroundColor','Red')
+set(handles.datatype,'String','Filtered Data','ForegroundColor','Red')
 
 disp('Filtering 0.03 - 0.06 Hz')
 
@@ -739,18 +772,18 @@ dtime=handles.dt;
 time_sec=((tim.*dtime)-dtime);
 
 nptsew=length(ew);
-ewf=bandpass(ew,0.01,0.03,nptsew,dtime);
+ewf=bandpass2(ew,0.01,0.03,nptsew,dtime);
 nptsns=length(ns);
-nsf=bandpass(ns,0.01,0.03,nptsns,dtime);
+nsf=bandpass2(ns,0.01,0.03,nptsns,dtime);
 nptsver=length(ver);
-verf=bandpass(ver,0.01,0.03,nptsver,dtime);
+verf=bandpass2(ver,0.01,0.03,nptsver,dtime);
 
 handles.ewcur = ewf;
 handles.nscur = nsf;
 handles.vercur=verf;
 guidata(hObject,handles)
 
-set(handles.datatype,'String','Velocity','ForegroundColor','Red')
+set(handles.datatype,'String','Filtered Data','ForegroundColor','Red')
 
 disp('Filtering 0.01 - 0.03 Hz')
 
@@ -849,20 +882,21 @@ time_sec=((tim.*dtime)-dtime);
 
 lowfreq = str2double(get(handles.lfreq,'String'));
 highfreq = str2double(get(handles.hfreq,'String'));
+forder = str2double(get(handles.forder,'String'));
 
 nptsew=length(ew);
-ewf=bandpass(ew,lowfreq,highfreq,nptsew,dtime);
+ewf=bandpass3(ew,lowfreq,highfreq,nptsew,dtime,forder);
 nptsns=length(ns);
-nsf=bandpass(ns,lowfreq,highfreq,nptsns,dtime);
+nsf=bandpass3(ns,lowfreq,highfreq,nptsns,dtime,forder);
 nptsver=length(ver);
-verf=bandpass(ver,lowfreq,highfreq,nptsver,dtime);
+verf=bandpass3(ver,lowfreq,highfreq,nptsver,dtime,forder);
 
 handles.ewcur = ewf;
 handles.nscur = nsf;
 handles.vercur=verf;
 guidata(hObject,handles)
 
-set(handles.datatype,'String','Velocity','ForegroundColor','Red')
+set(handles.datatype,'String','Filtered Data','ForegroundColor','Red')
 
 
 disp(['Filtering ' get(handles.lfreq,'String') '  -  '  get(handles.hfreq,'String') ' Hz'])
@@ -1001,3 +1035,24 @@ function hfreqsec_Callback(hObject, eventdata, handles)
 %        str2double(get(hObject,'String')) returns contents of hfreqsec as a double
 
 
+
+function forder_Callback(hObject, eventdata, handles)
+% hObject    handle to forder (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of forder as text
+%        str2double(get(hObject,'String')) returns contents of forder as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function forder_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to forder (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

@@ -22,7 +22,7 @@ function varargout = makepz(varargin)
 
 % Edit the above text to modify the response to help makepz
 
-% Last Modified by GUIDE v2.5 12-Jan-2013 13:00:55
+% Last Modified by GUIDE v2.5 31-Aug-2015 23:38:59
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -66,7 +66,7 @@ handles.pposition=ppos;
 handles.nozeroes=0;
 handles.nopoles=0;
 
- disp('This is makepz  version 15/09/2012');
+ %disp('This is makepz  version 01/09/2015');
 
 % Update handles structure
 guidata(hObject, handles);
@@ -258,7 +258,7 @@ if strcmp(button,'No')
     fprintf(fid,'%s\r\n',A0);
     fprintf(fid,'%s\r\n','count-->m/sec');
     fprintf(fid,'%e\r\n',1/(Dsens*Ssens));
-    fprintf(fid,'%s\r\n','zeroes');
+    fprintf(fid,'%s\r\n','zeros');
     fprintf(fid,'%i\r\n',str2num(b));
     fprintf(fid,'%e     %e\r\n',zfinal);
     fprintf(fid,'%s\r\n','poles');
@@ -271,7 +271,7 @@ if strcmp(button,'No')
     fprintf(fid,'%s\n',A0);
     fprintf(fid,'%s\n','count-->m/sec');
     fprintf(fid,'%e\n',1/(Dsens*Ssens));
-    fprintf(fid,'%s\n','zeroes');
+    fprintf(fid,'%s\n','zeros');
     fprintf(fid,'%i\n',str2num(b));
     fprintf(fid,'%e     %e\n',zfinal);
     fprintf(fid,'%s\n','poles');
@@ -283,13 +283,28 @@ if strcmp(button,'No')
 elseif strcmp(button,'Yes')
     
  if ispc
-    [newfile, newdir] = uiputfile([staname 'BHZ' '.pz'], 'Save pole zero file as');
-    fid = fopen([newdir newfile],'w');
+    %[newfile, newdir] = uiputfile([staname 'BHZ' '.pz'], 'Save pole zero file as');
+    
+      h=dir('pzfiles');
+
+     if isempty(h);
+        startfolder='';
+     else
+        startfolder=[pwd '.\pzfiles']; 
+     end
+     
+         newdir = uigetdir(startfolder);
+ 
+     newfile1=[staname 'BHZ' '.pz'];
+     newfile2=[staname 'BHE' '.pz'];
+     newfile3=[staname 'BHN' '.pz'];
+    
+    fid = fopen([newdir '\' newfile1],'w');
     fprintf(fid,'%s\r\n','A0');   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
     fprintf(fid,'%s\r\n',A0);
     fprintf(fid,'%s\r\n','count-->m/sec');
     fprintf(fid,'%e\r\n',1/(Dsens*Ssens));
-    fprintf(fid,'%s\r\n','zeroes');
+    fprintf(fid,'%s\r\n','zeros');
     fprintf(fid,'%i\r\n',str2num(b));
     fprintf(fid,'%e     %e\r\n',zfinal);
     fprintf(fid,'%s\r\n','poles');
@@ -298,13 +313,14 @@ elseif strcmp(button,'Yes')
     fprintf(fid,'%s\r\n',['Info:  ' date '  '  staname '  Digi sens  '  num2str(Dsens) '  Seism sens   '   num2str(Ssens)]);
     fclose(fid);
     
-    [newfile, newdir] = uiputfile([staname 'BHE' '.pz'], 'Save pole zero file as');
-    fid = fopen([newdir newfile],'w');
+    %[newfile, newdir] = uiputfile([staname 'BHE' '.pz'], 'Save pole zero file as');
+    
+    fid = fopen([newdir '\'  newfile2],'w');
     fprintf(fid,'%s\r\n','A0');   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
     fprintf(fid,'%s\r\n',A0);
     fprintf(fid,'%s\r\n','count-->m/sec');
     fprintf(fid,'%e\r\n',1/(Dsens*Ssens));
-    fprintf(fid,'%s\r\n','zeroes');
+    fprintf(fid,'%s\r\n','zeros');
     fprintf(fid,'%i\r\n',str2num(b));
     fprintf(fid,'%e     %e\r\n',zfinal);
     fprintf(fid,'%s\r\n','poles');
@@ -313,13 +329,14 @@ elseif strcmp(button,'Yes')
     fprintf(fid,'%s\r\n',['Info:  ' date '  '  staname '  Digi sens  '  num2str(Dsens) '  Seism sens   '   num2str(Ssens)]);
     fclose(fid);
 
-    [newfile, newdir] = uiputfile([staname 'BHN' '.pz'], 'Save pole zero file as');
-    fid = fopen([newdir newfile],'w');
+   % [newfile, newdir] = uiputfile([staname 'BHN' '.pz'], 'Save pole zero file as');
+    
+    fid = fopen([newdir '\'  newfile3],'w');
     fprintf(fid,'%s\r\n','A0');   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
     fprintf(fid,'%s\r\n',A0);
     fprintf(fid,'%s\r\n','count-->m/sec');
     fprintf(fid,'%e\r\n',1/(Dsens*Ssens));
-    fprintf(fid,'%s\r\n','zeroes');
+    fprintf(fid,'%s\r\n','zeros');
     fprintf(fid,'%i\r\n',str2num(b));
     fprintf(fid,'%e     %e\r\n',zfinal);
     fprintf(fid,'%s\r\n','poles');
@@ -327,14 +344,35 @@ elseif strcmp(button,'Yes')
     fprintf(fid,'%e    %e\r\n',pfinal);
     fprintf(fid,'%s\r\n',['Info:  ' date '  '  staname '  Digi sens  '  num2str(Dsens) '  Seism sens   '   num2str(Ssens)]);
     fclose(fid);
+ 
+    
+    helpdlg(['Files saved in folder   '   newdir   ],'Info');
+    
+    
  else
-      [newfile, newdir] = uiputfile([staname 'BHZ' '.pz'], 'Save pole zero file as');
-    fid = fopen([newdir newfile],'w');
+  %    [newfile, newdir] = uiputfile([staname 'BHZ' '.pz'], 'Save pole zero file as');
+    
+          h=dir('pzfiles');
+
+     if isempty(h);
+        startfolder='';
+     else
+        startfolder=[pwd './pzfiles']; 
+     end
+     
+         newdir = uigetdir(startfolder);
+ 
+     newfile1=[staname 'BHZ' '.pz'];
+     newfile2=[staname 'BHE' '.pz'];
+     newfile3=[staname 'BHN' '.pz'];
+    
+  
+    fid = fopen([newdir '/'  newfile1],'w');
     fprintf(fid,'%s\n','A0');   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
     fprintf(fid,'%s\n',A0);
     fprintf(fid,'%s\n','count-->m/sec');
     fprintf(fid,'%e\n',1/(Dsens*Ssens));
-    fprintf(fid,'%s\n','zeroes');
+    fprintf(fid,'%s\n','zeros');
     fprintf(fid,'%i\n',str2num(b));
     fprintf(fid,'%e     %e\n',zfinal);
     fprintf(fid,'%s\n','poles');
@@ -343,13 +381,13 @@ elseif strcmp(button,'Yes')
     fprintf(fid,'%s\n',['Info:  ' date '  '  staname '  Digi sens  '  num2str(Dsens) '  Seism sens   '   num2str(Ssens)]);
     fclose(fid);
     
-    [newfile, newdir] = uiputfile([staname 'BHE' '.pz'], 'Save pole zero file as');
-    fid = fopen([newdir newfile],'w');
+  %  [newfile, newdir] = uiputfile([staname 'BHE' '.pz'], 'Save pole zero file as');
+    fid = fopen([newdir '/' newfile2],'w');
     fprintf(fid,'%s\n','A0');   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
     fprintf(fid,'%s\n',A0);
     fprintf(fid,'%s\n','count-->m/sec');
     fprintf(fid,'%e\n',1/(Dsens*Ssens));
-    fprintf(fid,'%s\n','zeroes');
+    fprintf(fid,'%s\n','zeros');
     fprintf(fid,'%i\n',str2num(b));
     fprintf(fid,'%e     %e\n',zfinal);
     fprintf(fid,'%s\n','poles');
@@ -358,13 +396,13 @@ elseif strcmp(button,'Yes')
     fprintf(fid,'%s\n',['Info:  ' date '  '  staname '  Digi sens  '  num2str(Dsens) '  Seism sens   '   num2str(Ssens)]);
     fclose(fid);
 
-    [newfile, newdir] = uiputfile([staname 'BHN' '.pz'], 'Save pole zero file as');
-    fid = fopen([newdir newfile],'w');
+ %   [newfile, newdir] = uiputfile([staname 'BHN' '.pz'], 'Save pole zero file as');
+    fid = fopen([newdir '/' newfile3],'w');
     fprintf(fid,'%s\n','A0');   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
     fprintf(fid,'%s\n',A0);
     fprintf(fid,'%s\n','count-->m/sec');
     fprintf(fid,'%e\n',1/(Dsens*Ssens));
-    fprintf(fid,'%s\n','zeroes');
+    fprintf(fid,'%s\n','zeros');
     fprintf(fid,'%i\n',str2num(b));
     fprintf(fid,'%e     %e\n',zfinal);
     fprintf(fid,'%s\n','poles');
@@ -373,7 +411,7 @@ elseif strcmp(button,'Yes')
     fprintf(fid,'%s\n',['Info:  ' date '  '  staname '  Digi sens  '  num2str(Dsens) '  Seism sens   '   num2str(Ssens)]);
     fclose(fid);
    
-     
+        helpdlg(['Files saved in folder   '   newdir   ],'Info');
  end
 
 end
@@ -505,17 +543,43 @@ A0=str2num(get(ha.A0,'String'));
 staname=get(ha.staname,'String');
 
 a_ns=zpk(zfinal,pfinal,A0);
-figure(1)
+ev1 = tf(a_ns);% 
+
+figure
+
+hb=bodeplot(ev1);
+grid on
+
+opts = getoptions(hb);
+
+opts.Title.String = staname;
+opts.Title.FontSize=18;
+opts.XLabel.FontSize=16;
+opts.YLabel.FontSize=16;
+
+opts.FreqUnits='Hz';
+opts.TickLabel.FontSize=12;
+opts.TickLabel.FontWeight='bold';
+% opts.XlimMode={'manual'}
+% opts.Xlim={[0, 1000]};
+
+setoptions(hb,opts);
+
+%setoptions(hb,'FreqUnits','Hz','Title.String',staname)
+
+figure 
 subplot(2,1,1)
 
-ev1 = tf(a_ns);% 
 [mag,phase,w] = bode(ev1, {0.01, 1000});
-w=w*0.159;		%translates rad/s in c/s only for graphing purposes 
+w=w*0.159;		%  translates rad/s in Hz only for graphing purposes  rad/s=2*pi*f (f in Hz)
+
 loglog(w,(mag(:))), grid on
 title(['Station ', staname ,'       Amplitude Response   ']);
 xlabel('Hz');
 subplot(2,1,2);
 loglog(w,(phase(:))), grid on
+%loglog(w,squeeze(phase)), grid on
+
 xlabel('Hz')
 title('Phase Response (Deg)')
 
@@ -615,7 +679,8 @@ sname=fliplr(aa);
     constantns=str2num(fgetl(fid));
 
             zer=fgetl(fid);
-            zer=zer(1:6);
+          %  zer=zer(1:6);  % disabled 10/10/2016 it was creating problems
+          %  if user had zeros instead of zeroes..!
             nzerns=str2num(fgetl(fid));
             set(handles.nzeroes,'String',num2str(nzerns));
             
@@ -693,4 +758,53 @@ handles.nozeroes=nzerns;
 handles.nopoles=npolns;
 % Update handles structure
 guidata(hObject, handles);
+
+
+
+% --- Executes on button press in help.
+function help_Callback(hObject, eventdata, handles)
+% hObject    handle to help (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% find where isola is installed
+infold=which('isola.m');
+str = strrep(infold,'isola.m','');
+
+h=dir([str '\doc']);
+% 
+
+if isempty(h);
+  
+   errordlg('Could not find doc folder in isola installation folder. Cannot open documentation','Folder Error');
+  
+else
+
+    url = [str 'doc\ISOLA_pz.htm'];
+    a=exist(url,'file');
+
+  if a~=2
+    
+    errordlg(['Could not find ' url ],'File Error');
+    
+  else
+    
+    stat=web(url) ;
+      
+       switch stat
+        case  0
+            disp('Browser was found and launched.')
+        case  1
+            disp('Browser was not found.')
+        case  2
+            disp('Browser was found but could not be launched.')
+       end
+    
+  end
+
+
+end
+
+
+
 

@@ -22,7 +22,7 @@ function varargout = create_synth(varargin)
 
 % Edit the above text to modify the response to help create_synth
 
-% Last Modified by GUIDE v2.5 28-Aug-2013 20:54:58
+% Last Modified by GUIDE v2.5 05-Nov-2017 17:39:26
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -56,14 +56,13 @@ function create_synth_OpeningFcn(hObject, eventdata, handles, varargin)
 handles.output = hObject;
 %%
 disp('This is create_synth.m')
-disp('Ver.1.0, 02/06/2011')
+disp('Ver.1.6, 26/05/2017')
 disp('           ')
 
-% if ~ispc
-%     
-%     errordlg('Not ready for Linux yet')
-% delete(handles.create_synth)
-% end
+disp('!!!!!!!!!!!!!!!!!!!!')
+disp('Warning. This tool doesn''t support multiple crustal models')
+disp('!!!!!!!!!!!!!!!!!!!!')
+disp('           ')
 
 %%
 %check if INVERT exists..!
@@ -85,20 +84,7 @@ if (fh~=7);
     delete(handles.create_synth)
 end
 
-%% Check if we have all needed files
-%check if INPINV.DAT exists..!
-if ispc
-  fh2=exist('.\invert\inpinv.dat','file');
-else
-  fh2=exist('./invert/inpinv.dat','file');
-end
-
-if (fh2~=2);
-    errordlg('Invert folder doesn''t contain inpinv.dat. Please run inversion. ','File Error');
-   delete(handles.create_synth)
-end
-
-% check for allstat.dat
+%% check for allstat.dat
 if ispc 
   fh2=exist('.\invert\allstat.dat','file');
 else
@@ -132,7 +118,30 @@ else
        end   
 end
 
-% check for grdat.hed
+%% Check if we are in single crustal model
+h=dir('green.isl');
+
+if isempty(h); 
+  warndlg('Green.isl file doesn''t exist. Single crustal model options will be used. Be careful code works only in single crustal model mode.','Warning');
+
+else
+    
+    fid = fopen('green.isl','r');
+    mulorsin=fscanf(fid,'%s',1);
+    fclose(fid);
+
+  switch  mulorsin 
+    case 'single'
+      disp('Single crustal model case')
+    case 'multiple'
+      errordlg('This code works only for single crustal model. Cannot continue.','Error'); 
+      delete(handles.create_synth)
+  end
+
+  
+end
+
+%% check for grdat.hed
 if ispc 
    fh2=exist('.\green\grdat.hed','file');
 else
@@ -212,7 +221,12 @@ else
     tl=fscanf(fid,'%g',1);
     fclose(fid);
 end
-% read grdat.hed exists....
+%% get tstep from duration.isl
+tstep=tl/8192;
+
+disp(['Found time step (dt) : ', num2str(tstep)]);
+
+%%  read grdat.hed exists....
            if ispc 
                fid = fopen('.\green\grdat.hed','r');
            else
@@ -226,34 +240,6 @@ end
           nfreq=str2num(linetmp3(1,7:length(linetmp3)));
           maxfreq=nfreq/tl;
           set(handles.gtext,'String',num2str(maxfreq,'%2.2f'))  
-         
-%% find filter and dt
-cd invert
-          fid = fopen('inpinv.dat','r');
-            linetmp=fgets(fid);         %01 line
-            linetmp=fgets(fid);         %02 line
-            linetmp=fgets(fid);         %03 line
-            tstep=fscanf(fid,'%g',1);    %04
-            linetmp=fgets(fid);         %05 line
-            linetmp=fgets(fid);         %06 line
-            linetmp=fgets(fid);         %07 line
-            linetmp=fgets(fid);         %08 line
-            linetmp=fgets(fid);         %09 line
-            linetmp=fgets(fid);         %10 line
-            linetmp=fgets(fid);         %11 line
-            linetmp=fgets(fid);          %12 line
-            linetmp=fgets(fid);          %13 line
-            linetmp=fgets(fid);          %13 line
-            ifilter=fscanf(fid,'%g',4);  %14
-            linetmp=fgets(fid);         %15 line
-            linetmp=fgets(fid);         %16 line
-       fclose(fid);
-cd ..
-
-set(handles.f1,'String',num2str(ifilter(1,1)));        
-set(handles.f2,'String',num2str(ifilter(2,1)));         
-set(handles.f3,'String',num2str(ifilter(3,1)));          
-set(handles.f4,'String',num2str(ifilter(4,1)));          
 
 %% now we need mechan.dat
 % % look if we have a mechan.dat in invert
@@ -272,6 +258,85 @@ set(handles.f4,'String',num2str(ifilter(4,1)));
 %               mechanlife=1;
 %         end
 % end
+%% check for inpinv.dat if it doesn't exist try to create it..!
+
+%check if INPINV.DAT exists..!
+if ispc
+  fh2=exist('.\invert\inpinv.dat','file');
+else
+  fh2=exist('./invert/inpinv.dat','file');
+end
+
+if (fh2~=2);
+    warndlg('Invert folder doesn''t contain inpinv.dat. ISOLA will try to create based on info found in other files. ','File Warning');
+% collect info 
+% mode of inversion
+inv=2; % keep as devia
+% time step 
+dtres=tl/8192;
+% number of sources
+%nsources
+%trial shifts
+% number of subevents
+nsubevents=1;
+% filter 
+    
+  fid = fopen('.\invert\inpinv.dat','w');
+    fprintf(fid,'%s\r\n','    mode of inversion: 1=full MT, 2=deviatoric MT (recommended), 3= DC MT, 4=known fixed DC MT');
+    fprintf(fid,'%i\r\n',inv);
+    fprintf(fid,'%s\r\n','    time step of XXXRAW.DAT files (in sec)');
+    fprintf(fid,'%g\r\n',dtres);
+    fprintf(fid,'%s\r\n','    number of trial source positions (isourmax), max. 51');
+    fprintf(fid,'%i\r\n',nsources);
+    fprintf(fid,'%s\r\n','    trial time shifts (max. 100 shifts): from (>-2500), step, to (<2500)');
+    fprintf(fid,'%s\r\n','    example: -10,5,50 means -10dt to 50dt, step = 5dt, i.e. 12 shifts');
+    fprintf(fid,'%d %u %d\r\n',-100, 5, 100);
+    fprintf(fid,'%s\r\n','    number of subevents to be searched (isubmax), max. 20');
+    fprintf(fid,'%i\r\n',nsubevents);
+    fprintf(fid,'%s\r\n','    filter (f1,f2,f3,f4); flat band-pass between f2, f3');
+    fprintf(fid,'%s\r\n','    values aren''t used freq band is read from allstat.dat');
+    fprintf(fid,'%g %g %g %g\r\n',0.05,0.05,0.1,0.1);
+    fprintf(fid,'%s\r\n','    guess of data variance (important only for absolute value of the parameter variance)');
+    fprintf(fid,'%s\r\n','2.0e-12');
+  fclose(fid);
+
+set(handles.f1,'String','');        
+set(handles.f4,'String','');          
+
+else  % inpinv exists..!
+      % find filter and dt
+cd invert
+          fid = fopen('inpinv.dat','r');
+            linetmp=fgets(fid);         %01 line
+            linetmp=fgets(fid);       %02 line
+            linetmp=fgets(fid);         %03 line
+            linetmp=fgets(fid);
+           % tstep=fscanf(fid,'%g',1);    %04
+            linetmp=fgets(fid);         %05 line
+            linetmp=fgets(fid);         %06 line
+            linetmp=fgets(fid);         %07 line
+            linetmp=fgets(fid);         %08 line
+            linetmp=fgets(fid);         %09 line
+            linetmp=fgets(fid);         %10 line
+            linetmp=fgets(fid);         %11 line
+            linetmp=fgets(fid);          %12 line
+            linetmp=fgets(fid);          %13 line
+            ifilter=fscanf(fid,'%g',4)   %14
+            linetmp=fgets(fid)         %15 line
+            linetmp=fgets(fid)         %16 line
+       fclose(fid);
+cd ..
+
+set(handles.f1,'String',num2str(ifilter(1,1)));        
+set(handles.f4,'String',num2str(ifilter(4,1)));          
+
+disp(['Found filter    : ', num2str(ifilter(1,1)) '  '  num2str(ifilter(2,1))  '  '  num2str(ifilter(3,1))  '  '  num2str(ifilter(4,1)) ]);
+
+handles.ifilter=ifilter;
+% Update handles structure
+guidata(hObject, handles);
+
+end
 
 %%
 % look for inv1.dat file to get moment and delay
@@ -361,6 +426,9 @@ set(handles.delay,'String',num2str(inv1_isour_shift(2,1)*tstep));
 set(handles.source,'String',num2str(inv1_isour_shift(1,1)));  
 set(handles.timetext,'String', ['Time step (dt) was ' num2str(tstep) '   Best time step in dt was ' num2str(inv1_isour_shift(2,1))]);  
 
+disp(['Found moment : ', num2str(inv1_moment,'%10.5e') ]);
+disp(['Found Strike/Dip/Rake : ', num2str(inv1_sdr(1,1))  '  '  num2str(inv1_sdr(2,1))  '  '  num2str(inv1_sdr(3,1)) ]);
+disp(['Found source : ',num2str(inv1_isour_shift(1,1)) '   Best time shift=' num2str(inv1_isour_shift(2,1)) ' dt.  ' 'Time step=' num2str(tstep) '.' ' Time shift in sec= ' num2str(tstep*inv1_isour_shift(2,1)) ]);
 
 else
 
@@ -379,12 +447,6 @@ set(handles.source,'String',num2str(inv1_isour_shift(1,1)));
 %set(handles.timetext,'String', ['Time step (dt) was ' num2str(tstep) '   Best time step in dt was ' num2str(inv1_isour_shift(2,1))]);  
 
 end
-
-disp(['Found time step (dt) : ', num2str(tstep)]);
-disp(['Found filter    : ', num2str(ifilter(1,1)) '  '  num2str(ifilter(2,1))  '  '  num2str(ifilter(3,1))  '  '  num2str(ifilter(4,1)) ]);
-disp(['Found source : ',num2str(inv1_isour_shift(1,1)) '   Best time shift=' num2str(inv1_isour_shift(2,1)) ' dt.  ' 'Time step=' num2str(tstep) '.' ' Time shift in sec= ' num2str(tstep*inv1_isour_shift(2,1)) ]);
-disp(['Found moment : ', num2str(inv1_moment,'%10.5e') ]);
-disp(['Found Strike/Dip/Rake : ', num2str(inv1_sdr(1,1))  '  '  num2str(inv1_sdr(2,1))  '  '  num2str(inv1_sdr(3,1)) ]);
 
 %% read allstat
 % Copy  in synth
@@ -430,12 +492,13 @@ stnames{nostations+1}='All';
 set(handles.stationslistbox,'String',stnames)          %%%%% Fill listbox with stations names
 set(handles.stationslistbox,'Value',nostations+1)      %%%%% Set default plot to All stations
 
+%% 
+waitfor(warndlg('Code makes use of the files currently available in Green folder. Multiple crustal models are not supported','!! Warning !!'))
 
 %%
 handles.stnames=stnames;
 %handles.stnames2=stnames2;
 handles.nostations=nostations;
-handles.ifilter=ifilter;
 handles.tstep=tstep;
 handles.nsources=nsources;
 
@@ -467,14 +530,74 @@ function calculate_Callback(hObject, eventdata, handles)
 %%
 % if we change values in GUI these will go to 99.syn
 f1=str2double(get(handles.f1,'String'));  
-f2=str2double(get(handles.f2,'String'));  
-f3=str2double(get(handles.f3,'String'));  
+% f2=str2double(get(handles.f2,'String'));  
+% f3=str2double(get(handles.f3,'String'));  
 f4=str2double(get(handles.f4,'String'));  
+
+f2=f1;
+f3=f4;
 %
 moment= get(handles.moment,'String');  
 strike= get(handles.strike,'String');  
 dip=get(handles.dip,'String');  
 rake=get(handles.rake,'String');  
+
+%% check if cartesian of spherical is selected
+if (get(handles.Spherical,'Value') == get(handles.Spherical,'Max')) || (get(handles.Cartesian,'Value') == get(handles.Cartesian,'Max'))
+    moment='0';
+    strike='0';
+    dip='0';
+    rake='0';
+    disp('MT definition selected.')
+else
+end
+%
+if (get(handles.Spherical,'Value') == get(handles.Spherical,'Max'))
+        disp('MT Spherical definition selected.')
+        Mrr=str2double(get(handles.Mrr,'String'));
+        Mtt=str2double(get(handles.Mtt,'String'));
+        Mpp=str2double(get(handles.Mpp,'String'));
+        Mrt=str2double(get(handles.Mrt,'String'));
+        Mrp=str2double(get(handles.Mrp,'String'));
+        Mtp=str2double(get(handles.Mtp,'String'));
+         if ispc
+           fid = fopen('.\synth\moment_tensor.dat','w');
+           fprintf(fid,'%u\r\n',2);
+           fprintf(fid,'%e %e %e %e %e %e\r\n',Mrr,Mtt,Mpp,Mrt,Mrp,Mtp);
+           fclose(fid);
+         else
+           fid = fopen('./synth/moment_tensor.dat','w');
+           fprintf(fid,'%u\n',2);
+           fprintf(fid,'%e %e %e %e %e %e\r\n',Mrr,Mtt,Mpp,Mrt,Mrp,Mtp);
+           fclose(fid);
+         end
+else
+end
+
+%
+if (get(handles.Cartesian,'Value') == get(handles.Cartesian,'Max'))
+        disp('MT Cartesian definition selected.')
+        Mxx=str2double(get(handles.Mxx,'String'));
+        Mxy=str2double(get(handles.Mxy,'String'));
+        Mxz=str2double(get(handles.Mxz,'String'));
+        Myy=str2double(get(handles.Myy,'String'));
+        Myz=str2double(get(handles.Myz,'String'));
+        Mzz=str2double(get(handles.Mzz,'String'));
+         if ispc
+           fid = fopen('.\synth\moment_tensor.dat','w');
+           fprintf(fid,'%u\r\n',1);
+           fprintf(fid,'%e %e %e %e %e %e\r\n',Mxx,Mxy,Mxz,Myy,Myz,Mzz);
+           fclose(fid);
+         else
+           fid = fopen('./synth/moment_tensor.dat','w');
+           fprintf(fid,'%u\n',1);
+           fprintf(fid,'%e %e %e %e %e %e\r\n',Mxx,Mxy,Mxz,Myy,Myz,Mzz);
+           fclose(fid);
+         end
+else
+end
+
+%%
 %
 delay=get(handles.delay,'String');    % time shift
 %
@@ -503,7 +626,32 @@ else
     errordlg('Please select type of time function','!! Error !!')
     return
 end
+%%
+if get(handles.radiobutton11,'Value') == get(handles.radiobutton11,'Max')
+    disp('Band Pass selected')
+    keyfil=0;  
+elseif get(handles.radiobutton12,'Value') == get(handles.radiobutton12,'Max')
+    disp('Low Pass selected')
+    keyfil=1;  
+else
+    %%% case nothing is selected....!!
+    errordlg('Please select type of filter (Band or Low Pass)','!! Error !!')
+    return
+end
+%%
+if get(handles.radiobutton13,'Value') == get(handles.radiobutton13,'Max')
+    disp('Velocity selected')
+    keydis=0;  
+elseif get(handles.radiobutton14,'Value') == get(handles.radiobutton14,'Max')
+    disp('Displacement selected')
+    keydis=1;  
+else
+    %%% case nothing is selected....!!
+    errordlg('Please select type of filter (Band or Low Pass)','!! Error !!')
+    return
+end
 
+%%
 % prepare the file
 switch istype
     
@@ -528,20 +676,29 @@ switch istype
          if ispc
            fid = fopen('.\synth\soutype.dat','w');
            fprintf(fid,'%s\r\n','4');
-           fprintf(fid,'%4.1f\r\n',t0);
+           fprintf(fid,'%6.3f\r\n',t0);
            fprintf(fid,'%s\r\n','0.5');
            fprintf(fid,'%s\r\n','1');
            fclose(fid);
          else
            fid = fopen('./synth/soutype.dat','w');
            fprintf(fid,'%s\n','4');
-           fprintf(fid,'%4.1f\n',t0);
+           fprintf(fid,'%6.3f\n',t0);
            fprintf(fid,'%s\n','0.5');
            fprintf(fid,'%s\n','1');
            fclose(fid);
          end
 end
 
+%%  noise part new 05/11/2017
+if (get(handles.usenoise,'Value') == get(handles.usenoise,'Max'))
+    keyrand=1;
+    noise_sigma=str2double(get(handles.noisesigma,'String'));
+    noise_low=str2double(get(handles.noiselow,'String'));
+    noise_high=str2double(get(handles.noisehigh,'String'));
+else
+    keyrand=0;
+end
 %%
 % !!! IMPORTANT we need to check if this is out of our green calculation limits
 
@@ -556,6 +713,20 @@ if ispc
    fprintf(fid,'%g    %s\r\n',tstep,'! time step (after resampling)');
    fprintf(fid,'%g   %g   %s\r\n',f1, f2 ,'! filter left taper (Hz) ');
    fprintf(fid,'%g   %g   %s\r\n',f3, f4 ,'! filter right taper (Hz) ');
+   fprintf(fid,'%g   %s\r\n', keyfil,'! bandpass=0, lowpass=1 ');
+   fprintf(fid,'%g   %s\r\n', keydis,'! velocity=0, displacement=1 ');
+   if keyrand==1
+       fprintf(fid,'%u   %s\r\n', keyrand,'! keyrand=0 (no noise), =1 with noise');
+       fprintf(fid,'%g   %s\r\n', noise_sigma,'! noise sigma');
+       fprintf(fid,'%g   %s\r\n', noise_low,'! noise low cut');
+       fprintf(fid,'%g   %s\r\n', noise_high,'! noise high cut');
+   else
+       fprintf(fid,'%u   %s\r\n', 0,'! keyrand=0 (no noise), =1 with noise');
+       fprintf(fid,'%g   %s\r\n', 0,'! noise sigma');
+       fprintf(fid,'%g   %s\r\n', 0,'! noise low cut');
+       fprintf(fid,'%g   %s\r\n', 0,'! noise high cut');
+   end
+  % fprintf(fid,'%s   %s\r\n', delay,'! shift (in seconds)');   
   fclose(fid);
 
   fid = fopen('mechan.dat','w');
@@ -576,6 +747,20 @@ else
    fprintf(fid,'%g    %s\n',tstep,'! time step (after resampling)');
    fprintf(fid,'%g   %g   %s\n',f1, f2 ,'! filter left taper (Hz) ');
    fprintf(fid,'%g   %g   %s\n',f3, f4 ,'! filter right taper (Hz) ');
+   fprintf(fid,'%g   %s\n', keyfil,'! bandpass=0, lowpass=1 ');
+   fprintf(fid,'%g   %s\n', keydis,'! velocity=0, displacement=1 ');
+      if keyrand==1
+       fprintf(fid,'%u   %s\n', keyrand,'! keyrand=0 (no noise), =1 with noise');
+       fprintf(fid,'%g   %s\n', noise_sigma,'! noise sigma');
+       fprintf(fid,'%g   %s\n', noise_low,'! noise low cut');
+       fprintf(fid,'%g   %s\n', noise_high,'! noise high cut');
+   else
+       fprintf(fid,'%u   %s\n', 0,'! keyrand=0 (no noise), =1 with noise');
+       fprintf(fid,'%g   %s\n', 0,'! noise sigma');
+       fprintf(fid,'%g   %s\n', 0,'! noise low cut');
+       fprintf(fid,'%g   %s\n', 0,'! noise high cut');
+   end
+ %  fprintf(fid,'%s   %s\r\n', delay,'! shift (in seconds)');      
   fclose(fid);
 
   fid = fopen('mechan.dat','w');
@@ -617,13 +802,16 @@ end
                     fprintf(fid,'%s\r\n','          ');
                     fprintf(fid,'%s\r\n','REM needs GRxx.HEA, GRxx.HES for selected source position xx');
                     fprintf(fid,'%s\r\n','REM needs ALLSTAT.DAT, MECHAN.DAT, 99.SYN');
-                    fprintf(fid,'%s\r\n','REM syn_cor is with 50 sec shift, while syn_cor2 is without 50 sec');
-                    
                     fprintf(fid,'%s\r\n','          ');
-
                     fprintf(fid,'%s\r\n',['copy gr' sourcename '.hea gr.hea']);
                     fprintf(fid,'%s\r\n',['copy gr' sourcename '.hes gr.hes']);
+                    
+                    if (get(handles.Spherical,'Value') == get(handles.Spherical,'Max')) || (get(handles.Cartesian,'Value') == get(handles.Cartesian,'Max'))
+                    fprintf(fid,'%s\r\n','conshift_mt.exe');
+                    else
                     fprintf(fid,'%s\r\n','conshift.exe');
+                    end
+                    
                     fprintf(fid,'%s\r\n','REM creates temporary file SXXXROW.DAT for each XXX station.');
                     fprintf(fid,'%s\r\n','          ');
 % now loop over stations
@@ -631,51 +819,54 @@ end
                          fprintf(fid,'%s\r\n','copy  99.syn i.dat');
                          fprintf(fid,'%s\r\n',['copy  s' char(stnames{i}) 'row.dat row.dat']);
                          fprintf(fid,'%s\r\n','syn_cor.exe');
-                         fprintf(fid,'%s\r\n',['copy  outsei.dat  s' char(stnames{i}) '.dat']);
+                         fprintf(fid,'%s\r\n',['copy  outsei.dat ' char(stnames{i}) '.syn']);
+                         fprintf(fid,'%s\r\n',['copy  outsei.dat ' char(stnames{i}) 'raw.dat']);
+                         fprintf(fid,'%s\r\n',['copy  outsei.dat ' char(stnames{i}) 'syn.dat']);
+                         
                       %   fprintf(fid,'%s\r\n',['del  s' char(stnames{1,1}(i,1)) 'row.dat']);
                          fprintf(fid,'%s\r\n','          ');
                      end
                      
-                     fprintf(fid,'%s\r\n','REM ******************************************************');
-                     fprintf(fid,'%s\r\n','REM ******************************************************');
-                     fprintf(fid,'%s\r\n','REM ***  part for Velocity Sythetics Without Filter  *****');
-                     fprintf(fid,'%s\r\n','REM ***  previous part is for Displacement and Filtered **');
-                     fprintf(fid,'%s\r\n','REM ***  data produced here e.g. s(station)2.dat will be *');
-                     fprintf(fid,'%s\r\n','REM ***  for frequencies up to green function calculation ');
-                     fprintf(fid,'%s\r\n','REM ******************************************************');
-                     fprintf(fid,'%s\r\n','REM ******************************************************');
-                     fprintf(fid,'%s\r\n','          ');
-                                         
-                     for i=1:nostations
-                         fprintf(fid,'%s\r\n','copy  99.syn i.dat');
-                         fprintf(fid,'%s\r\n',['copy  s' char(stnames{i}) 'row.dat row.dat']);
-                         fprintf(fid,'%s\r\n','syn_cor2.exe');
-                         fprintf(fid,'%s\r\n',['copy  outsei.dat  s' char(stnames{i}) '2.dat']);
-                         fprintf(fid,'%s\r\n',['del  s' char(stnames{i}) 'row.dat']);
-                         fprintf(fid,'%s\r\n','          ');
-                     end
-                    
-                     
+%                      fprintf(fid,'%s\r\n','REM ******************************************************');
+%                      fprintf(fid,'%s\r\n','REM ******************************************************');
+%                      fprintf(fid,'%s\r\n','REM ***  part for Velocity Sythetics Without Filter  *****');
+%                      fprintf(fid,'%s\r\n','REM ***  previous part is for Displacement and Filtered **');
+%                      fprintf(fid,'%s\r\n','REM ***  data produced here e.g. s(station)2.dat will be *');
+%                      fprintf(fid,'%s\r\n','REM ***  for frequencies up to green function calculation ');
+%                      fprintf(fid,'%s\r\n','REM ******************************************************');
+%                      fprintf(fid,'%s\r\n','REM ******************************************************');
+%                      fprintf(fid,'%s\r\n','          ');
+%                                          
+%                      for i=1:nostations
+%                          fprintf(fid,'%s\r\n','copy  99.syn i.dat');
+%                          fprintf(fid,'%s\r\n',['copy  s' char(stnames{i}) 'row.dat row.dat']);
+%                          fprintf(fid,'%s\r\n','syn_cor2.exe');
+%                          fprintf(fid,'%s\r\n',['copy  outsei.dat  s' char(stnames{i}) '2.dat']);
+%                          fprintf(fid,'%s\r\n',['del  s' char(stnames{i}) 'row.dat']);
+%                          fprintf(fid,'%s\r\n','          ');
+%                      end
+%                     
+%                      
                       fprintf(fid,'%s\r\n','          ');
                       fprintf(fid,'%s\r\n','del i.dat gr.hea gr.hes outsei.dat row.dat');
                       
-                      
                  fclose(fid);
-                 
-                 
    else  % Linux
             fid = fopen('run_synth.sh','w');
                     fprintf(fid,'%s\n','#!/bin/bash');
                     fprintf(fid,'%s\n','             ');
                     fprintf(fid,'%s\n','echo needs GRxx.HEA, GRxx.HES for selected source position xx');
                     fprintf(fid,'%s\n','echo needs ALLSTAT.DAT, MECHAN.DAT, 99.SYN');
-                    fprintf(fid,'%s\n','echo syn_cor is with 50 sec shift, while syn_cor2 is without 50 sec');
-                    
                     fprintf(fid,'%s\n','          ');
-
                     fprintf(fid,'%s\n',['cp gr' sourcename '.hea gr.hea']);
                     fprintf(fid,'%s\n',['cp gr' sourcename '.hes gr.hes']);
+                    
+                    if (get(handles.Spherical,'Value') == get(handles.Spherical,'Max')) || (get(handles.Cartesian,'Value') == get(handles.Cartesian,'Max'))
+                    fprintf(fid,'%s\n','conshift_mt.exe');
+                    else
                     fprintf(fid,'%s\n','conshift.exe');
+                    end                    
+                    
                     fprintf(fid,'%s\n','echo creates temporary file SXXXROW.DAT for each XXX station.');
                     fprintf(fid,'%s\n','          ');
 % now loop over stations
@@ -688,30 +879,26 @@ end
                          fprintf(fid,'%s\n','          ');
                      end
                      
-                     fprintf(fid,'%s\n','echo ******************************************************');
-                     fprintf(fid,'%s\n','echo ******************************************************');
-                     fprintf(fid,'%s\n','echo ***  part for Velocity Sythetics Without Filter  *****');
-                     fprintf(fid,'%s\n','echo ***  previous part is for Displacement and Filtered **');
-                     fprintf(fid,'%s\n','echo ***  data produced here e.g. s(station)2.dat will be *');
-                     fprintf(fid,'%s\n','echo ***  for frequencies up to green function calculation ');
-                     fprintf(fid,'%s\n','echo ******************************************************');
-                     fprintf(fid,'%s\n','echo ******************************************************');
-                     fprintf(fid,'%s\n','          ');
-                                         
-                     for i=1:nostations
-                         fprintf(fid,'%s\n','cp  99.syn i.dat');
-                         fprintf(fid,'%s\n',['cp  s' char(stnames{i}) 'row.dat row.dat']);
-                         fprintf(fid,'%s\n','syn_cor2.exe');
-                         fprintf(fid,'%s\n',['cp  outsei.dat  s' char(stnames{i}) '2.dat']);
-                         fprintf(fid,'%s\n',['rm  s' char(stnames{i}) 'row.dat']);
-                         fprintf(fid,'%s\n','          ');
-                     end
-                    
-                     
+%                      fprintf(fid,'%s\n','echo ******************************************************');
+%                      fprintf(fid,'%s\n','echo ******************************************************');
+%                      fprintf(fid,'%s\n','echo ***  part for Velocity Sythetics Without Filter  *****');
+%                      fprintf(fid,'%s\n','echo ***  previous part is for Displacement and Filtered **');
+%                      fprintf(fid,'%s\n','echo ***  data produced here e.g. s(station)2.dat will be *');
+%                      fprintf(fid,'%s\n','echo ***  for frequencies up to green function calculation ');
+%                      fprintf(fid,'%s\n','echo ******************************************************');
+%                      fprintf(fid,'%s\n','echo ******************************************************');
+%                      fprintf(fid,'%s\n','          ');
+%                                          
+%                      for i=1:nostations
+%                          fprintf(fid,'%s\n','cp  99.syn i.dat');
+%                          fprintf(fid,'%s\n',['cp  s' char(stnames{i}) 'row.dat row.dat']);
+%                          fprintf(fid,'%s\n','syn_cor2.exe');
+%                          fprintf(fid,'%s\n',['cp  outsei.dat  s' char(stnames{i}) '2.dat']);
+%                          fprintf(fid,'%s\n',['rm  s' char(stnames{i}) 'row.dat']);
+%                          fprintf(fid,'%s\n','          ');
+%                      end
                       fprintf(fid,'%s\n','          ');
                       fprintf(fid,'%s\n','rm i.dat gr.hea gr.hes outsei.dat row.dat');
-                      
-                      
                  fclose(fid);
    end
                      
@@ -744,8 +931,12 @@ cd ..
             
        elseif strcmp(button,'No')
           disp('Canceled ')
-       end
+        end
 
+       
+        
+        
+        
 
 % --- Executes on button press in exit.
 function exit_Callback(hObject, eventdata, handles)
@@ -763,9 +954,11 @@ dip=get(handles.dip,'String');
 rake=get(handles.rake,'String'); 
 % 
 f1=get(handles.f1,'String');  
-f2=get(handles.f2,'String');  
-f3=get(handles.f3,'String');  
+%f2=get(handles.f2,'String');  
+%f3=get(handles.f3,'String');  
 f4=get(handles.f4,'String');  
+f2=f1;
+f3=f4;
 %
 source=get(handles.source,'String'); 
 %
@@ -783,12 +976,12 @@ else
     return
 end
 %
-normalized = get(handles.check1,'Value');
-addvarred = get(handles.svarred,'Value');
+%normalized = get(handles.check1,'Value');
+%addvarred = get(handles.svarred,'Value');
 uselimits=get(handles.uselimits,'Value');
 ftime =  get(handles.ftime,'String');
 totime = get(handles.totime,'String');
-pbw = get(handles.bw,'Value');
+%pbw = get(handles.bw,'Value');
 %
 % Write to file
 if ispc
@@ -805,29 +998,29 @@ if ispc
    fprintf(fid,'%s\r\n',delay);
    fprintf(fid,'%u\r\n',istype);
    fprintf(fid,'%s\r\n',t0);
-   if normalized == 1 
-     fprintf(fid,'%s\r\n','1');
-   else
-     fprintf(fid,'%s\r\n','0');
-   end
-   if addvarred == 1 
-     fprintf(fid,'%s\r\n','1');
-   else
-     fprintf(fid,'%s\r\n','0');
-   end
-   if uselimits == 1 
-     fprintf(fid,'%s\r\n','1');
-   else
-     fprintf(fid,'%s\r\n','0');
-   end
-   if pbw == 1 
-     fprintf(fid,'%s\r\n','1');
-   else
-     fprintf(fid,'%s\r\n','0');
-   end
-   
-   fprintf(fid,'%s\r\n',ftime);
-   fprintf(fid,'%s\r\n',totime);
+%    if normalized == 1 
+%      fprintf(fid,'%s\r\n','1');
+%    else
+%      fprintf(fid,'%s\r\n','0');
+%    end
+%    if addvarred == 1 
+%      fprintf(fid,'%s\r\n','1');
+%    else
+%      fprintf(fid,'%s\r\n','0');
+%    end
+    if uselimits == 1 
+      fprintf(fid,'%s\r\n','1');
+    else
+      fprintf(fid,'%s\r\n','0');
+    end
+%    if pbw == 1 
+%      fprintf(fid,'%s\r\n','1');
+%    else
+%      fprintf(fid,'%s\r\n','0');
+%    end
+%    
+    fprintf(fid,'%s\r\n',ftime);
+    fprintf(fid,'%s\r\n',totime);
    
    fclose(fid);
 else
@@ -844,29 +1037,29 @@ else
    fprintf(fid,'%s\n',delay);
    fprintf(fid,'%u\n',istype);
    fprintf(fid,'%s\n',t0);
-   if normalized == 1 
-     fprintf(fid,'%s\n','1');
-   else
-     fprintf(fid,'%s\n','0');
-   end
-   if addvarred == 1 
-     fprintf(fid,'%s\n','1');
-   else
-     fprintf(fid,'%s\n','0');
-   end
-   if uselimits == 1 
-     fprintf(fid,'%s\n','1');
-   else
-     fprintf(fid,'%s\n','0');
-   end
-   if pbw == 1 
-     fprintf(fid,'%s\n','1');
-   else
-     fprintf(fid,'%s\n','0');
-   end
-   
-   fprintf(fid,'%s\n',ftime);
-   fprintf(fid,'%s\n',totime);
+%    if normalized == 1 
+%      fprintf(fid,'%s\n','1');
+%    else
+%      fprintf(fid,'%s\n','0');
+%    end
+%    if addvarred == 1 
+%      fprintf(fid,'%s\n','1');
+%    else
+%      fprintf(fid,'%s\n','0');
+%    end
+    if uselimits == 1 
+      fprintf(fid,'%s\n','1');
+    else
+      fprintf(fid,'%s\n','0');
+    end
+%    if pbw == 1 
+%      fprintf(fid,'%s\n','1');
+%    else
+%      fprintf(fid,'%s\n','0');
+%    end
+%    
+    fprintf(fid,'%s\n',ftime);
+    fprintf(fid,'%s\n',totime);
 
   fclose(fid);
 end
@@ -1304,6 +1497,21 @@ syntdatafilename=syntdatafilename';
     
 %try    
 %%%%%%%%%NOW WE KNOW FILENAMES AND WE CAN PLOT .....
+%% check if we have velocity or displacemnt
+
+if get(handles.radiobutton13,'Value') == get(handles.radiobutton13,'Max')
+    disp('Velocity selected')
+    keyheader='Velocity (m/s)';  
+elseif get(handles.radiobutton14,'Value') == get(handles.radiobutton14,'Max')
+    disp('Displacement selected')
+    keyheader='Displacement (m)';
+else
+    %%% case nothing is selected....!!
+    errordlg('Please select type of filter (Band or Low Pass)','!! Error !!')
+    return
+end
+
+%%
 
 %%%%%%%%%%%initialize data matrices
 realdataall=zeros(8192,4,nostations);    %%%% 8192 points  fixed....
@@ -1511,7 +1719,7 @@ else
                     set(object_h,'LineWidth',2)
                     set(plot_h(1),'LineWidth',1.5)
                     set(plot_h(2),'LineWidth',1)
-                    title(['Displacement (m).  Inversion band (Hz)  ' invband],'FontSize',10,'FontWeight','bold')
+                    title([keyheader '  Inversion band (Hz)  ' invband],'FontSize',10,'FontWeight','bold')
 axis off
 end
 
@@ -1644,8 +1852,10 @@ for i=1:nostations    %%%%%%loop over stations
               'FontSize',12,...
               'FontWeight','bold');
           end
-          
-%           if  j==2 
+          set(get(gca,'YLabel'),'Rotation',0)
+          set(y, 'Units', 'Normalized', 'Position', [-0.12, 0.5, 0]);          
+
+%           if  j==2
 %           ylabel('Displacement')
 %           end
 
@@ -1976,6 +2186,23 @@ uselimits=get(handles.uselimits,'Value');
 ftime =  str2double(get(handles.ftime,'String'));
 totime = str2double(get(handles.totime,'String'));
 
+
+%% check if we have velocity or displacemnt
+
+if get(handles.radiobutton13,'Value') == get(handles.radiobutton13,'Max')
+    disp('Velocity selected')
+    keyheader='Velocity (m/s)';  
+elseif get(handles.radiobutton14,'Value') == get(handles.radiobutton14,'Max')
+    disp('Displacement selected')
+    keyheader='Displacement (m)';
+else
+    %%% case nothing is selected....!!
+    errordlg('Please select type of filter (Band or Low Pass)','!! Error !!')
+    return
+end
+%%
+
+
 %%%%%%%%%%%%%FIND OUT USER SELECTION %%%%%%%%%%%%%%
 %%%%%%%%%%% code based on Matlab example of list box....!!!
 
@@ -1985,11 +2212,11 @@ if length(index_selected)==1   %%% plot ONE or ALL stations ONLY
     
     if index_selected == nostations+1                          %%%ALL
           disp('Plotting All Stations Synthetic data in one Figure')
-          plotallstationssyn(nostations,staname,uselimits,ftime,totime)
+          plotallstationssyn(nostations,staname,uselimits,ftime,totime,keyheader)
     elseif index_selected ~= nostations+1                       %%% just one
           disp('Plotting ONLY One Station Synthetic data in one Figure')
           stationname=staname{index_selected}
-          plotonestationsyn(stationname,uselimits,ftime,totime)
+          plotonestationsyn(stationname,uselimits,ftime,totime,keyheader)
     end
       
 elseif length(index_selected) ~=1   %%%Plot more than one and maybe ALL stations...
@@ -1999,10 +2226,10 @@ elseif length(index_selected) ~=1   %%%Plot more than one and maybe ALL stations
          if index_selected(i) ~= nostations+1
              disp('Plotting selected stations Synthetic data ')
              stationname=staname{index_selected(i)}
-             plotonestationsyn(stationname,uselimits,ftime,totime)
+             plotonestationsyn(stationname,uselimits,ftime,totime,keyheader)
          elseif index_selected(i) == nostations+1
              disp('Plotting All Stations Synthetic data in one Figure')
-             plotallstationssyn(nostations,staname,uselimits,ftime,totime)
+             plotallstationssyn(nostations,staname,uselimits,ftime,totime,keyheader)
          else
              disp('Error')
          end
@@ -2019,14 +2246,14 @@ end
 %%%%%%%%%%% %%%%%%%%%%%%IN A NEW FIGURE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%      
 
-function plotallstationssyn(nostations,staname,uselimits,ftime,totime)
+function plotallstationssyn(nostations,staname,uselimits,ftime,totime,keyheader)
 %%%%%prepare filenames  
 %%% we keep fixed that data will be e.g. evrfil.dat
 %%% and synthetics will be               evrsyn.dat
 % ['.\synth\s' char(staname{i}) '.dat'];
 
 for i=1:nostations
-    syntdatafilename{i}=['s' staname{i} '.dat'];
+    syntdatafilename{i}=[staname{i} '.syn'];
 end
 
 syntdatafilename=syntdatafilename';
@@ -2034,7 +2261,11 @@ syntdatafilename=syntdatafilename';
 % whos staname syntdatafilename
         
 %%%%%%%%%NOW WE KNOW FILENAMES AND WE CAN PLOT .....
+
+
+%%
 %%%%%%%%%go in invert first
+
 try
     
   cd synth
@@ -2077,26 +2308,24 @@ scrsz = get(0,'ScreenSize');
 %fh=figure('Tag','Syn vs Obs','Position',[5 scrsz(4)*1/6 scrsz(3)*5/6 scrsz(4)*5/6-50], 'Name','Plotting Obs vs Syn');
 fh=figure('Tag','Syn','Position',get(0,'Screensize'), 'Name','Plotting Syn');
 
-
-
-
-
-          subplot(nostations+1,3,1);
+          subplot1(nostations+1,3);
+          
+          subplot1(1)
           axis off
           
-          subplot(nostations+1,3,2);
+          subplot1(2);
           plot(syntdataall(:,1,1),syntdataall(:,2,1)-0.0003,'Visible','off')
-                         title('Synthetic data displacement (m)','FontSize',12,'FontWeight','bold')
+                         title(['Synthetic data ' keyheader ],'FontSize',12,'FontWeight','bold')
           axis off
           
-          subplot(nostations+1,3,3);
+          subplot1(3);
           axis off
 
 k=0;
 for i=1:nostations    %%%%%%loop over stations
 
     for j=1:3                %%%%%%%%loop over components
-          subplot(nostations+1,3,j+k+3);
+          subplot1(j+k+3);
           plot(syntdataall(:,1,i),syntdataall(:,j+1,i),'r','LineWidth',1);  
           % h = vline(50,'k');
           
@@ -2107,10 +2336,12 @@ for i=1:nostations    %%%%%%loop over stations
             title(componentname{j},'FontSize',12,'FontWeight','bold');
           end
           if i==nostations
-          xlabel('Sec')
+          xlabel('Time (s)')
           end
           if  j==1 
-          ylabel(staname{i},'FontSize',12,'FontWeight','bold');
+          y=ylabel(staname{i},'FontSize',12,'FontWeight','bold');
+              set(get(gca,'YLabel'),'Rotation',0)
+              set(y, 'Units', 'Normalized', 'Position', [-0.12, 0.5, 0]);
           end
 
                 if uselimits == 1
@@ -2130,13 +2361,13 @@ for i=1:nostations    %%%%%%loop over stations
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%IN A NEW FIGURE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function plotonestationsyn(stationname,uselimits,ftime,totime)
+function plotonestationsyn(stationname,uselimits,ftime,totime,keyheader)
 
 %%%%%prepare filenames  
 %%% we keep fixed that data will be e.g. evrfil.dat
 %%% and synthetics will be               evrsyn.dat
 
-    syntdatafilename=['s' stationname '.dat'];
+    syntdatafilename=[stationname '.syn'];
  
 %%%%%%%%%%%initialize data matrices
 syntdata=zeros(8192,4); 
@@ -2174,7 +2405,7 @@ figure
           end
           if  j==3 
           xlabel('Time (Sec)')
-          ylabel('Displacement (m)')
+          ylabel(keyheader)
           end
           
           if uselimits == 1
@@ -2188,3 +2419,566 @@ figure
          end
           
  end
+
+
+% --- Executes on button press in radiobutton11.
+function radiobutton11_Callback(hObject, eventdata, handles)
+% hObject    handle to radiobutton11 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of radiobutton11
+if get(handles.radiobutton11,'Value') == get(handles.radiobutton11,'Max')
+    set(handles.radiobutton12,'Value',0)
+end
+    
+    
+
+% --- Executes on button press in radiobutton12.
+function radiobutton12_Callback(hObject, eventdata, handles)
+% hObject    handle to radiobutton12 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of radiobutton12
+if get(handles.radiobutton12,'Value') == get(handles.radiobutton12,'Max')
+    set(handles.radiobutton11,'Value',0)
+end
+    
+
+% --- Executes on button press in radiobutton13.
+function radiobutton13_Callback(hObject, eventdata, handles)
+% hObject    handle to radiobutton13 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of radiobutton13
+if get(handles.radiobutton13,'Value') == get(handles.radiobutton13,'Max')
+    set(handles.radiobutton14,'Value',0)
+end
+    
+
+% --- Executes on button press in radiobutton14.
+function radiobutton14_Callback(hObject, eventdata, handles)
+% hObject    handle to radiobutton14 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of radiobutton14
+if get(handles.radiobutton14,'Value') == get(handles.radiobutton14,'Max')
+    set(handles.radiobutton13,'Value',0)
+end
+    
+
+
+
+function edit14_Callback(hObject, eventdata, handles)
+% hObject    handle to edit14 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit14 as text
+%        str2double(get(hObject,'String')) returns contents of edit14 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit14_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit14 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Mxy_Callback(hObject, eventdata, handles)
+% hObject    handle to Mxy (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Mxy as text
+%        str2double(get(hObject,'String')) returns contents of Mxy as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Mxy_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Mxy (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Mxz_Callback(hObject, eventdata, handles)
+% hObject    handle to Mxz (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Mxz as text
+%        str2double(get(hObject,'String')) returns contents of Mxz as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Mxz_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Mxz (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Myy_Callback(hObject, eventdata, handles)
+% hObject    handle to Myy (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Myy as text
+%        str2double(get(hObject,'String')) returns contents of Myy as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Myy_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Myy (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Myz_Callback(hObject, eventdata, handles)
+% hObject    handle to Myz (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Myz as text
+%        str2double(get(hObject,'String')) returns contents of Myz as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Myz_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Myz (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Mzz_Callback(hObject, eventdata, handles)
+% hObject    handle to Mzz (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Mzz as text
+%        str2double(get(hObject,'String')) returns contents of Mzz as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Mzz_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Mzz (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in Cartesian.
+function Cartesian_Callback(hObject, eventdata, handles)
+% hObject    handle to Cartesian (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of Cartesian
+
+if (get(hObject,'Value') == get(hObject,'Max'))
+	disp('MT definition in Cartesian coordinates needed.');
+    
+    % 
+    off =[handles.text6,handles.text5,handles.text4,handles.text13,handles.strike,handles.dip,handles.rake,handles.moment];
+    enableoff(off)
+    
+    on =[handles.text29,handles.text30,handles.text31,handles.text32,handles.text33,handles.text34,handles.Mxx,handles.Mxy,handles.Mxz,handles.Myy,handles.Myz,handles.Mzz];
+    enableon(on)
+
+       % check if spherical is on
+       if (get(handles.Spherical,'Value') == get(handles.Spherical,'Max'))
+    
+             off =[handles.text35,handles.text36,handles.text37,handles.text38,handles.text39,handles.text40,handles.Mrr,handles.Mtt,handles.Mpp,handles.Mrt,handles.Mrp,handles.Mtp];
+             enableoff(off)
+    
+             set(handles.Spherical,'Value',0)
+       else
+       end
+
+    
+else
+%	display('Not selected');
+    
+    off =[handles.text29,handles.text30,handles.text31,handles.text32,handles.text33,handles.text34,handles.Mxx,handles.Mxy,handles.Mxz,handles.Myy,handles.Myz,handles.Mzz];
+    enableoff(off)
+    
+    on =[handles.text6,handles.text5,handles.text4,handles.text13,handles.strike,handles.dip,handles.rake,handles.moment];
+    enableon(on)
+    
+end
+
+% --- Executes on button press in Spherical.
+function Spherical_Callback(hObject, eventdata, handles)
+% hObject    handle to Spherical (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of Spherical
+
+if (get(hObject,'Value') == get(hObject,'Max'))
+	disp('MT definition in spherical coordinates needed.');
+    
+    % 
+    off =[handles.text6,handles.text5,handles.text4,handles.text13,handles.strike,handles.dip,handles.rake,handles.moment];
+    enableoff(off)
+    
+    on =[handles.text35,handles.text36,handles.text37,handles.text38,handles.text39,handles.text40,handles.Mrr,handles.Mtt,handles.Mpp,handles.Mrt,handles.Mrp,handles.Mtp];
+    enableon(on)
+    
+    % check if cartesian is on
+       if (get(handles.Cartesian,'Value') == get(handles.Cartesian,'Max'))
+             off =[handles.text29,handles.text30,handles.text31,handles.text32,handles.text33,handles.text34,handles.Mxx,handles.Mxy,handles.Mxz,handles.Myy,handles.Myz,handles.Mzz];
+             enableoff(off)
+             set(handles.Cartesian,'Value',0)
+       else
+       end
+    
+%% read inv3.dat and put the values here...
+if ispc
+  fh2=exist('.\invert\inv3.dat','file');
+else
+  fh2=exist('./invert/inv3.dat','file');
+end
+
+if (fh2~=2);
+    errordlg('Invert folder doesn''t contain inv3.dat. Please run inversion. ','File Error');
+    return
+else
+    %  
+        if ispc
+            fid=fopen('.\invert\inv3.dat');
+        else
+            fid=fopen('./invert/inv3.dat');
+        end
+        
+           C=textscan(fid,'%u %d %f %f %f %f %f %f');
+        
+           fclose(fid);
+        
+        % decide if we have more than one subevent !!!
+        nsunevt=C{1};
+        
+        if length(nsunevt)~=1
+           warndlg('Found more than one subevents, the first will be used.','!! Warning !!')
+            set(handles.Mrr,'String',num2str(C{1,3}(1),'%6.2e'));
+            set(handles.Mtt,'String',num2str(C{1,4}(1),'%6.2e'));
+            set(handles.Mpp,'String',num2str(C{1,5}(1),'%6.2e'));
+            set(handles.Mrt,'String',num2str(C{1,6}(1),'%6.2e'));
+            set(handles.Mrp,'String',num2str(C{1,7}(1),'%6.2e'));
+            set(handles.Mtp,'String',num2str(C{1,8}(1),'%6.2e'));
+        else            
+            set(handles.Mrr,'String',num2str(C{3},'%6.2e'));
+            set(handles.Mtt,'String',num2str(C{4},'%6.2e'));
+            set(handles.Mpp,'String',num2str(C{5},'%6.2e'));
+            set(handles.Mrt,'String',num2str(C{6},'%6.2e'));
+            set(handles.Mrp,'String',num2str(C{7},'%6.2e'));
+            set(handles.Mtp,'String',num2str(C{8},'%6.2e'));
+        end
+        
+        
+end
+       
+       
+else
+%	display('Not selected');
+    
+    off =[handles.text35,handles.text36,handles.text37,handles.text38,handles.text39,handles.text40,handles.Mrr,handles.Mtt,handles.Mpp,handles.Mrt,handles.Mrp,handles.Mtp];
+    enableoff(off)
+    
+    on =[handles.text6,handles.text5,handles.text4,handles.text13,handles.strike,handles.dip,handles.rake,handles.moment];
+    enableon(on)
+    
+end
+
+
+function Mxx_Callback(hObject, eventdata, handles)
+% hObject    handle to Mxx (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Mxx as text
+%        str2double(get(hObject,'String')) returns contents of Mxx as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Mxx_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Mxx (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Mrr_Callback(hObject, eventdata, handles)
+% hObject    handle to Mrr (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Mrr as text
+%        str2double(get(hObject,'String')) returns contents of Mrr as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Mrr_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Mrr (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Mpp_Callback(hObject, eventdata, handles)
+% hObject    handle to Mpp (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Mpp as text
+%        str2double(get(hObject,'String')) returns contents of Mpp as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Mpp_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Mpp (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Mrp_Callback(hObject, eventdata, handles)
+% hObject    handle to Mrp (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Mrp as text
+%        str2double(get(hObject,'String')) returns contents of Mrp as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Mrp_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Mrp (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Mtt_Callback(hObject, eventdata, handles)
+% hObject    handle to Mtt (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Mtt as text
+%        str2double(get(hObject,'String')) returns contents of Mtt as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Mtt_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Mtt (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Mrt_Callback(hObject, eventdata, handles)
+% hObject    handle to Mrt (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Mrt as text
+%        str2double(get(hObject,'String')) returns contents of Mrt as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Mrt_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Mrt (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function Mtp_Callback(hObject, eventdata, handles)
+% hObject    handle to Mtp (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of Mtp as text
+%        str2double(get(hObject,'String')) returns contents of Mtp as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function Mtp_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to Mtp (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+
+
+
+
+
+function enableoff(off)
+set(off,'Enable','off')
+
+function enableon(on)
+set(on,'Enable','on')
+
+
+% --- Executes on button press in usenoise.
+function usenoise_Callback(hObject, eventdata, handles)
+% hObject    handle to usenoise (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of usenoise
+
+
+
+function noisesigma_Callback(hObject, eventdata, handles)
+% hObject    handle to noisesigma (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of noisesigma as text
+%        str2double(get(hObject,'String')) returns contents of noisesigma as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function noisesigma_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to noisesigma (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function noiselow_Callback(hObject, eventdata, handles)
+% hObject    handle to noiselow (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of noiselow as text
+%        str2double(get(hObject,'String')) returns contents of noiselow as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function noiselow_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to noiselow (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function noisehigh_Callback(hObject, eventdata, handles)
+% hObject    handle to noisehigh (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of noisehigh as text
+%        str2double(get(hObject,'String')) returns contents of noisehigh as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function noisehigh_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to noisehigh (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

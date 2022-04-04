@@ -22,7 +22,7 @@ function varargout = mseedimport(varargin)
 
 % Edit the above text to modify the response to help mseedimport
 
-% Last Modified by GUIDE v2.5 29-Aug-2011 22:26:41
+% Last Modified by GUIDE v2.5 09-Nov-2020 22:40:24
 
 
 % Begin initialization code - DO NOT EDIT
@@ -85,7 +85,9 @@ function varargout = mseedimport_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-disp('This is mseedimport 05/08/11');
+disp('This is mseedimport 10/11/2020');
+disp('Based on miniseed read code of François Beauducel');
+disp('Available here: https://www.mathworks.com/matlabcentral/fileexchange/28803-rdmseed-and-mkmseed-read-and-write-miniseed-files');
 
 
 % --- Executes on button press in readew.
@@ -94,11 +96,13 @@ function readew_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-%%%%% isola path
-path1=handles.path1
+%%  isola path
+path1=handles.path1;
 mainpath=handles.mainpath;
+%%
+timerefns=handles.timerefns;
 
-%%%type of sac file
+%% 
 
 cd(path1)
 
@@ -106,52 +110,86 @@ cd(path1)
       
    lopa = [path1 file1]
    
-      %   try 
-             N = rdmseed(lopa)
-           
-%           catch
-%              infostr= ['Error reading ' lopa ' please check the file and try again'];
-%              helpdlg(infostr,'File info');
-%              cd(mainpath)
-%           return
-%          end
+         try 
+             [X,I] = rdmseed(lopa);
+             samples_ew=cat(1,X.d);
+         catch
+             infostr= ['Error reading ' lopa ' please check the file and try again'];
+             helpdlg(infostr,'File info');
+             cd(mainpath)
+          return
+         end
 
 cd(mainpath)
 
 %%%%%%%%%%%%%%%
+%maxnssamples=N(1,1).NumberSamples;
+dt = 1/X(1,1).SampleRate;
+%set(handles.sfreq,'String',num2str(X(1,1).SampleRate))
 
-maxnssamples=N(1,1).NumberSamples;
+time_sec = cat(1,X.t);
+% format long
+% min(cat(1,X.t))
+dv=datevec(min(cat(1,X.t)));
 
-dt = 1/N(1,1).SampleRate;
-set(handles.sfreq,'String',num2str(N(1,1).SampleRate))
+doy = day(datetime(dv),'dayofyear');
+
+%%
+istew=datenum(dv);
+
+if timerefns ~= istew
+% find file start time....        
+   set(handles.ewtime,'String',[datestr(min(cat(1,X.t)),'dd-mmm-yyyy') ' (' num2str(doy,'%03u') ') '  datestr(min(cat(1,X.t)),'HH:MM:SS.FFF')]);
+   set(handles.ewtime,'ForegroundColor','red')
+   set(handles.nstime,'ForegroundColor','red')
+else
+   set(handles.ewtime,'String',[datestr(min(cat(1,X.t)),'dd-mmm-yyyy') ' (' num2str(doy,'%03u') ') '  datestr(min(cat(1,X.t)),'HH:MM:SS.FFF')]);
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 %this is the sample number ....
-tim=(1:1:maxnssamples);
-time_sec=((tim.*dt)-dt)';
-pause
+maxnssamples=length(time_sec);tim=(1:1:maxnssamples);time_sec=((tim.*dt)-dt)';
+scode=strrep(char(I.ChannelFullName),':',' ');
+SSCH=textscan(scode,'%s');sta=SSCH{1}{2};chan2=SSCH{1}{3};
+set(handles.ewname,'String',[sta '  ' chan2])
 
-set(handles.ewname,'String',[scode '  ' chan2])
+%% plot gaps and overlaps
+% 
+% 		for i = 1:length(I.GapBlockIndex)
+% 			plot(I.GapTime(i),X(I.GapBlockIndex(i)).d(1),'*r')
+% 		end
+% 		for i = 1:length(I.OverlapBlockIndex)
+% 			plot(I.OverlapTime(i),X(I.OverlapBlockIndex(i)).d(1),'og')
+% 		end
 
-%%%%find file start time....        
+if ~isempty(I.GapBlockIndex)
+    warndlg('Gaps detected BE CAREFUL with this file','Warning');
+    
+elseif ~isempty(I.OverlapBlockIndex)
+    warndlg('Overlaps detected BE CAREFUL with this file','Warning');
+    
+end
 
-set(handles.ewtime,'String',[year month ' ' day ' ' hour ':' minute ':' seconds]);
 
 %%%%plotting
 axes(handles.ewaxis)
-plot(time_sec,samples,'k')
+plot(time_sec,samples_ew,'k')
 set(handles.ewaxis,'XMinorTick','on')
 grid on
 % title('NS')
 xlabel('Time (sec)')
 ylabel('Counts')
 
+
+
 %save RAW data to handles 
 handles.path1=path1;
 handles.mainpath=mainpath;
-handles.ew = samples;
-%handles.istns=istns;
+handles.ew = samples_ew;
+handles.istew=istew;
 handles.dt=dt;
-%handles.timerefns=datestr(istns);
+handles.timerefew=istew;
 guidata(hObject,handles)
 
 
@@ -173,14 +211,14 @@ mainpath=handles.mainpath;
 
 cd(path1)
 
-[file1,path1] = uigetfile([ '*.*'],'Import mseed ascii file',400,400);
+[file1,path1] = uigetfile([ '*.*'],'Import mseed  file',400,400);
       
    lopa = [path1 file1]
    
          try 
              
-             N = rdmseed(lopa);
-            samples=cat(1,N.d);
+             [X,I] = rdmseed(lopa);
+            samples_ns=cat(1,X.d);
           catch
              infostr= ['Error reading ' lopa ' please check the file and try again'];
              helpdlg(infostr,'File info');
@@ -191,25 +229,57 @@ cd(path1)
 cd(mainpath)
 
 %%%%%%%%%%%%%%%
+%maxnssamples=N(1,1).NumberSamples
 
-maxnssamples=N(1,1).NumberSamples;
+dt = 1/X(1,1).SampleRate;
+set(handles.sfreq,'String',num2str(X(1,1).SampleRate))
 
-dt = 1/N(1,1).SampleRate;
-set(handles.sfreq,'String',num2str(N(1,1).SampleRate))
+time_sec = cat(1,X.t);
+% format long
+% min(cat(1,X.t))
+
+dv=datevec(min(cat(1,X.t)));
+
+doy = day(datetime(dv),'dayofyear');
+
+istns=datenum(dv);
 
 %this is the sample number ....
-tim=(1:1:maxnssamples);
-time_sec=((tim.*dt)-dt)';
+maxnssamples=length(time_sec);tim=(1:1:maxnssamples);time_sec=((tim.*dt)-dt)';
 
-%set(handles.nsname,'String',[scode '  ' chan2])
+scode=strrep(char(I.ChannelFullName),':',' ');
+SSCH=textscan(scode,'%s');sta=SSCH{1}{2};chan2=SSCH{1}{3};
 
-%%%%find file start time....        
+set(handles.nsname,'String',[sta '  ' chan2])
 
+%% find file start time....        
 %set(handles.nstime,'String',[year month ' ' day ' ' hour ':' minute ':' seconds]);
+% set(handles.nstime,'String',[num2str(dv(1)) '/' num2str(dv(2)) '/' num2str(dv(3)) ' ' num2str(dv(4)) ':' num2str(dv(5)) ':' num2str(dv(6))]);
 
-%%%%plotting
+set(handles.nstime,'String',[datestr(min(cat(1,X.t)),'dd-mmm-yyyy') ' (' num2str(doy,'%03u') ') '  datestr(min(cat(1,X.t)),'HH:MM:SS.FFF')]);
+
+%% plot gaps and overlaps
+% 
+% 		for i = 1:length(I.GapBlockIndex)
+% 			plot(I.GapTime(i),X(I.GapBlockIndex(i)).d(1),'*r')
+% 		end
+% 		for i = 1:length(I.OverlapBlockIndex)
+% 			plot(I.OverlapTime(i),X(I.OverlapBlockIndex(i)).d(1),'og')
+% 		end
+
+if ~isempty(I.GapBlockIndex)
+    warndlg('Gaps detected BE CAREFUL with this file','Warning');
+    
+elseif ~isempty(I.OverlapBlockIndex)
+    warndlg('Overlaps detected BE CAREFUL with this file','Warning');
+    
+end
+
+
+
+%% plotting
 axes(handles.nsaxis)
-plot(time_sec,samples,'k')
+plot(time_sec,samples_ns,'k')
 set(handles.nsaxis,'XMinorTick','on')
 grid on
 % title('NS')
@@ -217,12 +287,13 @@ xlabel('Time (sec)')
 ylabel('Counts')
 
 %save RAW data to handles 
+handles.stanameonly=sta;
 handles.path1=path1;
 handles.mainpath=mainpath;
-handles.ns = samples;
-%handles.istns=istns;
+handles.ns = samples_ns;
+handles.istns=istns;
 handles.dt=dt;
-%handles.timerefns=datestr(istns);
+handles.timerefns=istns;
 guidata(hObject,handles)
 
 
@@ -241,18 +312,21 @@ function readver_Callback(hObject, eventdata, handles)
 path1=handles.path1
 mainpath=handles.mainpath;
 
-%%%type of sac file
+%%%read ref time ...
+timerefns=handles.timerefns;
+timerefew=handles.timerefew;
+%
 
 cd(path1)
 
-[file1,path1] = uigetfile([ '*.*'],'Import mseed ascii file',400,400);
+[file1,path1] = uigetfile([ '*.*'],'Import mseed  file',400,400);
       
    lopa = [path1 file1]
    
          try 
              
-          [samples,year,month,day,hour,minute,seconds,sfreq,npoints,scode,chan2] = readmseedfile(lopa);
-            
+             [X,I] = rdmseed(lopa);
+            samples_ver=cat(1,X.d);
           catch
              infostr= ['Error reading ' lopa ' please check the file and try again'];
              helpdlg(infostr,'File info');
@@ -262,37 +336,68 @@ cd(path1)
 
 cd(mainpath)
 
-%%%%%%%%%%%%%%%
+%%
+%maxnssamples=N(1,1).NumberSamples
 
-maxnssamples=max(size(samples));
+dt = 1/X(1,1).SampleRate;
+time_sec = cat(1,X.t);
+dv=datevec(min(cat(1,X.t)));
+doy = day(datetime(dv),'dayofyear');
 
-dt = 1/str2num(sfreq);
-set(handles.sfreq,'String',num2str(str2num(sfreq)))
 
+%%
+istver=datenum(dv);
+
+if istver ~= timerefns || istver ~= timerefew
+% find file start time....        
+  set(handles.vertime,'String',[datestr(min(cat(1,X.t)),'dd-mmm-yyyy') ' (' num2str(doy,'%03u') ') '  datestr(min(cat(1,X.t)),'HH:MM:SS.FFF')]);
+  set(handles.ewtime,'ForegroundColor','red')
+  set(handles.nstime,'ForegroundColor','red')
+% handles on
+  on =[handles.Allign];
+  enableon(on)
+else
+% find file start time....        
+  set(handles.vertime,'String',[datestr(min(cat(1,X.t)),'dd-mmm-yyyy') ' (' num2str(doy,'%03u') ') '  datestr(min(cat(1,X.t)),'HH:MM:SS.FFF')]);
+% handles on
+  on =[handles.cut,handles.saveascii];
+  enableon(on)
+end
+%% 
 %this is the sample number ....
-tim=(1:1:maxnssamples);
-time_sec=((tim.*dt)-dt)';
+maxnssamples=length(time_sec);tim=(1:1:maxnssamples);time_sec=((tim.*dt)-dt)';
+scode=strrep(char(I.ChannelFullName),':',' '); SSCH=textscan(scode,'%s');sta=SSCH{1}{2};chan2=SSCH{1}{3};
+set(handles.vername,'String',[sta '  ' chan2])
 
-set(handles.vername,'String',[scode '  ' chan2])
+%% plot gaps and overlaps
+% 
+% 		for i = 1:length(I.GapBlockIndex)
+% 			plot(I.GapTime(i),X(I.GapBlockIndex(i)).d(1),'*r')
+% 		end
+% 		for i = 1:length(I.OverlapBlockIndex)
+% 			plot(I.OverlapTime(i),X(I.OverlapBlockIndex(i)).d(1),'og')
+% 		end
 
-%%%%find file start time....        
+if ~isempty(I.GapBlockIndex)
+    warndlg('Gaps detected BE CAREFUL with this file','Warning');
+    
+elseif ~isempty(I.OverlapBlockIndex)
+    warndlg('Overlaps detected BE CAREFUL with this file','Warning');
+    
+end
 
-set(handles.vertime,'String',[year month ' ' day ' ' hour ':' minute ':' seconds]);
-
-%%%%plotting
 axes(handles.veraxis)
-plot(time_sec,samples,'k')
+plot(time_sec,samples_ver,'k')
 set(handles.veraxis,'XMinorTick','on')
 grid on
-% title('NS')
 xlabel('Time (sec)')
 ylabel('Counts')
 
 %save RAW data to handles 
 handles.path1=path1;
 handles.mainpath=mainpath;
-handles.ver = samples;
-%handles.istns=istns;
+handles.ver = samples_ver;
+handles.istver=istver;
 handles.dt=dt;
 %handles.timerefns=datestr(istns);
 guidata(hObject,handles)
@@ -314,7 +419,7 @@ nscounts=handles.ns;
 vercounts=handles.ver;
 
 %%%read station name from EW..
-station_name = get(handles.ewname,'String');
+stname=deblank(handles.stanameonly);
 %%% read sampling rate
 sfreq = str2double(get(handles.sfreq,'String'))
 %%%%dt
@@ -323,86 +428,108 @@ dt=1/sfreq;
 tim=(1:1:length(vercounts));
 time_sec=((tim.*dt)-dt)';
 
-whos time_sec ewcounts nscounts vercounts
-
-
+%whos time_sec ewcounts nscounts vercounts
 alld=[time_sec'; nscounts' ; ewcounts' ; vercounts'];    %%% Changed to N,E,Z
 
-whos alld
+%whos alld
 %%%%%% now we select folder to save ....ISOLA likes data folder...
 %% so we check for it and save files inside...
 %check if DATA exists..!
 h=dir('data');
 
-if length(h) == 0;
+if isempty(h) ;
     button=questdlg('Data folder doesn''t exist. ISOLA uses DATA folder to store data files. Create it..?',...
                     'Folder Error','Yes','No','Yes');
                 
-if strcmp(button,'Yes')
-   disp('Creating folder')
-   [s,mess,messid] = mkdir('data')
-%%% save files   
-try
-cd data
-[newfile, newdir] = uiputfile([station_name(1:3) 'unc' '.dat'], 'Save station data as');
-fid = fopen([newdir newfile],'w');
-fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
-fclose(fid);
+  if strcmp(button,'Yes')
+     disp('Creating folder')
+     [s,mess,messid] = mkdir('data')
+  %%% save files   
+  try
+    cd data
+    [newfile, newdir] = uiputfile([stname 'unc' '.dat'], 'Save station data as')
+    fid = fopen([newdir newfile],'w');
+    if ispc
+       fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
+    else
+       fprintf(fid,'%e     %e     %e     %e\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
+    end
+    fclose(fid);
 
-infostr= ['Data were written in the file ' newdir newfile ' the column order is time, NS, EW, VER'];
+    infostr= ['Data were written in the file ' newdir newfile ' the column order is time, NS, EW, VER'];
 
-helpdlg(infostr,'File info');
+    helpdlg(infostr,'File info');
+    cd ..
+    pwd
+
+  catch
+     cd ..
+     pwd
+  end
+
+  elseif strcmp(button,'No')
+     disp('Canceled folder operation')
+     [newfile, newdir] = uiputfile([stname 'unc' '.dat'], 'Save station data as')
+     fid = fopen([newdir newfile],'w');
+     if ispc
+        fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
+     else
+        fprintf(fid,'%e     %e     %e     %e\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
+     end
+     fclose(fid);
+     infostr= ['Data were written in the file ' newdir newfile ' the column order is time, NS, EW, VER'];
+     helpdlg(infostr,'File info');
    
-cd ..
-pwd
-
-catch
-cd ..
-pwd
-end
-
-elseif strcmp(button,'No')
-   disp('Canceled folder operation')
-   
-[newfile, newdir] = uiputfile([station_name(1:3) 'unc' '.dat'], 'Save station data as');
-fid = fopen([newdir newfile],'w');
-fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
-fclose(fid);
-
-infostr= ['Data were written in the file ' newdir newfile ' the column order is time, NS, EW, VER'];
-
-helpdlg(infostr,'File info');
-   
-   
-   
-end
+  end
+  
+  
 else
-%%%%DATA folder exists......    
-%%% save files   
-disp('DATA folder exists. Files will be saved there.')
-try
-cd data
-[newfile, newdir] = uiputfile([station_name(1:3) 'unc' '.dat'], 'Save station data as');
-fid = fopen([newdir newfile],'w');
-fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
+%%%%DATA folder exists save files   
+   disp('DATA folder exists. Files will be saved there.')
+   try
+   cd data
+     [newfile, newdir] = uiputfile([stname 'unc' '.dat'], 'Save station data as');
+     fid = fopen([newdir newfile],'w');
+     if ispc
+        fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
+     else
+        fprintf(fid,'%e     %e     %e     %e\n',alld);   %%%%%BE CAREFUL THESE NEED EXPONENTIAL FORMAT (are corrected....)
+     end
+     fclose(fid);
+     infostr= ['Data were written in the file ' newdir newfile ' the column order is time, NS, EW, VER'];
+     helpdlg(infostr,'File info');
+   cd ..
+   catch
+   cd ..
+   pwd
+   end
+
+end
+%% new ... prepare a file with file start time
+
+k=strfind(newfile,'unc.dat');
+
+if isempty(k)
+    errordlg('Filename should be in the form <station name>unc.dat. Please save your file with such a name.','File Error');
+   return
+else
+    
+stime_filename=[newfile(1:k-1)  'stime' '.isl'];
+start_time=strrep(strrep(strrep(strrep(get(handles.nstime,'String'),':',' '),'-',' '),')',' '),'(',' ')
+%%%
+disp(['Saving file start time info in file   ' stime_filename])
+fid = fopen(stime_filename,'w');
+ if ispc
+   fprintf(fid,'%s %s\r\n',stname,start_time);
+ else
+   fprintf(fid,'%s %s\n',stname,start_time);
+ end
 fclose(fid);
-
-infostr= ['Data were written in the file ' newdir newfile ' the column order is time, NS, EW, VER'];
-
-helpdlg(infostr,'File info');
-   
-cd ..
-catch
-cd ..
+end
+% 
+% 
+% 
 pwd
-end
-
-
-
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
 
 
 % --- Executes on button press in exit.
@@ -495,73 +622,68 @@ ns=handles.ns ;
 ver=handles.ver;
 dt=handles.dt;
 
-% disp('ew')
-% length(ew)
-% size(ew)
-% disp('ns')
-% length(ns)
-% disp('ver')
-% length(ver)
+%%
+[Y(1,1),Y(1,2),Y(1,3),Y(1,4),Y(1,5),Y(1,6)] =datevec(istns); 
+sprintf('Date: %d/%d/%d   Time: %d:%d:%2.3f\n', Y(1,1),Y(1,2), Y(1,3),Y(1,4),Y(1,5),Y(1,6))
+[Y(2,1),Y(2,2),Y(2,3),Y(2,4),Y(2,5),Y(2,6)] =datevec(istew); 
+sprintf('Date: %d/%d/%d   Time: %d:%d:%2.3f\n', Y(2,1),Y(2,2), Y(2,3),Y(2,4),Y(2,5),Y(2,6))
+[Y(3,1),Y(3,2),Y(3,3),Y(3,4),Y(3,5),Y(3,6)] =datevec(istver); 
+sprintf('Date: %d/%d/%d   Time: %d:%d:%2.3f\n', Y(3,1),Y(3,2), Y(3,3),Y(3,4),Y(3,5),Y(3,6))
 
-datestr(istew)
-datestr(istns)
-datestr(istver)
-
-[Y(1,1),Y(1,2),Y(1,3),Y(1,4),Y(1,5),Y(1,6)] =datevec(datestr(istns));
-[Y(2,1),Y(2,2),Y(2,3),Y(2,4),Y(2,5),Y(2,6)] =datevec(datestr(istew));
-[Y(3,1),Y(3,2),Y(3,3),Y(3,4),Y(3,5),Y(3,6)] =datevec(datestr(istver));
-
-%[Y,M,D,H,MI,S] = datevec(A)
-
+%%
 if Y(1,1) ~= Y(2,1) || Y(1,1) ~= Y(3,1)
     disp('Error in file timing')
 end
-    
 if Y(1,2) ~= Y(2,2) || Y(1,2) ~= Y(3,2)
     disp('Error in file timing')
 end
-
 if Y(1,3) ~= Y(2,3) || Y(1,3) ~= Y(3,3)
     disp('Error in file timing')
 end
 
+%%  find maximum time and cut
 
-%convert to seconds since day start...!!
-nssec= Y(1,4)*3600+Y(1,5)*60+Y(1,6);
-ewsec= Y(2,4)*3600+Y(2,5)*60+Y(2,6);
-versec=Y(3,4)*3600+Y(3,5)*60+Y(3,6);
+[~,b]=max([istns;istew;istver]);
 
-[a,b]=max([nssec;ewsec;versec]);
-
-   
 if b ==1
     %%allign to ns
     %%find cutsamples
-    ewcutsamples=(nssec-ewsec)/dt
-    vercutsamples=(nssec-versec)/dt
-    disp(['Cutting ' num2str((nssec-ewsec)) ' seconds from EW'])
-    disp(['Cutting ' num2str((nssec-versec)) ' seconds from Ver'])
-    
-    if ewcutsamples >= length(ew) || vercutsamples >= length(ver)
-        disp('Error check your file timing')
-        errordlg('Error check your file timing','File time error');
-    end
-    
-    ew=ew(ewcutsamples+1:length(ew));
-    ver=ver(vercutsamples+1:length(ver));
-    
-    helpdlg('Changed start time for EW and VER','Start time change');
-    set(handles.ewtime,'String',datestr(istns))
-    set(handles.vertime,'String',datestr(istns))
+     [~, ~, ~, h, mn, s] = datevec(istns-istew);
+     secdifne=s+mn*60+h*3600;
+     ewcutsamples=round(secdifne/dt);    %ewcutsamples=(nssec-ewsec)/dt round also..!
 
+     [~, ~, ~, h, mn, s] = datevec(istns-istver);
+     secdifnv=s+mn*60+h*3600;
+     vercutsamples=round(secdifnv/dt);   %vercutsamples=(nssec-versec)/dt
+
+      disp(['Cutting ' num2str(secdifne) ' seconds from EW'])
+      disp(['Cutting ' num2str(secdifnv) ' seconds from Ver'])
+     
+      if ewcutsamples >= length(ew) || vercutsamples >= length(ver)
+          disp('Error check your file timing')
+          errordlg('Error check your file timing','File time error');
+      end
+%     
+      ew=ew(ewcutsamples+1:length(ew));
+      ver=ver(vercutsamples+1:length(ver));
+%     
+      helpdlg('Changed start time for EW and VER','Start time change');
+      set(handles.ewtime,'String',get(handles.nstime,'String'))
+      set(handles.vertime,'String',get(handles.nstime,'String'))
     
 elseif b == 2
     %%allign to ew
     %%find cutsamples
-    nscutsamples=(ewsec-nssec)/dt
-    vercutsamples=(ewsec-versec)/dt
-    disp(['Cutting ' num2str((ewsec-nssec)) ' seconds from NS'])
-    disp(['Cutting ' num2str((ewsec-versec)) ' seconds from Ver'])
+    [~, ~, ~, h, mn, s] = datevec(istew-istns);
+    secdifen=s+mn*60+h*3600;
+    nscutsamples=round(secdifen/dt);
+
+    [~, ~, ~, h, mn, s] = datevec(istew-istver);
+    secdifev=s+mn*60+h*3600;
+    vercutsamples=round(secdifev/dt);
+    
+    disp(['Cutting ' num2str(secdifen) ' seconds from NS'])
+    disp(['Cutting ' num2str(secdifev) ' seconds from Ver'])
     
     if nscutsamples >= length(ns) || vercutsamples >= length(ver)
         disp('Error check your file timing')
@@ -572,16 +694,23 @@ elseif b == 2
     ver=ver(vercutsamples+1:length(ver));
 
     helpdlg('Changed start time for NS and VER','Start time change');
-    set(handles.nstime,'String',datestr(istew))
-    set(handles.vertime,'String',datestr(istew))
+     
+    set(handles.nstime,'String',get(handles.ewtime,'String'))
+    set(handles.vertime,'String',get(handles.ewtime,'String'))
 
 elseif b ==3
     %%allign to ver
     %%find cutsamples
-    nscutsamples=(versec-nssec)/dt
-    ewcutsamples=(versec-ewsec)/dt
-    disp(['Cutting ' num2str((versec-nssec)) ' seconds from NS'])
-    disp(['Cutting ' num2str((versec-ewsec)) ' seconds from EW'])
+    [~, ~, ~, h, mn, s] = datevec(istver-istns);
+    secdifvn=s+mn*60+h*3600;
+    nscutsamples=round(secdifvn/dt);  %    nscutsamples=(versec-nssec)/dt
+
+    [~, ~, ~, h, mn, s] = datevec(istver-istew);
+    secdifve=s+mn*60+h*3600;
+    ewcutsamples=round(secdifve/dt);  %    ewcutsamples=(versec-ewsec)/dt
+    
+    disp(['Cutting ' num2str(secdifvn) ' seconds from NS'])
+    disp(['Cutting ' num2str(secdifve) ' seconds from EW'])
     
     if nscutsamples >= length(ns) || ewcutsamples >= length(ew)
         disp('Error check your file timing')
@@ -592,60 +721,47 @@ elseif b ==3
     ns=ns(nscutsamples+1:length(ns));
     
     helpdlg('Changed start time for EW and NS','Start time change');
-    set(handles.ewtime,'String',datestr(istver))
-    set(handles.nstime,'String',datestr(istver))
+    set(handles.ewtime,'String',get(handles.vertime,'String'))
+    set(handles.nstime,'String',get(handles.vertime,'String'))
 
 else
 end
-% 
-% disp('ew')
-% length(ew)
-% size(ew)
-% disp('ns')
-% length(ns)
-% disp('ver')
-% length(ver)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+%% 
 %%%%%%%%automatic cutting at the end of the records based on minimum no of samples....
 [amax,b]=max([length(ns) ; length(ew) ; length(ver)]);
 [amin,c]=min([length(ns) ; length(ew) ; length(ver)]);
 
-
 if c==1 %%% ns has less points
     ew=ew(1:length(ns));
     ver=ver(1:length(ns));
-helpdlg(['Cutting Data according to NS samples'],'File info');
+helpdlg('Cutting Data according to NS samples','File info');
 disp('Cutting Data according to NS samples')
 elseif c==2 %%% ew has less points
     ns=ns(1:length(ew));
     ver=ver(1:length(ew));
-helpdlg(['Cutting Data according to EW samples'],'File info');
+helpdlg('Cutting Data according to EW samples','File info');
 disp('Cutting Data according to EW samples')
 elseif c==3 %%% ver has less points
     ns=ns(1:length(ver));
     ew=ew(1:length(ver));
-helpdlg(['Cutting Data according to Ver samples'],'File info');
+helpdlg('Cutting Data according to Ver samples','File info');
 disp('Cutting Data according to Ver samples')
 else
 end
-   
-length(ns) 
-length(ew) 
-length(ver)
+    
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
 timns=(1:1:length(ns));
 timew=(1:1:length(ew));
 timver=(1:1:length(ver));
-% 
 % %prepare new time axis
 % %%%%%%%%%read sampling rate
 time_secns=((timns.*dt)-dt);
 time_secew=((timew.*dt)-dt);
 time_secver=((timver.*dt)-dt);
 
-%%%%%%%%% 
 axes(handles.nsaxis)
 plot(time_secns,ns,'r')
 set(handles.nsaxis,'XMinorTick','on')
@@ -663,19 +779,17 @@ grid on
 xlabel('Seconds')
 ylabel('Counts')
 
-
-%%%%%%%%%%%%%%%%%%%%  save to handles
-% 
+%%  save to handles
 handles.ew=ew;
 handles.ns=ns;
 handles.ver=ver;
 guidata(hObject,handles)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
+%%
 % handles on
 on =[handles.cut,handles.saveascii];
 enableon(on)
+
 
 
 
@@ -718,3 +832,17 @@ fclose(fid);
 
 
 
+
+
+% --- Executes on button press in Allign.
+function pushbutton8_Callback(hObject, eventdata, handles)
+% hObject    handle to Allign (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in cut.
+function pushbutton9_Callback(hObject, eventdata, handles)
+% hObject    handle to cut (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

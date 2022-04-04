@@ -22,7 +22,7 @@ function varargout = sourcepre(varargin)
 
 % Edit the above text to modify the response to help sourcepre
 
-% Last Modified by GUIDE v2.5 18-Nov-2007 19:51:47
+% Last Modified by GUIDE v2.5 06-Jan-2019 18:31:33
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -87,6 +87,105 @@ set(handles.lon,'String',num2str(eventcor(1,1)))
 set(handles.depth,'String',num2str(epidepth))          
 set(handles.magn,'String',num2str(magn))          
 set(handles.eventdate,'String',eventdate)          
+%% check if we have sourcesinfo.txt in gmtfiles folder
+if ispc
+   h=dir('.\gmtfiles\sourcesinfo.txt');
+else
+   h=dir('./gmtfiles/sourcesinfo.txt');
+end
+
+if length(h) == 0; 
+  disp('sourcesinfo.txt file doesn''t exist in gmtfiles folder. Using defaults.');
+else
+    if ispc
+       fid = fopen('.\gmtfiles\sourcesinfo.txt','r'); 
+    else
+       fid = fopen('./gmtfiles/sourcesinfo.txt','r');  
+    end
+    
+     tline = fgetl(fid);tline = fgetl(fid);tline = fgetl(fid);tline = fgetl(fid);tline = fgetl(fid);
+     tline = fgetl(fid);tline = fgetl(fid);tline = fgetl(fid);tline = fgetl(fid);tline = fgetl(fid);
+     
+     tline = fgetl(fid);
+     set(handles.depth,'String',strrep(tline,' ',''))   
+     
+     tline = fgetl(fid);     
+     tline = fgetl(fid);
+     set(handles.northkm,'String',strrep(tline,' ',''))
+     
+     tline = fgetl(fid);     
+     tline = fgetl(fid);
+     set(handles.eastkm,'String',strrep(tline,' ',''))
+     
+     tline = fgetl(fid);     
+     tline = fgetl(fid);
+     set(handles.noSourcesstrike,'String',strrep(tline,' ',''))     
+     noSourcesstrike=str2double(tline);
+     
+     tline = fgetl(fid);     
+     tline = fgetl(fid);
+     set(handles.distanceStep,'String',strrep(tline,' ',''))      
+     spacing=str2double(tline);
+     
+     % update the Length (km) also
+     set(handles.flength,'string',num2str((noSourcesstrike*spacing)-spacing));
+     
+     tline = fgetl(fid);     
+     tline = fgetl(fid);
+     set(handles.noSourcesdip,'String',strrep(tline,' ',''))        
+     noSourcesdip=str2double(tline);
+      
+     tline = fgetl(fid);     
+     tline = fgetl(fid);
+     set(handles.steponPlane,'String',strrep(tline,' ',''))          
+     steponPlane=str2double(tline);
+     % update the width (km) also
+     set(handles.fwidth,'string',num2str((noSourcesdip*steponPlane)-steponPlane));
+     
+     tline = fgetl(fid);     
+     tline = fgetl(fid);
+     set(handles.firstSourcestrike,'String',strrep(tline,' ',''))   
+     
+     tline = fgetl(fid);    
+     tline = fgetl(fid);
+     set(handles.firstsourcedip,'String',strrep(tline,' ',''))   
+     
+     tline = fgetl(fid);    
+     tline = fgetl(fid);
+     set(handles.Strike,'String',strrep(tline,' ',''))   
+     
+     tline = fgetl(fid);    
+     tline = fgetl(fid);
+     set(handles.Dip,'String',strrep(tline,' ',''))   
+     
+     try % for sourcesinfo.txt in old format.!!
+         
+       tline = fgetl(fid);
+       tline = fgetl(fid);
+      if str2num(tline)==1
+         set(handles.checkbox1,'Value',1)   
+         tline = fgetl(fid); tline = fgetl(fid);
+         set(handles.rake,'String',tline)
+         tline = fgetl(fid); tline = fgetl(fid);
+         set(handles.norakesources,'String',tline)
+         tline = fgetl(fid); tline = fgetl(fid);
+         set(handles.rakespacing,'String',tline)
+         tline = fgetl(fid); tline = fgetl(fid);
+         set(handles.rakerefsource,'String',tline)
+         
+         on =[handles.rake,handles.raketext,handles.norakesources,handles.rakespacing,handles.rakerefsource,handles.text45,handles.text46,handles.text47,handles.text48];
+         enableon(on)        
+      else
+         set(handles.checkbox1,'Value',0)    
+      end
+      
+     catch
+      disp('Old sourcesinfo.txt')
+     end
+     
+     fclose(fid);  
+end
+   
 
 
 
@@ -101,7 +200,7 @@ function varargout = sourcepre_OutputFcn(hObject, eventdata, handles)
 varargout{1} = handles.output;
 
 
-disp('This is sourcepre version 18/11/07');
+disp('This is sourcepre version 30/11/2019');
 
 % --- Executes during object creation, after setting all properties.
 function lat_CreateFcn(hObject, eventdata, handles)
@@ -322,24 +421,26 @@ diprad=deg2rad(dip);
 %%%%%%%%%% LINE ALONG DIP
 %%%%%%%%%% PLANE
 
-if noSourcesdip==0 
-    val=1;
-    disp('Sources will be computed along Strike');
+if (get(handles.checkbox1,'Value') == get(handles.checkbox1,'Max'))
+    disp('Sources will be computed on an inclined line following Strike, Dip and Rake'); 
+    val=4;    
+    rake = str2double(get(handles.rake,'String'));
+else
 
-elseif noSourcesdip ~=0 && noSourcesstrike ==0
+  if noSourcesdip==0 
+    val=1;
+    disp('Sources will be computed on a horizontal line (at the specific depth) along Strike');
+  elseif noSourcesdip ~=0 && noSourcesstrike ==0
     val=2;
     disp('Sources will be computed along Dip');
-    
-elseif noSourcesdip ~=0  && noSourcesstrike ~=0
+  elseif noSourcesdip ~=0  && noSourcesstrike ~=0
     val=3;
     disp('Sources will be computed on a plane');
-else
-    
+  else
      helpdlg('Error');     %%%%%%%%%%%%%%
-     
+  end
+
 end
-
-
 
 switch val
     
@@ -351,36 +452,28 @@ case 1      %%%%%%%%%%line of epicenters along strike
                 strdis(i)=distanceStep*(i-firstSourcestrike);
             end
 
-%             strdis
-
             %%FIND COORDINATES ALONG STRIKE
             for i=1:noSourcesstrike
-                strdisX(i)=strdis(i)*cos(strikerad)+Edist;
-                strdisY(i)=strdis(i)*sin(strikerad)+Ndist;
+                strdisX(i)=strdis(i)*cos(strikerad)+Edist;  % East
+                strdisY(i)=strdis(i)*sin(strikerad)+Ndist;  % North
                 strdisZ(i)=epidepth;    
             end
 
             figure(1)       %X-Y
-            plot(strdisX,strdisY,'ro')
-            xlabel('X (km)')
-            ylabel('Y (km)')
-            title('X-Y')
-            grid on
-            
-           
+            plot(strdisX,strdisY,'ro');xlabel('X (km)'); ylabel('Y (km)'); title('X-Y'); grid on
             axis ([-(max(abs(strdisX))+1) max(abs(strdisX))+1 -(max(abs(strdisY))+1) max(abs(strdisY))+1])  %%%%%% !!!!!!!
             
              %%%%%%%%OUTPUT TO SRC FILES
              %%%%%%% and source.isl !!!!!!!!!
              fid2 = fopen('tsources.isl','w');
-             fprintf(fid2,'%s\r\n','line');
-             fprintf(fid2,'%i\r\n',noSourcesstrike);
-             fprintf(fid2,'%f\r\n',distanceStep);
-             fprintf(fid2,'%f\r\n',firstSourcestrike);
+              fprintf(fid2,'%s\r\n','line');
+              fprintf(fid2,'%i\r\n',noSourcesstrike);
+              fprintf(fid2,'%f\r\n',distanceStep);
+              fprintf(fid2,'%f\r\n',firstSourcestrike);
              fclose(fid2);
              
-             %% go in GREEN
-             cd green
+           %% go in GREEN
+           cd green
              
              for i=1:noSourcesstrike
              %%% find filename
@@ -393,54 +486,44 @@ case 1      %%%%%%%%%%line of epicenters along strike
              fclose(fid);
              end
 
-             %% go back
-             cd ..
-             
-             %%%%%%%%%%%%%%%%%%%%%%%%%%%
-             %%%%%%%%%%%%%%%%%HERE WE HAVE TO CONVERT TO 'GEOGRAPHICAL COORDINATES'
-             %%%%%           Use vdistinv subroutine from Matlab user files...!!
+           cd .. 
+           %%
+             %%%% HERE WE HAVE TO CONVERT TO 'GEOGRAPHICAL COORDINATES'
+             %%%%           Use vdistinv subroutine from Matlab user files...!!
              %%%%            output should be in WGS84..
              %%%             read  "epicenter"..
-             
-            
              for i=1:noSourcesstrike
-                 
                       if strdis(i) < 0 
                               azim=strike+180;
-                                
                                 if azim > 360
                                     azim=azim-360;
                                 end
-                                
                       else
                               azim=strike;
                       end
-         
                       [strdisYgeo(i),strdisXgeo(i)] = vdistinv(newlat,newlon,abs(strdis(i))*1000,azim);
              end
              
-             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
              %%%%%%%%%%OUTPUT TO GMT FILE
           try
              %% go in gmtfile
           cd gmtfiles
-             
-             fid = fopen('sources.gmt','w');
-             
+            fid = fopen('sources.gmt','w');
 %              fprintf(fid,'%s\r\n','>');
-             
              for i=1:noSourcesstrike
              fprintf(fid,'  %5.10f   %5.10f  %s  %5.10f %3i %s\r\n',strdisXgeo(i),strdisYgeo(i),'0.2',epidepth,i,'d');
              end
-             
 %              fprintf(fid,'%s\r\n','>');
              fprintf(fid,'  %5.10f   %5.10f  %s  %5.10f  %s %s\r\n',newlon,newlat,'0.8',epidepth,'New_ref','a');
-             
 %              fprintf(fid,'%s\r\n','>');
              fprintf(fid,'  %5.10f   %5.10f   %s %5.10f  %s %s\r\n',epilon,epilat,'0.4',epidepth,'Old_ref','a');
-             
-             fclose(fid);   
-             
+            fclose(fid);   
+             %% sour.dat
+             fid = fopen('sour.dat','w');   % XY file ...
+                  for i=1:noSourcesstrike
+                     fprintf(fid,'%10.4f   %10.4f  %10.4f  %s\r\n',strdisX(i),strdisY(i), strdisZ(i), num2str(i));
+                  end
+             fclose(fid);
              %%%%%%%%%%%%%%%%%%%%%%%%make plot batch file
              %%%find map limits...
               border=0.1;
@@ -454,8 +537,7 @@ case 1      %%%%%%%%%%line of epicenters along strike
                     n=(nend+border);
                r=['-R' num2str(w,'%7.5f') '/' num2str(e,'%7.5f') '/' num2str(s,'%7.5f') '/' num2str(n,'%7.5f') ' '];
                j=[' -JM14c'];
-
-            
+           
              fid = fopen('psources.bat','w');
                    fprintf(fid,'%s\r\n','gmtset PAPER_MEDIA A4');
                    fprintf(fid,'%s\r\n','gmtset PLOT_DEGREE_FORMAT D');
@@ -465,10 +547,10 @@ case 1      %%%%%%%%%%line of epicenters along strike
                    fprintf(fid,'%s\r\n','pstext -R -J -O   textsou.txt  -V >> sources.ps ');
                        
              fclose(fid);   
-                   
+
+  if (get(handles.kmlout,'Value') == get(handles.kmlout,'Max'))         
              
-             
-%             %%%% try to prepare a KML file for Google Earth ..!!
+%%             try to prepare a KML file for Google Earth ..!!
               fid = fopen('sources.kml','w');
               
               fprintf(fid,'<?xml version="1.0" encoding="UTF-8"?>\r\n');
@@ -498,7 +580,7 @@ case 1      %%%%%%%%%%line of epicenters along strike
               fprintf(fid,'<tessellate>0</tessellate>\r\n');
               fprintf(fid,'<altitudeMode>clampToGround</altitudeMode>\r\n');
               fprintf(fid,'<coordinates>\r\n');
-%% line
+%  line
                  for i=1:noSourcesstrike
                       fprintf(fid,'%11.6f, %11.6f, 0\n',strdisXgeo(i),strdisYgeo(i));
                  end
@@ -507,7 +589,7 @@ case 1      %%%%%%%%%%line of epicenters along strike
               fprintf(fid,'</LineString>\r\n');
               fprintf(fid,'</Placemark>\r\n');
               
-%%%%%%%%%%     points
+%      points
               fprintf(fid,'<Folder>\r\n');
               fprintf(fid,'<name> Trial sources </name>\r\n');
               
@@ -573,7 +655,11 @@ fprintf(fid,'</Document>\r\n');
 fprintf(fid,'</kml>\r\n');
 
 fclose(fid);
-%              
+
+  else
+     disp('KML output is not selected'); 
+  end
+%%
              
 %%%%%  output this run data...
              fid = fopen('sourcesinfo.txt','w');
@@ -610,11 +696,14 @@ fclose(fid);
              fprintf(fid,'Dip reference\r\n');
              fprintf(fid,'%s  \r\n', get(handles.firstsourcedip,'String'));
              
-              fprintf(fid,'Strike \r\n');
+             fprintf(fid,'Strike \r\n');
              fprintf(fid,'%s  \r\n', get(handles.Strike,'String'));
              fprintf(fid,'Dip \r\n');
              fprintf(fid,'%s  \r\n', get(handles.Dip,'String'));
-            
+             fprintf(fid,'Use rake \r\n');
+             fprintf(fid,'%s  \r\n', '0');
+             fprintf(fid,'rake \r\n');
+             fprintf(fid,'%s  \r\n', '60');
              fclose(fid);
                           
              %%go back
@@ -736,7 +825,8 @@ case 2       %%%%%%%%%%line of epicenters along dip
              end
              %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
              %%%%%%%%%%OUTPUT TO GMT FILE
-            try    
+
+  try    
              %% go in gmtfile
              cd gmtfiles
              
@@ -751,7 +841,15 @@ case 2       %%%%%%%%%%line of epicenters along dip
 
              fclose(fid);   
              %%%%%%%%%%%%%%%%%%%%%%%%
-                          %%%%%%%%%%%%%%%%%%%%%%%%make plot batch file
+              
+             %% sour.dat
+             fid = fopen('sour.dat','w');   % XY file ...
+                  for i=1:noSourcesdip
+                     fprintf(fid,'%10.4f   %10.4f  %10.4f  %s\r\n',dipdisXrot(i),dipdisYrot(i),dipdisZrot(i), num2str(i));
+                  end
+             fclose(fid);
+             
+             %%%%%%%%%%%%%%%%%%%%%%%%make plot batch file
              %%%find map limits...
               border=0.1;
                   wend=min(dipdisXgeo);
@@ -775,7 +873,9 @@ case 2       %%%%%%%%%%line of epicenters along dip
                    fprintf(fid,'%s\r\n','pstext -R -J -O   textsou.txt  -V >> sources.ps ');
                        
              fclose(fid);   
-
+             
+%%             
+ if (get(handles.kmlout,'Value') == get(handles.kmlout,'Max')) 
 %             %%%% try to prepare a KML file for Google Earth ..!!
               fid = fopen('sources.kml','w');
               
@@ -881,8 +981,10 @@ fprintf(fid,'</Document>\r\n');
 fprintf(fid,'</kml>\r\n');
 
 fclose(fid);
-%              
-        
+              
+ else
+    disp('KML output is not selected');    
+ end
 %%%%%  output this run data...
              fid = fopen('sourcesinfo.txt','w');
              
@@ -918,18 +1020,21 @@ fclose(fid);
              fprintf(fid,'Dip reference\r\n');
              fprintf(fid,'%s  \r\n', get(handles.firstsourcedip,'String'));
              
-              fprintf(fid,'Strike \r\n');
+             fprintf(fid,'Strike \r\n');
              fprintf(fid,'%s  \r\n', get(handles.Strike,'String'));
              fprintf(fid,'Dip \r\n');
              fprintf(fid,'%s  \r\n', get(handles.Dip,'String'));
-            
+             fprintf(fid,'Use rake \r\n');
+             fprintf(fid,'%s  \r\n', '0');
+             fprintf(fid,'rake \r\n');
+             fprintf(fid,'%s  \r\n', '60');
              fclose(fid);
                           
              %%go back
              cd ..
-         catch
-             cd ..
-         end
+  catch
+     cd ..
+  end
 %             
              %%%%%%%%%%%PLOT USING M_MAP
              figure(4)
@@ -951,7 +1056,7 @@ fclose(fid);
              
              
 case 3       %%%%%%%%%% sources on a plane....
-
+disp(' sources on a plane....')
 strikerad=deg2rad(-strike);
 
 sourceindex=0;
@@ -982,7 +1087,7 @@ end
 figure(1)
 plot3(x,y,z,'-ro')
 for j=1:noSourcesdip 
-    for i=1:noSourcesstrike
+  for i=1:noSourcesstrike
       text(x(j,i),y(j,i),z(j,i),xytext{j,i});
   end
 end
@@ -1076,16 +1181,13 @@ end
 %              fprintf(fid,'%s\r\n','>');
 
              %%%%%  !!!!!!!!!!!!!%%%%%%%%%%%%%%
-             westbound=180;
-             eastbound=0;
-             southbound=90;
-             northbound=-90;
+             westbound=180; eastbound=0;
+             southbound=90; northbound=-90;
 
              
              orig_y=yrot(firstSourcedip,firstSourcestrike);
              orig_x=xrot(firstSourcedip,firstSourcestrike);
 
-             
              for j=1:noSourcesdip
                   for i=1:noSourcesstrike
                                
@@ -1093,7 +1195,8 @@ end
                       northkm(j,i)=yrot(j,i)-orig_y;
                       
                       [dist(j,i),theta(j,i)]=az(eastkm(j,i),northkm(j,i));
-                      [outpointsYrot(j,i),outpointsXrot(j,i)] = vdistinv(newlat,newlon,dist(j,i)*1000,theta(j,i));
+                   %   [outpointsYrot(j,i),outpointsXrot(j,i),derr(j,i),aerr(j,i)] = vdistinv(newlat,newlon,dist(j,i)*1000,theta(j,i))
+                       [outpointsYrot(j,i),outpointsXrot(j,i),~] = wgs84invdist(newlat,newlon,theta(j,i),dist(j,i)*1000,1,1);
                        outpointsZrot(j,i)=-z(j,i);
                      
                        outpointsXrot(firstSourcedip,firstSourcestrike)=newlon;
@@ -1146,8 +1249,9 @@ end
                    fprintf(fid,'%s\r\n','gawk "{print $1,$2,"14","1","1","1",$5}" sources.gmt > textsou.txt');
                    fprintf(fid,'%s\r\n','pstext -R -J -O   textsou.txt  -V >> sources.ps ');
                        
-             fclose(fid);   
-
+             fclose(fid); 
+             
+  if (get(handles.kmlout,'Value') == get(handles.kmlout,'Max')) 
              
 %             %%%% try to prepare a KML file for Google Earth ..!!
               fid = fopen('sources.kml','w');
@@ -1218,7 +1322,9 @@ fprintf(fid,'</kml>\r\n');
 
 fclose(fid);
 %              
-        
+  else
+      disp('KML output is not selected');  
+  end
 %%%%%  output this run data...
              fid = fopen('sourcesinfo.txt','w');
              
@@ -1254,12 +1360,15 @@ fclose(fid);
              fprintf(fid,'Dip reference\r\n');
              fprintf(fid,'%s  \r\n', get(handles.firstsourcedip,'String'));
              
-              fprintf(fid,'Strike \r\n');
+             fprintf(fid,'Strike \r\n');
              fprintf(fid,'%s  \r\n', get(handles.Strike,'String'));
              fprintf(fid,'Dip \r\n');
              fprintf(fid,'%s  \r\n', get(handles.Dip,'String'));
-            
-             fclose(fid)
+             fprintf(fid,'Use rake \r\n');
+             fprintf(fid,'%s  \r\n', '0');
+             fprintf(fid,'rake \r\n');
+             fprintf(fid,'%s  \r\n', '60');
+             fclose(fid);
                           
              %%go back
              cd ..
@@ -1274,7 +1383,7 @@ fclose(fid);
              
              figure(3)
             % m_proj('Mercator','long',[westbound-0.1 eastbound+0.1],'lat',[southbound-0.1 northbound+0.1]);
-              m_proj('Mercator','long',[w e],'lat',[s n]) 
+             m_proj('Mercator','long',[w e],'lat',[s n]) 
              
              m_gshhs_h('color','k');
              %m_gshhs_h('patch',[.7 .7 .7],'edgecolor','g');%'color','k');
@@ -1294,6 +1403,265 @@ fclose(fid);
              end
 
              
+%% inclined line !! new 20/12/2018             
+            
+case 4             
+disp('Calculating sources along line on a plane')              
+
+% read values from GUI
+norakesources    = str2double(get(handles.norakesources,'String'));
+rakespacing      = str2double(get(handles.rakespacing,'String'));
+rakerefsource    = str2double(get(handles.rakerefsource,'String'));
+
+% call subroutine 
+[ux,uy,uz,strdis] = calclcoord(strike,dip,rake,norakesources,rakespacing,rakerefsource); %,epidepth); 
+uz=uz+epidepth ;
+
+
+%%
+for jj=1:norakesources
+ xytext(jj)={num2str(jj,'%02d')};
+end
+% ux ----> NS, positive North
+% uy ----> EW, positive East
+% figure
+% plot3(-uy,ux,uz,'bo-')
+%% plot
+figure
+% plot the system of coordinates
+%Xs1=[0  0   0   0  0  10   10    0]; Ys1=[0 10  10   0  0   0    0    0]; Zs1=[0  0 -10 -10  0   0  -10  -10];
+%Xs2=[  0  -10  -10  0   0       0  0]; Ys2=[  0    0    0  0   -10   -10  0]; Zs2=[-10  -10    0  0   0     -10  -10];
+
+hold on
+%plot3(Ys1,Xs1,Zs1,'k--'); plot3(Ys2,Xs2,Zs2,'k--')
+plot3(uy,ux,uz,'bo-')
+
+% plot the reference source
+plot3(uy(rakerefsource),ux(rakerefsource),uz(rakerefsource),'r*')
+% 
+for j=1:norakesources
+      text(uy(j),ux(j),uz(j),xytext{j});
+end
+
+% % % % check with plane
+% strikerad=deg2rad(-strike);
+% 
+% sourceindex=0;
+% 
+% for j=1:5
+%     for i=1:5
+% 
+%         xytext(j,i)={num2str(i+sourceindex,'%02d')};
+%         
+%         y(j,i)=5*(i-1);
+%         x(j,i)=(5*cos(diprad))*(j-1);
+%         z(j,i)=-x(j,i)*tan(diprad)-epidepth;
+%         
+%         [xrot(j,i),yrot(j,i)]=rotateisol(strikerad,x(j,i),y(j,i));
+%         
+%         xrot(j,i)=xrot(j,i)+Edist;
+%         yrot(j,i)=yrot(j,i)+Ndist;
+%       
+%     end
+%      sourceindex=sourceindex+i;
+% end
+% 
+% plot3(xrot,yrot,-z,'-ro','Markerfacecolor',[.17 .17 .17])
+
+xlabel('Y (km)');ylabel('X (km)');zlabel('Z (km)');title('X-Y-Z');grid on
+hold off;rotate3d on;axis square
+set(gca, 'ZDir','reverse')
+
+%% OUTPUT TO SRC FILES
+% and source.isl !!!!!!!!!
+             fid2 = fopen('tsources.isl','w');
+              fprintf(fid2,'%s\r\n','line');
+              fprintf(fid2,'%i\r\n',norakesources);
+              fprintf(fid2,'%f\r\n',rakespacing);
+              fprintf(fid2,'%f\r\n',rakerefsource);
+             fclose(fid2);
+             
+         %% go in GREEN
+           cd green
+             for i=1:norakesources
+             %%% find filename
+             filename=['src' num2str(i,'%02d') '.dat'];
+             %%%% open file
+             fid = fopen(filename,'w');
+             fprintf(fid,'%s\r\n',' Source parameters');
+             fprintf(fid,'%s\r\n',' x(N>0,km),y(E>0,km),z(km),magnitude,date');
+             fprintf(fid,'%10.4f%10.4f%10.4f%10.4f  %c%s%c\r\n',ux(i),uy(i),uz(i),magn, '''', eventdate, '''');
+             fclose(fid);
+             end
+           cd ..
+             
+%%
+             %%%%%%%%%%%%%%%%%HERE WE HAVE TO CONVERT TO 'GEOGRAPHICAL COORDINATES'
+             %%%%%           Use vdistinv subroutine from Matlab user files...!!
+             %%%%            output should be in WGS84..
+             %%%             read  "epicenter"..
+          
+             
+     %% go in gmtfile
+     cd gmtfiles
+             
+             %%%%%  !!!!!!!!!!!!!%%%%%%%%%%%%%%
+             westbound=180;eastbound=0;southbound=90;northbound=-90;
+
+             fid = fopen('sources.gmt','w');             
+             orig_y=ux(rakerefsource);
+             orig_x=uy(rakerefsource);
+
+             for i=1:norakesources
+                               
+                      eastkm(i)= uy(i)-orig_x;
+                      northkm(i)=ux(i)-orig_y;
+                      
+                      [dist(i),theta(i)]=az(eastkm(i),northkm(i));
+
+                         
+                      [outpointsYrot(i),outpointsXrot(i)] = vdistinv(newlat,newlon,dist(i)*1000,theta(i));
+                      
+                       outpointsZrot(i)=uz(i);
+                     
+                       outpointsXrot(rakerefsource)=newlon;
+                       outpointsYrot(rakerefsource)=newlat;
+                       
+                   fprintf(fid,'  %5.10f   %5.10f  %s  %5.10f %s %s\r\n',outpointsXrot(i),outpointsYrot(i),'0.2',outpointsZrot(i),xytext{i},'d');
+
+                     if outpointsXrot(i) <= westbound
+                         westbound = outpointsXrot(i);
+                     end
+                     if outpointsXrot(i) >= eastbound
+                         eastbound = outpointsXrot(i);
+                     end
+                     if outpointsYrot(i) <= southbound
+                         southbound = outpointsYrot(i);
+                     end
+                     if outpointsYrot(i) >= northbound
+                         northbound = outpointsYrot(i);
+                     end
+                     
+
+              end
+             
+             
+             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+             %%%%%%%%%%OUTPUT TO GMT FILE
+        
+
+                fprintf(fid,'  %5.10f   %5.10f  %s  %5.10f  %s %s\r\n',newlon,newlat,'0.8',epidepth,'New_ref','a');
+                fprintf(fid,'  %5.10f   %5.10f   %s %5.10f  %s %s\r\n',epilon,epilat,'0.4',epidepth,'Old_ref','a');
+             fclose(fid);   
+             
+             %% sour.dat
+             fid = fopen('sour.dat','w');   % XY file ...
+                  for i=1:norakesources
+                     fprintf(fid,'%10.4f   %10.4f  %10.4f  %s\r\n',uy(i),ux(i),uz(i), num2str(i));
+                  end
+             fclose(fid);
+             %%             
+             % make plot batch file
+             %%%find map limits...
+              border=0.1;
+                  wend=min(min(outpointsXrot));
+                  eend=max(max(outpointsXrot));
+                  send=min(min(outpointsYrot));
+                  nend=max(max(outpointsYrot));
+                    w=(wend-border);
+                    e=(eend+border);
+                    s=(send-border);
+                    n=(nend+border);
+               r=['-R' num2str(w,'%7.5f') '/' num2str(e,'%7.5f') '/' num2str(s,'%7.5f') '/' num2str(n,'%7.5f') ' '];
+               j=' -JM14c';
+
+             fid = fopen('psources.bat','w');
+                   fprintf(fid,'%s\r\n','gmtset PAPER_MEDIA A4');
+                   fprintf(fid,'%s\r\n','gmtset PLOT_DEGREE_FORMAT D');
+                   fprintf(fid,'%s\r\n',['pscoast ' r   j ' -G255/255/204 -Df -W0.7p  -B0.1 -K -S104/204/255   > sources.ps' ]);
+                   fprintf(fid,'%s\r\n','psxy -R -J -O  -K      sources.gmt   -S  -G255/0/0    -W1.p -V >> sources.ps ');
+                   fprintf(fid,'%s\r\n','gawk "{print $1,$2,"14","1","1","1",$5}" sources.gmt > textsou.txt');
+                   fprintf(fid,'%s\r\n','pstext -R -J -O   textsou.txt  -V >> sources.ps ');
+                       
+             fclose(fid); 
+
+             figure(3)
+            % m_proj('Mercator','long',[westbound-0.1 eastbound+0.1],'lat',[southbound-0.1 northbound+0.1]);
+             m_proj('Mercator','long',[w e],'lat',[s n]) 
+             m_gshhs_h('color','k');
+             %m_gshhs_h('patch',[.7 .7 .7],'edgecolor','g');%'color','k');
+             m_grid('box','fancy','tickdir','out');
+            %%%plot new "epicenter"
+             m_line(newlon,newlat,'marker','p','markersize',17,'color','y','MarkerFaceColor','y');
+             %%%plot epicenter
+             m_line(epilon,epilat,'marker','p','markersize',17,'color','b','MarkerFaceColor','b');
+
+             for i=1:norakesources
+                    m_line(outpointsXrot(i),outpointsYrot(i),'marker','square','markersize',5,'color','r');
+%                    m_text(outpointsXrot(j,i),outpointsYrot(j,i),xytext{j,i},'vertical','top');
+             end
+             
+             
+%%  output this run data...
+             fid = fopen('sourcesinfo.txt','w');
+             
+             fprintf(fid,'Event Parameters\r\n') ;
+             fprintf(fid,'Magnitude\r\n') 
+             fprintf(fid,'%4.2f\r\n', magn);
+             fprintf(fid,'Date\r\n');
+             fprintf(fid,'%s  \r\n', eventdate);
+             fprintf(fid,'Lat\r\n');
+             fprintf(fid,'%7.4f  \r\n', epilat);
+             fprintf(fid,'Lon\r\n');
+             fprintf(fid,'%7.4f  \r\n', epilon);
+             fprintf(fid,'Depth\r\n');
+             fprintf(fid,'%7.2f  \r\n', epidepth);
+             fprintf(fid,'Shift to North\r\n');
+             fprintf(fid,'%s   \r\n', get(handles.northkm,'String'));
+             fprintf(fid,'Shift to East\r\n');
+             fprintf(fid,'%s   \r\n', get(handles.eastkm,'String'));
+             
+
+             fprintf(fid,'No sources strike\r\n');
+             fprintf(fid,'%s  \r\n', get(handles.noSourcesstrike,'String'));
+             fprintf(fid,'Spacing along strike\r\n');
+             fprintf(fid,'%s  \r\n', get(handles.distanceStep,'String'));
+
+             fprintf(fid,'No sources dip\r\n');
+             fprintf(fid,'%s  \r\n', get(handles.noSourcesdip,'String'));
+             fprintf(fid,'Spacing along dip\r\n');
+             fprintf(fid,'%s  \r\n', get(handles.steponPlane,'String'));
+
+             fprintf(fid,'Strike reference\r\n');
+             fprintf(fid,'%s  \r\n', get(handles.firstSourcestrike,'String'));
+             fprintf(fid,'Dip reference\r\n');
+             fprintf(fid,'%s  \r\n', get(handles.firstsourcedip,'String'));
+             
+             fprintf(fid,'Strike \r\n');
+             fprintf(fid,'%s  \r\n', get(handles.Strike,'String'));
+             fprintf(fid,'Dip \r\n');
+             fprintf(fid,'%s  \r\n', get(handles.Dip,'String'));
+             fprintf(fid,'Use rake \r\n');
+             fprintf(fid,'%s  \r\n', '1');
+             fprintf(fid,'Rake \r\n');
+             fprintf(fid,'%s  \r\n', get(handles.rake,'String'));
+             fprintf(fid,'No sources Rake \r\n');
+             fprintf(fid,'%s  \r\n', get(handles.norakesources,'String'));
+             fprintf(fid,'Spacing along Rake \r\n');
+             fprintf(fid,'%s  \r\n', get(handles.rakespacing,'String'));
+             fprintf(fid,'Rake Reference\r\n');
+             fprintf(fid,'%s  \r\n', get(handles.rakerefsource,'String'));
+             
+            
+             fclose(fid);
+                          
+             %%go back
+             
+             
+   
+     cd ..
+
+            
 end  %%%case end
 
 
@@ -2228,11 +2596,41 @@ if nargout > 2
 end
 return
 
-
-
+%%
+% 
+% function [dist,theta]=az(eastkm,northkm)
+% 
+% dist=sqrt(eastkm^2+northkm^2);
+%     
+%     if eastkm >= 0  && northkm >= 0
+%         theta=rad2deg(atan(eastkm/northkm));
+%         
+%     elseif northkm < 0 && eastkm >= 0
+%         theta=180-rad2deg(atan(eastkm/abs(northkm)));
+%         
+%     elseif northkm <= 0 && eastkm <= 0
+%         theta=180+rad2deg(atan(abs(eastkm)/abs(northkm)));
+%         
+%     elseif northkm > 0 && eastkm < 0
+%         theta=270+rad2deg(atan(northkm/abs(eastkm)));
+%         
+%     end
+%     
+%                       if theta < 0
+%                           theta=-theta
+%                           
+%                       end
+%
 function [dist,theta]=az(eastkm,northkm)
 
-dist=sqrt(eastkm^2+northkm^2);
+if eastkm==0 && northkm==0
+    dist=0;
+    theta=0;
+    return
+    
+else
+    
+    dist=sqrt(eastkm^2+northkm^2);
     
     if eastkm >= 0  && northkm >= 0
         theta=rad2deg(atan(eastkm/northkm));
@@ -2247,6 +2645,163 @@ dist=sqrt(eastkm^2+northkm^2);
         theta=270+rad2deg(atan(northkm/abs(eastkm)));
         
     end
-
     
+    if theta < 0
+        theta=-theta;
+                         
+    end    
+    
+end
 
+
+
+% --- Executes on button press in checkbox1.
+function checkbox1_Callback(hObject, eventdata, handles)
+% hObject    handle to checkbox1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of checkbox1
+
+if (get(handles.checkbox1,'Value') == get(handles.checkbox1,'Max'))
+%%%enable rake
+on =[handles.rake,handles.raketext,handles.norakesources,handles.rakespacing,handles.rakerefsource,handles.text45,handles.text46,handles.text47,handles.text48];
+enableon(on)
+
+off =[handles.noSourcesstrike,handles.distanceStep,handles.noSourcesdip,handles.steponPlane,handles.firstSourcestrike,handles.firstsourcedip, handles.fwidth, handles.flength, handles.text17, handles.text18, handles.text29, handles.text25, handles.text43 , handles.text20, handles.text31, handles.text24, handles.text19];
+enableoff(off)
+
+else
+off =[handles.rake,handles.raketext,handles.norakesources,handles.rakespacing,handles.rakerefsource,handles.text45,handles.text46,handles.text47,handles.text48];
+enableoff(off)
+
+on =[handles.noSourcesstrike,handles.distanceStep,handles.noSourcesdip,handles.steponPlane,handles.firstSourcestrike,handles.firstsourcedip, handles.fwidth, handles.flength, handles.text17, handles.text18, handles.text29, handles.text25, handles.text43 , handles.text20, handles.text31, handles.text24, handles.text19];
+enableon(on)
+
+
+end
+
+
+
+function rake_Callback(hObject, eventdata, handles)
+% hObject    handle to rake (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of rake as text
+%        str2double(get(hObject,'String')) returns contents of rake as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function rake_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to rake (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function enableoff(off)
+set(off,'Enable','off')
+
+function enableon(on)
+set(on,'Enable','on')
+
+
+
+
+% --- Executes on button press in kmlout.
+function kmlout_Callback(hObject, eventdata, handles)
+% hObject    handle to kmlout (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of kmlout
+
+
+% --- Executes when uipanel1 is resized.
+function uipanel1_ResizeFcn(hObject, eventdata, handles)
+% hObject    handle to uipanel1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+
+function norakesources_Callback(hObject, eventdata, handles)
+% hObject    handle to norakesources (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of norakesources as text
+%        str2double(get(hObject,'String')) returns contents of norakesources as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function norakesources_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to norakesources (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function rakespacing_Callback(hObject, eventdata, handles)
+% hObject    handle to rakespacing (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of rakespacing as text
+%        str2double(get(hObject,'String')) returns contents of rakespacing as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function rakespacing_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to rakespacing (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function rakerefsource_Callback(hObject, eventdata, handles)
+% hObject    handle to rakerefsource (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of rakerefsource as text
+%        str2double(get(hObject,'String')) returns contents of rakerefsource as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function rakerefsource_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to rakerefsource (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes when figure1 is resized.
+function figure1_ResizeFcn(hObject, eventdata, handles)
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

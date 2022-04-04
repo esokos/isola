@@ -16,7 +16,7 @@ else
    h=dir('./invert/allstat.dat');
 end
 
-  if isempty(h); 
+  if isempty(h)
          errordlg('allstat.dat file doesn''t exist in invert folder. Run Station Selection. ','File Error');
      return
   else
@@ -120,20 +120,20 @@ for i=1:nsta
                 'String','',...
                 'Position',[520 (i+1)*30 80 20],'String',num2str(of1(i)));
             
-   % frequency 2
-   freq2(i) = uicontrol(fh,'Style','edit',...
-                'String','',...
-                'Position',[620 (i+1)*30 80 20],'String',num2str(of2(i)));          
-
-   % frequency 3
-   freq3(i) = uicontrol(fh,'Style','edit',...
-                'String','',...
-                'Position',[720 (i+1)*30 80 20],'String',num2str(of3(i)));      
+%    % frequency 2
+%    freq2(i) = uicontrol(fh,'Style','edit',...
+%                 'String','',...
+%                 'Position',[620 (i+1)*30 80 20],'String',num2str(of2(i)));          
+% 
+%    % frequency 3
+%    freq3(i) = uicontrol(fh,'Style','edit',...
+%                 'String','',...
+%                 'Position',[720 (i+1)*30 80 20],'String',num2str(of3(i)));      
 
    % frequency 4
    freq4(i) = uicontrol(fh,'Style','edit',...
                 'String','',...
-                'Position',[820 (i+1)*30 80 20],'String',num2str(of4(i)));          
+                'Position',[620 (i+1)*30 80 20],'String',num2str(of4(i)));          
   
   elseif nargin==4
       
@@ -144,20 +144,20 @@ for i=1:nsta
                 'String','',...
                 'Position',[520 (i+1)*30 80 20],'String',num2str(of1(i)));
             
-   % frequency 2
-   freq2(i) = uicontrol(fh,'Style','text',...
-                'String','',...
-                'Position',[620 (i+1)*30 80 20],'String',num2str(of2(i)));          
-
-   % frequency 3
-   freq3(i) = uicontrol(fh,'Style','text',...
-                'String','',...
-                'Position',[720 (i+1)*30 80 20],'String',num2str(of3(i)));      
+%    % frequency 2
+%    freq2(i) = uicontrol(fh,'Style','text',...
+%                 'String','',...
+%                 'Position',[620 (i+1)*30 80 20],'String',num2str(of2(i)));          
+% 
+%    % frequency 3
+%    freq3(i) = uicontrol(fh,'Style','text',...
+%                 'String','',...
+%                 'Position',[720 (i+1)*30 80 20],'String',num2str(of3(i)));      
 
    % frequency 4
    freq4(i) = uicontrol(fh,'Style','text',...
                 'String','',...
-                'Position',[820 (i+1)*30 80 20],'String',num2str(of4(i)));  
+                'Position',[620 (i+1)*30 80 20],'String',num2str(of4(i)));  
     
   end    
     
@@ -173,17 +173,17 @@ end
                 'Position',[320 (nsta+2)*30 80 20]);
 %
    l3 = uicontrol(fh,'Style','text',...
-                'String','f1','FontWeight','Bold',...
+                'String','LF','FontWeight','Bold',...
                 'Position',[520 (nsta+2)*30 80 20]);
    l4 = uicontrol(fh,'Style','text',...
-                'String','f2','FontWeight','Bold',...
+                'String','HF','FontWeight','Bold',...
                 'Position',[620 (nsta+2)*30 80 20]);
-   l5 = uicontrol(fh,'Style','text',...
-                'String','f3','FontWeight','Bold',...
-                'Position',[720 (nsta+2)*30 80 20]);
-   l6 = uicontrol(fh,'Style','text',...
-                'String','f4','FontWeight','Bold',...
-                'Position',[820 (nsta+2)*30 80 20]);
+%    l5 = uicontrol(fh,'Style','text',...
+%                 'String','f3','FontWeight','Bold',...
+%                 'Position',[720 (nsta+2)*30 80 20]);
+%    l6 = uicontrol(fh,'Style','text',...
+%                 'String','f4','FontWeight','Bold',...
+%                 'Position',[820 (nsta+2)*30 80 20]);
 % Cancel button
 cnl = uicontrol(fh,'Style','pushbutton','String','Exit',...
                 'Position',[720 10 60 40],...
@@ -203,8 +203,8 @@ set(fh,'Color',defaultBackground)
 for i=1:nsta
 
     set(freq1(i),'BackgroundColor',[ 1 1 1])
-    set(freq2(i),'BackgroundColor',[ 1 1 1])
-    set(freq3(i),'BackgroundColor',[ 1 1 1])
+%     set(freq2(i),'BackgroundColor',[ 1 1 1])
+%     set(freq3(i),'BackgroundColor',[ 1 1 1])
     set(freq4(i),'BackgroundColor',[ 1 1 1])
     
 end
@@ -252,8 +252,8 @@ function update(hObject,eventdata)
 
         %
         freq11(k)=str2double(get(freq1(k),'String'));
-        freq22(k)=str2double(get(freq2(k),'String'));
-        freq33(k)=str2double(get(freq3(k),'String'));
+        freq22(k)=str2double(get(freq1(k),'String'));
+        freq33(k)=str2double(get(freq4(k),'String'));
         freq44(k)=str2double(get(freq4(k),'String'));
         
     end
@@ -283,7 +283,7 @@ freq22=fliplr(freq22);
 freq33=fliplr(freq33);
 freq44=fliplr(freq44);
 
-% uodate allstat
+% update allstat
 if ispc
   fid = fopen('.\invert\allstat.dat','w');
      for p=1:nsta

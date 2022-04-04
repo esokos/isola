@@ -23,7 +23,7 @@ function varargout = plotres(varargin)
 
 % Edit the above text to modify the response to help plotres
 
-% Last Modified by GUIDE v2.5 11-Dec-2013 03:35:44
+% Last Modified by GUIDE v2.5 24-Mar-2021 00:28:13
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -55,11 +55,10 @@ function plotres_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for plotres
 handles.output = hObject;
-
 %% 
 h=dir('invert');
 
-if isempty(h);
+if isempty(h)
     errordlg('Invert folder doesn''t exist. Please create it. ','Folder Error');
     return
 else
@@ -69,7 +68,7 @@ end
 
 h=dir('waveplotoptions.isl');
 
-if length(h) == 1; 
+if length(h) == 1
     fid = fopen('waveplotoptions.isl','r');
     nor=fscanf(fid,'%f',1);
     usel=fscanf(fid,'%f',1);
@@ -77,6 +76,8 @@ if length(h) == 1;
     totime=fscanf(fid,'%f',1);
     pvar=fscanf(fid,'%f',1);
     pbw=fscanf(fid,'%f',1);
+    normsyn=fscanf(fid,'%f',1);
+    netcode=fscanf(fid,'%f',1);
     fclose(fid);
     
         set(handles.ftime,'String',ftime)
@@ -105,6 +106,20 @@ if length(h) == 1;
         elseif pbw==0
             set(handles.bw,'Value',0)
         end
+        
+        if normsyn==1
+            set(handles.normsyn,'Value',1)
+        elseif pbw==0
+            set(handles.normsyn,'Value',0)
+        end     
+        
+        if netcode==1
+            set(handles.stacode,'Value',1)
+        elseif pbw==0
+            set(handles.stacode,'Value',0)
+        end             
+        
+        
 else
     disp('wave plot options not found')
 end
@@ -114,7 +129,7 @@ end
 
 h=dir('event.isl');
 
-if isempty(h); 
+if isempty(h)
   errordlg('Event.isl file doesn''t exist. Run Event info. ','File Error');
   return
 else
@@ -135,6 +150,8 @@ end
 % eventid=[eventdate '  ' eventhour ':' eventmin ':' eventsec(1:2) ];
 % eventidnew=[eventdate(3:8) '_' eventhour '_' eventmin '_' eventsec];
 
+set(handles.depth,'String',num2str(epidepth))          % Update location depth for polarity
+
 eventid=[eventdate(3:8) '_' eventhour '_' eventmin '_' eventsec  ];
 eventidnew=[eventdate(3:8) '_' eventhour '_' eventmin '_' eventsec  ];
 
@@ -146,7 +163,7 @@ else
    h=dir('./invert/allstat.dat');
 end
    
-if isempty(h); 
+if isempty(h) 
          errordlg('allstat.dat file doesn''t exist in invert folder. Run Station Selection. ','File Error');
      return
 else
@@ -244,7 +261,7 @@ if a==2
 
 dtime=num2str(dtime);
 nsubevents=num2str(nsubevents);
-invband=[num2str(invband(1)) ' ' num2str(invband(2)) ' ' num2str(invband(3)) ' ' num2str(invband(4))];
+invband=[num2str(invband(1)) ' - ' num2str(invband(4))];
 
 handles.id=id;
 handles.dtime=dtime;
@@ -254,6 +271,12 @@ handles.invband=invband;
 handles.eventid=eventid;
 handles.eventidnew=eventidnew;
 handles.nsubevents=nsubevents;
+
+% add time info for origin
+eventorign=[eventdate ' ' eventhour ' ' eventmin ' ' eventsec];
+
+handles.evtorigin=eventorign;
+
 % Update handles structure
 guidata(hObject, handles);
 
@@ -298,7 +321,7 @@ end
 
 h=dir('tsources.isl');
 
-if isempty(h); 
+if isempty(h)
     errordlg('tsources.isl file doesn''t exist. Run Source create. ','File Error');
   return    
 else
@@ -374,7 +397,64 @@ else
           fclose(fid);
           
 end
+
+%% Update the NP1 NP2 text
+
+cd invert
+
+[~,~,~,~,~,~,~,inv1_sdr1,inv1_sdr2,~]=readinv1(nsources,1);
+
+NP1=[num2str(inv1_sdr1(1)) '/' num2str(inv1_sdr1(2)) '/' num2str(inv1_sdr1(3))];
+NP2=[num2str(inv1_sdr2(1)) '/' num2str(inv1_sdr2(2)) '/' num2str(inv1_sdr2(3))];
+
+cd ..
+
+set(handles.NP1,'String',NP1)   
+set(handles.NP2,'String',NP2)   
+
+%% read ISOLA defaults
+[gmt_ver,psview,npts,htmlfolder] = readisolacfg;
+
+if strcmp(htmlfolder,'null')
+   set(handles.html,'Visible','off')  % html is not needed
+   set(handles.html,'Enable','off')  % html is not needed
+else
+    
+end
+
+
+
+%% disable Plot correlation vs Source if we have only 1 sourse..!!
+
+if nsources == 1
+   set(handles.inv1,'Enable','off')
+else    
+end
+
+%%
+handles.gmt_ver=gmt_ver;
+handles.psview=psview;
+handles.npts=npts;
+handles.htmlfolder=htmlfolder;
+
+
+    if exist([pwd '\station_file.isl'],'file')
+           fid = fopen('station_file.isl','r'); 
+              fullstationfile=fgetl(fid);
+           fclose(fid);
+           handles.fullstationfile=fullstationfile;
+           disp([ fullstationfile ' will be used for network code'])
+           handles.fullstationfile=fullstationfile;
+    else  
+           handles.fullstationfile='';
+           set(handles.stacode,'Value',0);
+    end
+
+
+
+
 handles.conplane=conplane;
+handles.nsources=nsources;
 % Update handles structure
 guidata(hObject, handles);
 
@@ -392,7 +472,10 @@ function varargout = plotres_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-disp('This is plotres 01/09/2012');
+disp('This is plotres 10/10/2019');
+disp('Changes:');
+disp('Selection of subevent in cor vs source plotting and bug fixes');
+disp('Use the isolacfg.isl file');
 disp('  ');
 
 % corrects a small bug with wrong plotting of selected components in
@@ -419,6 +502,8 @@ uselimits=get(handles.uselimits,'Value');
 ftime =  str2double(get(handles.ftime,'String'));
 totime = str2double(get(handles.totime,'String'));
 
+npts=handles.npts;
+
 %%%%%%%%%%%%%FIND OUT USER SELECTION %%%%%%%%%%%%%%
 %%%%%%%%%%% code based on Matlab example of list box....!!!
 
@@ -428,11 +513,11 @@ if length(index_selected)==1   %%% plot ONE or ALL stations ONLY
     
     if index_selected == nostations+1                          %%%ALL
           disp('Plotting All Stations Real data in one Figure')
-          plotallstationsReal(nostations,staname,uselimits,ftime,totime)
+          plotallstationsReal(nostations,staname,uselimits,ftime,totime,npts)
     elseif index_selected ~= nostations+1                       %%% just one
           disp('Plotting ONLY One Station Real data in one Figure')
           stationname=staname{index_selected}
-          plotonestationReal(stationname,uselimits,ftime,totime)
+          plotonestationReal(stationname,uselimits,ftime,totime,npts)
     end
       
 elseif length(index_selected) ~=1   %%%Plot more than one and maybe ALL stations...
@@ -442,10 +527,10 @@ elseif length(index_selected) ~=1   %%%Plot more than one and maybe ALL stations
          if index_selected(i) ~= nostations+1
              disp('Plotting selected stations Real data ')
              stationname=staname{index_selected(i)}
-             plotonestationReal(stationname,uselimits,ftime,totime)
+             plotonestationReal(stationname,uselimits,ftime,totime,npts)
          elseif index_selected(i) == nostations+1
              disp('Plotting All Stations Real data in one Figure')
-             plotallstationsReal(nostations,staname,uselimits,ftime,totime)
+             plotallstationsReal(nostations,staname,uselimits,ftime,totime,npts)
          else
              disp('Error')
          end
@@ -473,6 +558,8 @@ uselimits=get(handles.uselimits,'Value');
 ftime =  str2double(get(handles.ftime,'String'));
 totime = str2double(get(handles.totime,'String'));
 
+npts=handles.npts;
+
 %%%%%%%%%%%%%FIND OUT USER SELECTION %%%%%%%%%%%%%%
 %%%%%%%%%%% code based on Matlab example of list box....!!!
 
@@ -482,11 +569,11 @@ if length(index_selected)==1   %%% plot ONE or ALL stations ONLY
     
     if index_selected == nostations+1                          %%%ALL
           disp('Plotting All Stations Synthetic data in one Figure')
-          plotallstationssyn(nostations,staname,uselimits,ftime,totime)
+          plotallstationssyn(nostations,staname,uselimits,ftime,totime,npts)
     elseif index_selected ~= nostations+1                       %%% just one
           disp('Plotting ONLY One Station Synthetic data in one Figure')
           stationname=staname{index_selected}
-          plotonestationsyn(stationname,uselimits,ftime,totime)
+          plotonestationsyn(stationname,uselimits,ftime,totime,npts)
     end
       
 elseif length(index_selected) ~=1   %%%Plot more than one and maybe ALL stations...
@@ -496,10 +583,10 @@ elseif length(index_selected) ~=1   %%%Plot more than one and maybe ALL stations
          if index_selected(i) ~= nostations+1
              disp('Plotting selected stations Synthetic data ')
              stationname=staname{index_selected(i)}
-             plotonestationsyn(stationname,uselimits,ftime,totime)
+             plotonestationsyn(stationname,uselimits,ftime,totime,npts)
          elseif index_selected(i) == nostations+1
              disp('Plotting All Stations Synthetic data in one Figure')
-             plotallstationssyn(nostations,staname,uselimits,ftime,totime)
+             plotallstationssyn(nostations,staname,uselimits,ftime,totime,npts)
          else
              disp('Error')
          end
@@ -519,12 +606,37 @@ function plrealsyn_Callback(hObject, eventdata, handles)
 
 %%inversion band
 invband=handles.invband;
+
+% extra check here for invband
+
+if ispc 
+   a=exist('.\invert\inpinv.dat','file');
+else
+   a=exist('./invert/inpinv.dat','file');
+end
+
+if a==2
+   if ispc
+      [~,~,~,~,~,invband,~] = readinpinv('.\invert\inpinv.dat');
+   else
+      [~,~,~,~,~,invband,~] = readinpinv('./invert/inpinv.dat');
+   end
+   
+   invband=[num2str(invband(1)) ' - ' num2str(invband(4))];
+
+else
+    disp('Cannot find inpinv.dat in invert folder')
+end
+   
+%% 
+   
 eventid=handles.eventid;
 dtime=handles.dtime;
 
 nostations=handles.nostations;
 staname=handles.staname;
 
+npts=handles.npts;
 
 %%%%%%%%%%%%%FIND OUT USER SELECTION %%%%%%%%%%%%%%
 %%%%%%%%%%% code based on Matlab example of list box....!!!
@@ -541,6 +653,10 @@ totime = str2double(get(handles.totime,'String'));
 addvarred = get(handles.svarred,'Value');
 pbw = get(handles.bw,'Value');
 
+net_use=get(handles.stacode,'Value');
+fullstationfile=handles.fullstationfile
+
+normsynth=get(handles.normsyn,'Value');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -548,24 +664,31 @@ if length(index_selected)==1   %%% plot ONE or ALL stations ONLY
     
     if index_selected == nostations+1                          %%%ALL
           disp('Plotting All Stations Real-Synthetic data in one Figure')
-          plotallstations(nostations,staname,normalized,invband,ftime,totime,uselimits,dtime,eventid,addvarred,pbw)
+          plotallstations(nostations,staname,normalized,invband,ftime,totime,uselimits,dtime,eventid,addvarred,pbw,net_use,fullstationfile,normsynth,npts)
     elseif index_selected ~= nostations+1                       %%% just one
           disp('Plotting ONLY One Station  Real-Synthetic  data in one Figure')
           stationname=staname{index_selected}
-          plotonestation(stationname,normalized,ftime,totime,uselimits)
+          plotonestation(stationname,normalized,ftime,totime,uselimits,normsynth,npts)
     end
       
 elseif length(index_selected) ~=1   %%%Plot more than one and maybe ALL stations...
-    
+ 
+%% plot selected in one plot    
+    disp('Plotting selected stations  Real-Synthetic  data ')
+%     stationname=staname(index_selected);     nostations=length(stationname);
+%     
+%     plotselectedstations(nostations,stationname,normalized,invband,ftime,totime,uselimits,dtime,eventid,addvarred,pbw,net_use,fullstationfile,normsynth)
+%%         
       for i=1:length(index_selected)
           
          if index_selected(i) ~= nostations+1
              disp('Plotting selected stations  Real-Synthetic  data ')
-             stationname=staname{index_selected(i)}
-             plotonestation(stationname,normalized,ftime,totime,uselimits)
+             stationname=staname{index_selected(i)};
+             nostations=length(stationname);
+             plotonestation(stationname,normalized,ftime,totime,uselimits,normsynth,npts)
          elseif index_selected(i) == nostations+1
              disp('Plotting All Stations  Real-Synthetic  data in one Figure')
-             plotallstations(nostations,staname,normalized,dtime,eventid)
+             plotallstations(nostations,staname,normalized,invband,ftime,totime,uselimits,dtime,eventid,addvarred,pbw,net_use,fullstationfile,normsynth,npts)
          else
              disp('Error')
          end
@@ -608,7 +731,7 @@ staname=handles.staname(1:nostations);
 %check if INVERT exists..!
 h=dir('invert');
 
-if isempty(h);
+if isempty(h)
     errordlg('Invert folder doesn''t exist. Please create it. ','Folder Error');
     return
 else
@@ -619,7 +742,7 @@ end
 h=dir('tsources.isl');
 source_gmtfile=0;
 
-if isempty(h); 
+if isempty(h) 
     errordlg('tsources.isl file doesn''t exist. Run Source create. ','File Error');
   return    
 else
@@ -709,7 +832,7 @@ else
 % find how many stations
 h=dir('stations.isl');
 
-if isempty(h); 
+if isempty(h)
     errordlg('Stations.isl file doesn''t exist. Run Station select. ','File Error');
   return    
 else
@@ -727,7 +850,7 @@ stanames=get(handles.stationslistbox,'String');
 
 h=dir('event.isl');
 
-if isempty(h); 
+if isempty(h) 
   errordlg('Event.isl file doesn''t exist. Run Event info. ','File Error');
   return
 else
@@ -756,7 +879,7 @@ try
  cd gmtfiles
  h=dir('sources.gmt');
 
-if isempty(h); 
+if isempty(h)
   errordlg('Sources.gmt file doesn''t exist. Run Source definition. ','File Error');
   return
 else
@@ -789,7 +912,7 @@ try
     
         h=dir('allstat.dat');
 
-          if isempty(h); 
+          if isempty(h)   
                 errordlg('Allstat.dat file doesn''t exist. Run Invert. ','File Error');
                 
            cd ..
@@ -903,7 +1026,7 @@ end
                   %check if we have snr.isl
                   h=dir('snr.isl');
 
-                  if isempty(h);
+                  if isempty(h)
                       snr=NaN;
                   else
                       disp('Found snr.isl file')
@@ -924,7 +1047,7 @@ else
  h=dir('./invert/inpinv.dat');   
 end
 
-if isempty(h); 
+if isempty(h)
     errordlg('inpinv.dat file doesn''t exist. Run Inversion. ','File Error');
   return    
 else
@@ -936,8 +1059,20 @@ else
                fmvar2=NaN;
                stvar=NaN;
              else
+                  disp('Calling compute_fm_stvar')
                   [fmvar1,fmvar2,stvar]=compute_fm_stvar(cor);
              end
+             
+             if(id==4)
+                 inver_type='Fixed';
+             elseif(id==3)
+                 inver_type='DC-constrained';
+             elseif(id==2)
+                 inver_type='Deviatoric';
+             elseif(id==1)
+                 inver_type='Full';
+             end
+             
     else       
           [id,~,~,~,~,~,~] = readinpinv('./invert/inpinv.dat');
              if(id==4)
@@ -946,7 +1081,17 @@ else
                fmvar2=NaN;
                stvar=NaN;
              else
+                  disp('Calling compute_fm_stvar')
                   [fmvar1,fmvar2,stvar]=compute_fm_stvar(cor);
+             end
+             if(id==4)
+                 inver_type='Fixed';
+             elseif(id==3)
+                 inver_type='DC-constrained';
+             elseif(id==2)
+                 inver_type='Deviatoric';
+             elseif(id==1)
+                 inver_type='Full';
              end
 
     end
@@ -963,7 +1108,7 @@ pwd
 
 h=dir('inv3.dat');
 
-if isempty(h); 
+if isempty(h)  
     errordlg('inv3.dat file doesn''t exist. Run Invert. ','File Error');
     cd ..
   return    
@@ -978,7 +1123,7 @@ end
 h=dir('inv2.dat');
 
 %%%%%%%%%%%%%%%%%%%%%%  check length of inv2.dat
-if isempty(h); 
+if isempty(h)  
     errordlg('inv2.dat file doesn''t exist. Run Invert. ','File Error');
     cd ..
   return    
@@ -1017,7 +1162,7 @@ end
 
 h=dir('inv4.dat');   %%% new inv4 format 
 
-if isempty(h); 
+if isempty(h)  
     errordlg('inv4.dat file doesn''t exist. Run Invert. ','File Error');
     cd ..
   return    
@@ -1051,14 +1196,14 @@ end
 %%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%
 
-if length(srcpos) ~= 1;
+if length(srcpos) ~= 1
 %            srcstr='';
 %            
 %            for i=1:length(srcpos)
 %                srcstr=[srcstr num2str(srcpos(i)) ','];
 %            end
 %     
-            a=['There are ' num2str(length(srcpos)) ' sources in inv3.dat. Which one do you want to plot.?' ];
+            a=['There are ' num2str(length(srcpos)) ' subevents. Which one do you want to plot.?' ];
             prompt = {a};
             dlg_title = 'Input Trial Source Number';
             num_lines= 1;
@@ -1066,6 +1211,12 @@ if length(srcpos) ~= 1;
             answer  = inputdlg(prompt,dlg_title,num_lines,def);
             psrcpos = str2num(answer{1});
             disp(['Now Plotting trial source number  ' num2str(srcpos(psrcpos)) ])
+            
+            if psrcpos ~=1 
+                hw=warndlg('Variance Reduction reported here is total for this subevent and all previous ones.','!! Warning !!')
+                uiwait(hw);
+            end
+            
 else
     psrcpos=1;
 end
@@ -1084,25 +1235,54 @@ mrttmp=num2str(mrt{psrcpos});
 mrftmp=num2str(mrf{psrcpos});
 mtftmp=num2str(mtf{psrcpos});
 
-harv=[str2double(mrr{psrcpos});str2double(mtt{psrcpos});str2double(mff{psrcpos});str2double(mrt{psrcpos});str2double(mrf{psrcpos});str2double(mtf{psrcpos})];
-T = evalc('disp(harv)');
-start = regexp(T,'\n');
-Ta=T(1:start(1));
+harv=[str2double(mrr{psrcpos});str2double(mtt{psrcpos});str2double(mff{psrcpos});str2double(mrt{psrcpos});str2double(mrf{psrcpos});str2double(mtf{psrcpos})]
 
+%%
+T = evalc('disp(harv)')
+
+%% check if * exists
+
+checkstar=strfind(T,'*')
+
+if isempty(checkstar)
+   
+format shortEng
+T = evalc('disp(harv)')
+
+start = regexp(T,'\n')
+% Ta=T(1:start(1))
+% format long
+Ta1=strrep(strrep(strrep(strrep(T,'+',' '),'*','  '),'e',' '),'E',' ')
+
+Atmp = sscanf(Ta1,'%f') 
+
+format
+harcof = [Atmp(1) Atmp(3) Atmp(5) Atmp(7) Atmp(9) Atmp(11)]
+    
+maxexp =Atmp(2)
+
+format
+
+else
+ % same procedure as before
+start = regexp(T,'\n')
+Ta=T(1:start(1))
 % maxexp=str2num(Ta(strfind(Ta,'e+0')+3:strfind(Ta,'e+0')+5))
 % needed for new matlab...
 format long
 
-Ta1=strrep(strrep(strrep(strrep(Ta,'+',' '),'*','  '),'e',' '),'E',' ');
+Ta1=strrep(strrep(strrep(strrep(Ta,'+',' '),'*','  '),'e',' '),'E',' ')
 
-Atmp = sscanf(Ta1,'%f')  ;
-maxexp=Atmp(2);
+Atmp = sscanf(Ta1,'%f')  
+maxexp=Atmp(2)
 
 
-Tb=T((start(2)+1):length(T));
+Tb=T((start(2)+1):length(T))
 harcof = sscanf(Tb,'%f',6);
 
 format
+end
+
 
 % atmp1=mrr{psrcpos};
 % ex(1)=str2num(atmp1(length(atmp1)-1:length(atmp1)));
@@ -1134,12 +1314,12 @@ format
 
 % whos srcpos2 sourceno lon lat srclon srclat
 
- for i=1:length(srcpos2);
+ for i=1:length(srcpos2)
 
 %        srctime2(i,1)=srctime2(i,1)*dt;   %%%%convert time shift to
 %        seconds.....!!!!  (inv2 will be in seconds)!!
      
-     for j=1:length(sourceno);
+     for j=1:length(sourceno)
              
          if  srcpos2(i,1) == sourceno(j,1)
              srclon(i,1) = srclon(j,1);     %%%%Longitude 
@@ -1149,9 +1329,8 @@ format
      end
      
  end
-
  
- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1174,8 +1353,10 @@ disp(['Moment (Nm)             '  num2str(mo(psrcpos),'%6.3e')])
 %mommag=0.67*log10(mo(psrcpos)) - 6; %! Hanks & Kanamori (1979)
 %mommagF=0.67*log10(mo(psrcpos)/factnor) - 6; %! Hanks & Kanamori (1979)
 
-mommag=(2/3)*(log10(mo(psrcpos)) - 9.1); %! Hanks & Kanamori (1979)
+%mommag=(2/3)*(log10(mo(psrcpos)) - 9.1); %! Hanks & Kanamori (1979)
 %mommagF=(2/3)*(log10(mo(psrcpos)/factnor) - 9.1); %! Hanks & Kanamori (1979)
+
+mommag=(2.0/3.0)*log10(mo(psrcpos)) - 6.0333;  % changed 06/11/2020 
 
 
 disp(['Mw                      '  num2str(mommag,4) '             Hanks & Kanamori (1979)'])
@@ -1267,6 +1448,18 @@ switch inv2age
               end
           fclose(fid);
 end
+%% Give a warning is solution is of low quality e.g. VR<0.4, CN>10, number of used stations <=2
+nostationsused=length(stationsused(:,1));
+CN=inv1_eigen(2)/inv1_eigen(1);
+
+disp('  ')
+disp(['Used stations ' num2str(nostationsused)])
+
+if varred(psrcpos) < 0.4 || CN > 10  || nostationsused <=2
+    warndlg('This is a low quality solution. (VR<0.4 or CN>10 or No. of Stations <=2) ','Warning');
+else
+end
+
 
 %%
 if ispc     
@@ -1290,11 +1483,23 @@ if ispc
                  fprintf(fid,'%s\r\n',[  eventid2 ]);
                  fprintf(fid,'%s\r\n','');
                  fprintf(fid,'%s\r\n','> 18 33 16 0 9 LM 10p 10c j');
-                 fprintf(fid,'%s\r\n','@;0/0/0;CENTROID');
-                 fprintf(fid,'%s\r\n','> 18 32 16 0 9 LM 10p 10c l');
-                 fprintf(fid,'%s\r\n','--------@;; ');
+                 
+                 
+                 if length(srcpos) ~= 1
+                   fprintf(fid,'%s\r\n',['@;0/0/0;CENTROID OF SUBEVENT ' num2str(psrcpos,'%02d')]);
+                   fprintf(fid,'%s\r\n','> 18 32 16 0 9 LM 10p 10c l');
+                   fprintf(fid,'%s\r\n','-----------------------');
+                   
+                 else
+                   fprintf(fid,'%s\r\n','@;0/0/0;CENTROID');
+                   fprintf(fid,'%s\r\n','> 18 32 16 0 9 LM 10p 10c l');
+                   fprintf(fid,'%s\r\n','--------');
+                 end
+                 
+                 
+
                  fprintf(fid,'%s\r\n','> 1 31 12 0 9 LM 10p 20c j');
-                 fprintf(fid,'%s\r\n',['@;0/0/0;Trial source number      : ' num2str(srcpos(psrcpos)) '\040(' invtype(3:length(invtype)) ' inversion)' ]);
+                 fprintf(fid,'%s\r\n',['Trial source number      : ' num2str(srcpos(psrcpos)) '\040(' invtype(3:length(invtype)) ' inversion)' ]);
                  fprintf(fid,'%s\r\n','> 1 30 12 0 9 LM 10p 20c j');
                  fprintf(fid,'%s\r\n',['Centroid Lat (N)' num2str(srclat(psrcpos,1)) ' Lon (E)' num2str(srclon(psrcpos,1))]);
                  fprintf(fid,'%s\r\n','> 1 29 12 0 9 LM 10p 20c j');
@@ -1312,9 +1517,13 @@ if ispc
                  fprintf(fid,'%s\r\n','----------------------------------------------------');
                  fprintf(fid,'%s\r\n','> 1 26 12 0 9 LM 10p 20c j');
                  fprintf(fid,'%s\r\n',['  @;255/0/0;Moment (Nm)      :@;; ' num2str(mo(psrcpos),'%6.3e') ]);
-                 fprintf(fid,'%s\r\n','> 1 25 12 0 9 LM 10p 20c j');
-                 fprintf(fid,'%s\r\n',['  @;255/0/0;Mw      :@;; ' num2str(mommag,2) ]);
+                 fprintf(fid,'%s\r\n','> 45 26 12 0 9 LM 10p 20c j');
+                 fprintf(fid,'%s\r\n',['  @;255/0/0;Mw      :@;; ' num2str(mommag,'%4.2f') ]);
                  
+                 fprintf(fid,'%s\r\n','> 1 25 12 0 9 LM 10p 20c j');
+                 fprintf(fid,'%s\r\n',['@;255/0/0;Inversion Type:@;;' inver_type]);
+                 
+                                 
                  fprintf(fid,'%s\r\n','> 1 24 12 0 9 LM 10p 20c j');
                  fprintf(fid,'%s\r\n',['@;255/0/0;VOL%      :@;;' num2str(inv1_vol)]);
                  
@@ -1385,48 +1594,68 @@ if ispc
                  
 
                  %%%%break up invband string..!!
-                 iband = sscanf(invband,'%f');
+                 iband = sscanf(invband,'%f %*s %f');
 %                 fprintf(fid,'%s\r\n','Freq band (Hz)');    
                  fprintf(fid,'%s\r\n','> 31  18 12 0 9 LM 10p 25c l');
                  fprintf(fid,'%s\r\n','| Frequency band used in inversion (Hz)');
                  fprintf(fid,'%s\r\n','> 31  17 12 0 9 LM 10p 25c l');
-                 fprintf(fid,'%s\r\n',['|\040\040\040\040\040\040'   num2str(iband(1))  ' - '   num2str(iband(2)) ' -- '  num2str(iband(3))  ' - '   num2str(iband(4)) ]);    
+                 fprintf(fid,'%s\r\n',['|\040\040\040\040\040\040'   num2str(iband(1))  ' - '      num2str(iband(2)) ]);    
                  
+%                  fprintf(fid,'%s\r\n','> 31  16 12 0 9 LM 10p 25c l');
+%                  fprintf(fid,'%s\r\n','| \040');
                  fprintf(fid,'%s\r\n','> 31  16 12 0 9 LM 10p 25c l');
-                 fprintf(fid,'%s\r\n','| \040');
-                 fprintf(fid,'%s\r\n','> 31  15 12 0 9 LM 10p 25c l');
                  fprintf(fid,'%s\r\n','| \040Stations-Components Used-Distance');
-                 fprintf(fid,'%s\r\n','> 31  14 12 0 9 LM 10p 25c l');
+                 fprintf(fid,'%s\r\n','> 31  15 12 0 9 LM 10p 25c l');
                  fprintf(fid,'%s\r\n','|\040\040\040\040\040\040NS\040EW\040Z\040\040D(km)');
 
 %%% if we have more than 13 stations 
 if nostations > 13
 %%   
    for i=1:13
-     fprintf(fid,'%s\r\n',['> 31 ' num2str(14-i) ' 12 0 9 LM 10p 25c l']);
+%      fprintf(fid,'%s\r\n',['> 31 ' num2str(15-i) ' 12 0 9 LM 10p 25c l']);
+%      if length(stationsused{i,1})==3
+%      fprintf(fid,'%s\r\n',['|\040\040\040'   stationsused{i,1} '\040\040\040\040\040'  stationsused{i,2} '\040\040\040'  stationsused{i,3} '\040\040\040'  stationsused{i,4} ]);
+%      elseif length(stationsused{i,1})==4
+%      fprintf(fid,'%s\r\n',['|\040\040\040'   stationsused{i,1} '\040\040\040\040'  stationsused{i,2} '\040\040\040'  stationsused{i,3} '\040\040\040'  stationsused{i,4} ]);
+%      elseif length(stationsused{i,1})==5
+%      fprintf(fid,'%s\r\n',['|\040\040\040'   stationsused{i,1} '\040\040\040'  stationsused{i,2} '\040\040\040'  stationsused{i,3} '\040\040\040'  stationsused{i,4} ]);
+%      else
+%      fprintf(fid,'%s\r\n',['|\040\040\040'   stationsused{i,1} '\040\040\040'  stationsused{i,2} '\040\040\040'  stationsused{i,3} '\040\040\040'  stationsused{i,4} ]);
+%      end
+       fprintf(fid,'%s\r\n',['> 31 ' num2str(15-i) ' 12 0 9 LM 10p 25c l']);
      if length(stationsused{i,1})==3
-     fprintf(fid,'%s\r\n',['|\040\040\040'   stationsused{i,1} '\040\040\040\040\040'  stationsused{i,2} '\040\040\040'  stationsused{i,3} '\040\040\040'  stationsused{i,4} ]);
+       fprintf(fid,'%s\r\n',['|' stationsused{i,1} '\040\040\040'    stationsused{i,2} '\040\040'  stationsused{i,3} '\040\040'  stationsused{i,4} '\040\040' num2str(round(epidist(i)))]);
      elseif length(stationsused{i,1})==4
-     fprintf(fid,'%s\r\n',['|\040\040\040'   stationsused{i,1} '\040\040\040\040'  stationsused{i,2} '\040\040\040'  stationsused{i,3} '\040\040\040'  stationsused{i,4} ]);
+       fprintf(fid,'%s\r\n',['|' stationsused{i,1} '\040\040'        stationsused{i,2} '\040\040'  stationsused{i,3} '\040\040'  stationsused{i,4} '\040\040' num2str(round(epidist(i)))]);
      elseif length(stationsused{i,1})==5
-     fprintf(fid,'%s\r\n',['|\040\040\040'   stationsused{i,1} '\040\040\040'  stationsused{i,2} '\040\040\040'  stationsused{i,3} '\040\040\040'  stationsused{i,4} ]);
+       fprintf(fid,'%s\r\n',['|' stationsused{i,1} '\040'            stationsused{i,2} '\040\040'  stationsused{i,3} '\040\040'  stationsused{i,4} '\040\040' num2str(round(epidist(i)))]);
      else
-     fprintf(fid,'%s\r\n',['|\040\040\040'   stationsused{i,1} '\040\040\040'  stationsused{i,2} '\040\040\040'  stationsused{i,3} '\040\040\040'  stationsused{i,4} ]);
-     end
+       fprintf(fid,'%s\r\n',['|' stationsused{i,1} '\040'            stationsused{i,2} '\040\040'  stationsused{i,3} '\040\040'  stationsused{i,4} '\040\040' num2str(round(epidist(i)))]);
+     end  
    end
    
 % > 13 stations     
-     fprintf(fid,'%s\r\n','> 57  14 12 0 9 LM 10p 25c l');
-     fprintf(fid,'%s\r\n','\040\040Station\040\040NS\040\040EW\040\040Ver');
+     fprintf(fid,'%s\r\n','> 57  15 12 0 9 LM 10p 25c l');
+     fprintf(fid,'%s\r\n','\040\040\040\040\040\040\040NS\040EW\040Z\040\040D(km)');
    for i=14:nostations
-     fprintf(fid,'%s\r\n',['> 57 ' num2str(27-i) ' 12 0 9 LM 10p 25c l']);
-     fprintf(fid,'%s\r\n',['\040\040\040'   stationsused{i,1} '\040\040\040\040\040'  stationsused{i,2} '\040\040\040'  stationsused{i,3} '\040\040\040'  stationsused{i,4} ]);
+%      fprintf(fid,'%s\r\n',['> 57 ' num2str(27-i) ' 12 0 9 LM 10p 25c l']);
+%      fprintf(fid,'%s\r\n',['\040\040\040'   stationsused{i,1} '\040\040\040\040\040'  stationsused{i,2} '\040\040\040'  stationsused{i,3} '\040\040\040'  stationsused{i,4} ]);
+       fprintf(fid,'%s\r\n',['> 57 ' num2str(28-i) ' 12 0 9 LM 10p 25c l']);
+     if length(stationsused{i,1})==3
+       fprintf(fid,'%s\r\n',['|' stationsused{i,1} '\040\040\040'    stationsused{i,2} '\040\040'  stationsused{i,3} '\040\040'  stationsused{i,4} '\040\040' num2str(round(epidist(i)))]);
+     elseif length(stationsused{i,1})==4
+       fprintf(fid,'%s\r\n',['|' stationsused{i,1} '\040\040'        stationsused{i,2} '\040\040'  stationsused{i,3} '\040\040'  stationsused{i,4} '\040\040' num2str(round(epidist(i)))]);
+     elseif length(stationsused{i,1})==5
+       fprintf(fid,'%s\r\n',['|' stationsused{i,1} '\040'            stationsused{i,2} '\040\040'  stationsused{i,3} '\040\040'  stationsused{i,4} '\040\040' num2str(round(epidist(i)))]);
+     else
+       fprintf(fid,'%s\r\n',['|' stationsused{i,1} '\040'            stationsused{i,2} '\040\040'  stationsused{i,3} '\040\040'  stationsused{i,4} '\040\040' num2str(round(epidist(i)))]);
+     end  
    end
 %%
 else
 
    for i=1:nostations
-     fprintf(fid,'%s\r\n',['> 31 ' num2str(14-i) ' 12 0 9 LM 10p 25c l']);
+     fprintf(fid,'%s\r\n',['> 31 ' num2str(15-i) ' 12 0 9 LM 10p 25c l']);
      if length(stationsused{i,1})==3
      fprintf(fid,'%s\r\n',['|' stationsused{i,1} '\040\040\040'    stationsused{i,2} '\040\040'  stationsused{i,3} '\040\040'  stationsused{i,4} '\040\040' num2str(round(epidist(i)))]);
      elseif length(stationsused{i,1})==4
@@ -1462,7 +1691,18 @@ else % linux
                  fprintf(fid,'%s\n',[  eventid2 ]);
                  fprintf(fid,'%s\n','');
                  fprintf(fid,'%s\n','> 18 33 16 0 9 LM 10p 10c j');
-                 fprintf(fid,'%s\n','@;0/0/0;CENTROID');
+                 
+                 if length(srcpos) ~= 1
+                   fprintf(fid,'%s\n',['@;0/0/0;CENTROID OF SUBEVENT ' num2str(psrcpos,'%02d')]);
+                   fprintf(fid,'%s\n','> 18 32 16 0 9 LM 10p 10c l');
+                   fprintf(fid,'%s\n','-----------------------');
+                   
+                 else
+                   fprintf(fid,'%s\n','@;0/0/0;CENTROID');
+                    fprintf(fid,'%s\n','> 18 32 16 0 9 LM 10p 10c l');
+                   fprintf(fid,'%s\n','--------');
+                 end
+                 
                  fprintf(fid,'%s\n','> 18 32 16 0 9 LM 10p 10c l');
                  fprintf(fid,'%s\n','--------@;; ');
                  fprintf(fid,'%s\n','> 1 31 12 0 9 LM 10p 20c j');
@@ -1553,12 +1793,12 @@ else % linux
                  
 
                  %%%%break up invband string..!!
-                 iband = sscanf(invband,'%f');
+                 iband = sscanf(invband,'%f %*s %f');
 %                 fprintf(fid,'%s\n','Freq band (Hz)');    
                  fprintf(fid,'%s\n','> 31  18 12 0 9 LM 10p 25c l');
                  fprintf(fid,'%s\n','| Frequency band used in inversion (Hz)');
                  fprintf(fid,'%s\n','> 31  17 12 0 9 LM 10p 25c l');
-                 fprintf(fid,'%s\n',['|\040\040\040\040\040\040'   num2str(iband(1))  ' - '   num2str(iband(2)) ' -- '  num2str(iband(3))  ' - '   num2str(iband(4)) ]);    
+                 fprintf(fid,'%s\r\n',['|\040\040\040\040\040\040'   num2str(iband(1))  ' - '      num2str(iband(2)) ]);   
                  
                  fprintf(fid,'%s\n','> 31  16 12 0 9 LM 10p 25c l');
                  fprintf(fid,'%s\n','| \040');
@@ -1567,6 +1807,9 @@ else % linux
                  fprintf(fid,'%s\n','> 31  14 12 0 9 LM 10p 25c l');
                  fprintf(fid,'%s\n','|\040\040\040\040\040\040NS\040EW\040Z\040\040D(km)');
 
+                 
+                 
+                 
 %%% if we have more than 13 stations 
 if nostations > 13
 %%   
@@ -1614,17 +1857,27 @@ end  % end of linux
 %num2str(round(epidist(i)))
 fclose(fid);
 %%
-% write a one line file GMT ready with results in output and gmtfiles folder ...
+%  write a one line file GMT ready with results in output and gmtfiles folder ...
+
+disp(['Found ' num2str(length(srcpos)) ' subevents. Will be saved in gmtfiles folder as gmt format file'])
+
 fid = fopen([eventdate(3:8) '_' eventhour '_' eventmin '_' eventsec],'w');
 %      fprintf(fid,'%g  %g  %g  %g  %g  %g  %g  %g  %g %s\r\n',srclon(psrcpos,1),srclat(psrcpos,1),5,str1(psrcpos,1),dip1(psrcpos,1),rake1(psrcpos,1),5,srclon(psrcpos,1)+0.05,srclat(psrcpos,1)+0.05,[num2str(srctime2(psrcpos,1)) '  ' num2str(mo(psrcpos,1),'%5.2e')]);  %num2str(mo(i,1))num2str(dc(psrcpos,1))
-         if ispc
-            fprintf(fid,'%g  %g  %s  %g  %g  %g  %s  %g  %g %s\r\n',srclon(psrcpos,1),srclat(psrcpos,1), num2str(depth(srcpos(psrcpos))) ,str1(psrcpos,1),dip1(psrcpos,1),rake1(psrcpos,1),num2str(mommag,3),srclon(psrcpos,1)+0.05,srclat(psrcpos,1)+0.05, [eventdate(3:8) '_' eventhour ':' eventmin]);   % [num2str(srctime2(psrcpos,1)) '  ' num2str(mo(psrcpos,1),'%5.2e')]);  %num2str(mo(i,1))num2str(dc(psrcpos,1))
-         else
-            fprintf(fid,'%g  %g  %s  %g  %g  %g  %s  %g  %g %s\n',srclon(psrcpos,1),srclat(psrcpos,1), num2str(depth(srcpos(psrcpos))) ,str1(psrcpos,1),dip1(psrcpos,1),rake1(psrcpos,1),num2str(mommag,3),srclon(psrcpos,1)+0.05,srclat(psrcpos,1)+0.05, [eventdate(3:8) '_' eventhour ':' eventmin]);   % [num2str(srctime2(psrcpos,1)) '  ' num2str(mo(psrcpos,1),'%5.2e')]);  %num2str(mo(i,1))num2str(dc(psrcpos,1))
-         end
+% we will plot only the selected subevent 
+% srcpos(psrcpos)
+  if ispc
+     %for i=1:length(srcpos)         
+         i=psrcpos;
+         mommag1=(2/3)*(log10(mo(i)) - 9.1); %! Hanks & Kanamori (1979)
+         fprintf(fid,'%g  %g  %s  %g  %g  %g  %s  %g  %g %s\r\n',srclon(i,1),srclat(i,1),num2str(depth(srcpos(i))),str1(i,1),dip1(i,1),rake1(i,1),num2str(mommag1),srclon(i,1)+0.05,srclat(i,1)+0.05, [eventdate(3:8) '_' eventhour ':' eventmin]);   % [num2str(srctime2(psrcpos,1)) '  ' num2str(mo(psrcpos,1),'%5.2e')]);  %num2str(mo(i,1))num2str(dc(psrcpos,1))
+     %end
+  else
+         fprintf(fid,'%g  %g  %s  %g  %g  %g  %s  %g  %g %s\n',srclon(psrcpos,1),srclat(psrcpos,1), num2str(depth(srcpos(psrcpos))) ,str1(psrcpos,1),dip1(psrcpos,1),rake1(psrcpos,1),num2str(mommag,3),srclon(psrcpos,1)+0.05,srclat(psrcpos,1)+0.05, [eventdate(3:8) '_' eventhour ':' eventmin]);   % [num2str(srctime2(psrcpos,1)) '  ' num2str(mo(psrcpos,1),'%5.2e')]);  %num2str(mo(i,1))num2str(dc(psrcpos,1))
+  end
             
 fclose(fid);
 
+%%
 if ispc
  [s,mess,messid]=copyfile([eventdate(3:8) '_' eventhour '_' eventmin '_' eventsec],'..\output');
  [s,mess,messid]=copyfile([eventdate(3:8) '_' eventhour '_' eventmin '_' eventsec],'..\gmtfiles');
@@ -1632,12 +1885,14 @@ else
  [s,mess,messid]=copyfile([eventdate(3:8) '_' eventhour '_' eventmin '_' eventsec],'../output');
  [s,mess,messid]=copyfile([eventdate(3:8) '_' eventhour '_' eventmin '_' eventsec],'../gmtfiles');
 end
-
 %%
 %%%%%%%%%%%%%Check if map is needed
 plmap = get(handles.check2,'Value');
 useBB = get(handles.useBB,'Value');
 bbscale  = get(handles.bbscale,'String');
+
+% check if we have GMT 4 or 5
+gmt_ver=handles.gmt_ver;
 
 if plmap == 1
 
@@ -1692,35 +1947,70 @@ if plmap == 1
     
  cd ..  % makegmtscript4stationplot has to be in run folder...
     if ispc 
-       mecstringmax3='gawk "{print $3,$2,$1}" ..\gmtfiles\selstat.gmt > sta.gmt';
-       mecstringmax4='gawk "{print $3,$2,10,0,1,\"CB\",$1}" ..\gmtfiles\selstat.gmt > tsta.gmt'; 
+       
+      mecstringmax3='gawk "{print $3,$2,$1}" ..\gmtfiles\selstat.gmt > sta.gmt';
+       
+       if gmt_ver==4
+         mecstringmax4='gawk "{print $3,$2,10,0,1,\"CB\",$1}" ..\gmtfiles\selstat.gmt > tsta.gmt'; 
+       else
+         mecstringmax4='gawk "{print $3,$2,$1}" ..\gmtfiles\selstat.gmt > tsta.gmt'; 
+       end
     else
        mecstringmax3='gawk ''{print $3,$2,$1}'' ../gmtfiles/selstat.gmt > sta.gmt';
-       mecstringmax4='gawk ''{print $3,$2,10,0,1,"CB",$1}'' ../gmtfiles/selstat.gmt > tsta.gmt'; 
+       if gmt_ver==4
+         mecstringmax4='gawk ''{print $3,$2,10,0,1,"CB",$1}'' ../gmtfiles/selstat.gmt > tsta.gmt'; 
+       else
+         mecstringmax4='gawk ''{print $3,$2,$1}'' ../gmtfiles/selstat.gmt > tsta.gmt'; 
+       end
     end
     
     mecstringmax5=[makegmtscript4stationplot(0) ' -X-10.2c  -Y1c >> ' eventidnew '_best.ps'];
     
     %
     if ispc
-      mecstringmax6=['psxy -R -J ..\gmtfiles\event.gmt -Sa.6c -M  -W1p/0 -K -O -G255/0/0 >> ' eventidnew '_best.ps'];
+        if gmt_ver==4
+           mecstringmax6=['psxy -R -J ..\gmtfiles\event.gmt -Sa.6c -M  -W1p/0 -K -O -G255/0/0 >> ' eventidnew '_best.ps'];
+        else
+           mecstringmax6=['psxy -R -J ..\gmtfiles\event.gmt -Sa.6c     -W1p -K -O -G255/0/0 >> ' eventidnew '_best.ps'];
+        end
     else
-      mecstringmax6=['psxy -R -J ../gmtfiles/event.gmt -Sa.6c -M  -W1p/0 -K -O -G255/0/0 >> ' eventidnew '_best.ps'];
+        if gmt_ver==4
+           mecstringmax6=['psxy -R -J ../gmtfiles/event.gmt -Sa.6c -M  -W1p/0 -K -O -G255/0/0 >> ' eventidnew '_best.ps'];
+        else
+           mecstringmax6=['psxy -R -J ../gmtfiles/event.gmt -Sa.6c     -W1p   -K -O -G255/0/0 >> ' eventidnew '_best.ps'];
+        end
     end
+   
+    
     mecstringmax7=['psmeca -R -J -K ' eventidnew ' -Sa1.c/-1  -O  >> ' eventidnew '_best.ps'];
     
-    mecstringmax8=['psxy -R -J  sta.gmt -St.25c -M  -W1p/0 -K -O -G255/0/0 >>  ' eventidnew '_best.ps'];
- 
-    if ispc
-      mecstringmax8b=['psxy -R -J ..\gmtfiles\notusedstat.gmt -St.25c  -W1p/0 -K  -O -G138/138/138 >> ' eventidnew '_best.ps'];
+    if gmt_ver==4
+        mecstringmax8=['psxy -R -J  sta.gmt -St.25c -M  -W1p/0 -K -O -Ggreen >>  ' eventidnew '_best.ps'];
     else
-      mecstringmax8b=['psxy -R -J ../gmtfiles/notusedstat.gmt -St.25c  -W1p/0 -K  -O -G138/138/138 >> ' eventidnew '_best.ps'];
+        mecstringmax8=['psxy -R -J  sta.gmt -St.25c     -W1p   -K -O -Ggreen >>  ' eventidnew '_best.ps'];
+    end
+
+    
+    if ispc
+       if gmt_ver==4
+        mecstringmax8b=['psxy -R -J ..\gmtfiles\notusedstat.gmt -St.25c  -W1p/0 -K  -O -Gred >> ' eventidnew '_best.ps'];
+       else
+        mecstringmax8b=['psxy -R -J ..\gmtfiles\notusedstat.gmt -St.25c  -W1p   -K  -O -Gred >> ' eventidnew '_best.ps'];
+       end
+    else
+       if gmt_ver==4
+        mecstringmax8b=['psxy -R -J ../gmtfiles/notusedstat.gmt -St.25c  -W1p/0 -K  -O -Gred >> ' eventidnew '_best.ps'];
+       else
+        mecstringmax8b=['psxy -R -J ../gmtfiles/notusedstat.gmt -St.25c  -W1p   -K  -O -Gred >> ' eventidnew '_best.ps'];
+       end
     end   
     
-    mecstringmax9=['pstext -R -J  tsta.gmt  -D0/0.1c       -O  -G0/0/255 >> ' eventidnew '_best.ps'];
+    if gmt_ver==4
+       mecstringmax9=['pstext -R -J  tsta.gmt  -D0/0.1c       -O  -G0/0/255 >> ' eventidnew '_best.ps'];
+    else
+       mecstringmax9=['pstext -R -J  tsta.gmt  -D0/0.2c  -F+f10,Helvetica-Bold,blue    -O   >> ' eventidnew '_best.ps'];
+    end
 
-
-    
     
  cd invert  % back to invert to run the batch file ...
 
@@ -1745,17 +2035,26 @@ end   %end plmap
     
 %% prepare batch file and run it..
 
+
   fid = fopen('plbest.bat','w');
   
     if ispc      
       fprintf(fid,'%s\r\n','del .gmt*');
       fprintf(fid,'%s\r\n',' ');
-      fprintf(fid,'%s\r\n','gmtset PAPER_MEDIA A4 PLOT_DEGREE_FORMAT D');
+      if gmt_ver==4
+        fprintf(fid,'%s\r\n','gmtset PAPER_MEDIA A4 PLOT_DEGREE_FORMAT D');
+      else 
+        fprintf(fid,'%s\r\n','gmtset PS_MEDIA A4 FORMAT_GEO_MAP D');  
+      end
       fprintf(fid,'%s\r\n',' ');
     else
       fprintf(fid,'%s\n','rm .gmt*');
       fprintf(fid,'%s\n',' ');
-      fprintf(fid,'%s\n','gmtset PAPER_MEDIA A4 PLOT_DEGREE_FORMAT D');
+      if gmt_ver==4
+        fprintf(fid,'%s\n','gmtset PAPER_MEDIA A4 PLOT_DEGREE_FORMAT D');
+      else
+        fprintf(fid,'%s\n','gmtset PS_MEDIA A4 FORMAT_GEO_MAP D');
+      end
       fprintf(fid,'%s\n',' ');
     end
       
@@ -1763,25 +2062,56 @@ switch inv2age
   case 'old'
      if useBB~=1
       disp('found inv2.dat in old format')
-      mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sm2c btensor.foc -G255/0/0 -T0 -L2 -B100 -a0.15c/cc -ewhite -gblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      if gmt_ver==4
+        mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sm2c btensor.foc -G255/0/0 -T0 -L2 -B100 -a0.15c/cc -ewhite -gblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      elseif gmt_ver==5
+        mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sm2c btensor.foc -G255/0/0 -T0 -L2 -B100 -Fa0.15c/cc -Fewhite -Fgblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      else
+         mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sm2c btensor.foc -G255/0/0 -T0 -L2 -B100 -Fa0.15c/cc   -K -Y12c -X1c > ' eventidnew '_best.ps']; 
+      end
      else
       disp('found inv2.dat in old format')
-      mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sm' bbscale 'c btensor.foc -G255/0/0 -T0 -L2 -B100 -a0.15c/cc -ewhite -gblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      if gmt_ver==3
+        mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sm' bbscale 'c btensor.foc -G255/0/0 -T0 -L2 -B100 -a0.15c/cc -ewhite -gblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      else
+        mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sm' bbscale 'c btensor.foc -G255/0/0 -T0 -L2 -B100 -Fa0.15c/cc -Fewhite -Fgblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      end
      end
   case 'new'
      if useBB~=1 
       disp('found inv2.dat in new format')
-      mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sx2c btensor.foc -G255/0/0 -T0 -L2 -B100 -a0.15c/cc -ewhite -gblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      if gmt_ver==4
+        mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sx2c btensor.foc -G255/0/0 -T0 -L2 -B100 -a0.15c/cc -ewhite -gblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      elseif gmt_ver==5
+        mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sx2c btensor.foc -G255/0/0 -T0 -L2 -B100 -Fa0.15c/cc -Fewhite -Fgblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      else
+        mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sx2c btensor.foc -G255/0/0 -T0 -L2 -B100 -Fa0.15c/cc   -K -Y12c -X1c > ' eventidnew '_best.ps'];  
+      end
      else
       disp('found inv2.dat in new format')
-      mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sx' bbscale 'c btensor.foc -G255/0/0 -T0 -L2 -B100 -a0.15c/cc -ewhite -gblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      if gmt_ver==4
+       mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sx' bbscale 'c btensor.foc -G255/0/0 -T0 -L2 -B100 -a0.15c/cc -ewhite -gblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      elseif gmt_ver==5
+       mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sx' bbscale 'c btensor.foc -G255/0/0 -T0 -L2 -B100 -Fa0.15c/cc -Fewhite -Fgblack -K -Y12c -X1c > ' eventidnew '_best.ps'];
+      else
+       mecstringmax=['psmeca -R1/10/1/10 -JX8c -Sx' bbscale 'c btensor.foc -G255/0/0 -T0 -L2 -B100 -Fa0.15c/cc  -K -Y12c -X1c > ' eventidnew '_best.ps'];   
+      end
+     
      end
 end
 
      if plmap == 1
-       mecstringmax2 =['pstext -R1/100/1/40 -JX20c/20c -O -K btensor.sol -m  -X9.7c -Y-11c >> ' eventidnew '_best.ps'];
+       if gmt_ver==4
+          mecstringmax2 =['pstext -R1/100/1/40 -JX20c/20c -O -K btensor.sol -m  -X9.7c -Y-11c >> ' eventidnew '_best.ps'];
+       else
+          mecstringmax2 =['pstext -R1/100/1/40 -JX20c/20c -O -K btensor.sol -M  -X9.7c -Y-11c >> ' eventidnew '_best.ps'];
+       end
      else
-       mecstringmax2 =['pstext -R1/100/1/40 -JX20c/20c -O    btensor.sol -m  -X9.7c -Y-11c  >> ' eventidnew '_best.ps'];
+       if gmt_ver==4  
+          mecstringmax2 =['pstext -R1/100/1/40 -JX20c/20c -O    btensor.sol -m  -X9.7c -Y-11c  >> ' eventidnew '_best.ps'];
+       else
+          mecstringmax2 =['pstext -R1/100/1/40 -JX20c/20c -O    btensor.sol -M  -X9.7c -Y-11c  >> ' eventidnew '_best.ps'];
+       end
      end
 %    
      
@@ -1792,7 +2122,11 @@ end
     fprintf(fid,'%s\r\n',mecstringmax3);
     fprintf(fid,'%s\r\n',mecstringmax4);
     fprintf(fid,'%s\r\n',' ');
-    fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 8 ANNOT_OFFSET_PRIMARY 0.05c TICK_LENGTH 0.05c OBLIQUE_ANNOTATION 32 ');
+    if gmt_ver==4 
+      fprintf(fid,'%s\r\n','gmtset ANNOT_FONT_SIZE_PRIMARY 8 ANNOT_OFFSET_PRIMARY 0.05c TICK_LENGTH 0.05c OBLIQUE_ANNOTATION 32 ');
+    else
+      fprintf(fid,'%s\r\n','gmtset FONT_ANNOT_PRIMARY 8 MAP_ANNOT_OFFSET_PRIMARY 0.05c MAP_TICK_LENGTH 0.05c MAP_ANNOT_OBLIQUE 32 ');
+    end
     fprintf(fid,'%s\r\n',' ');
     fprintf(fid,'%s\r\n',mecstringmax5);
     fprintf(fid,'%s\r\n',mecstringmax6);
@@ -1802,7 +2136,11 @@ end
     fprintf(fid,'%s\r\n',mecstringmax9);
     fprintf(fid,'%s\r\n',' ');
     %%% add option to convert to PNG using ps2raster...26/10/09    
-    fprintf(fid,'%s\r\n',['ps2raster ' eventidnew '_best.ps -Tg -P  -D..\output']);
+    if gmt_ver==4 
+       fprintf(fid,'%s\r\n',['ps2raster ' eventidnew '_best.ps -Tg -P  -D..\output']);
+    else
+       fprintf(fid,'%s\r\n',['psconvert ' eventidnew '_best.ps -Tg -P  -D..\output']); 
+    end
 %    fprintf(fid,'%s\r\n',['rename ..\output\best.png ' eventidnew '_best.png']);
     %%% clean a few files 28/3/10
     % move to gmt folder
@@ -1811,12 +2149,7 @@ end
     fprintf(fid,'%s\r\n','move besttext.gmt ..\gmtfiles');
     fprintf(fid,'%s\r\n','move sta.gmt ..\gmtfiles');
     fprintf(fid,'%s\r\n','move tsta.gmt ..\gmtfiles');
- 
-    
 %    fprintf(fid,'%s\r\n','del btensor.foc btensor.sol besttext.gmt  sta.gmt tsta.gmt');
-    
-    
-    
   else
     fprintf(fid,'%s\n',mecstringmax);
     fprintf(fid,'%s\n',mecstringmax2);
@@ -1824,7 +2157,11 @@ end
     fprintf(fid,'%s\n',mecstringmax3);
     fprintf(fid,'%s\n',mecstringmax4);
     fprintf(fid,'%s\n',' ');
-    fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 8 ANNOT_OFFSET_PRIMARY 0.05c TICK_LENGTH 0.05c OBLIQUE_ANNOTATION 32 ');
+    if gmt_ver==4 
+      fprintf(fid,'%s\n','gmtset ANNOT_FONT_SIZE_PRIMARY 8 ANNOT_OFFSET_PRIMARY 0.05c TICK_LENGTH 0.05c OBLIQUE_ANNOTATION 32 ');
+    else
+      fprintf(fid,'%s\n','gmtset FONT_ANNOT_PRIMARY 8 MAP_ANNOT_OFFSET_PRIMARY 0.05c MAP_TICK_LENGTH 0.05c MAP_ANNOT_OBLIQUE 32 ');
+    end
     fprintf(fid,'%s\n',' ');
     fprintf(fid,'%s\n',mecstringmax5);
     fprintf(fid,'%s\n',mecstringmax6);
@@ -1834,7 +2171,11 @@ end
     fprintf(fid,'%s\n',mecstringmax9);
     fprintf(fid,'%s\n',' ');
     %%% add option to convert to PNG using ps2raster...26/10/09    
-    fprintf(fid,'%s\n',['ps2raster ' eventidnew '_best.ps -Tg -P  -D../output']);
+    if  gmt_ver==4 
+       fprintf(fid,'%s\n',['ps2raster ' eventidnew '_best.ps -Tg -P  -D../output']);
+    else
+       fprintf(fid,'%s\n',['psconvert ' eventidnew '_best.ps -Tg -P  -D../output']);
+    end
 %    fprintf(fid,'%s\r\n',['rename ..\output\best.png ' eventidnew '_best.png']);
     %%% clean a few files 28/3/10
     fprintf(fid,'%s\n','rm btensor.foc btensor.sol besttext.gmt  sta.gmt tsta.gmt');
@@ -1899,7 +2240,7 @@ end
 % % 
 h=dir('header.txt');
 
-if isempty(h); 
+if isempty(h)
 %%%% NO header file write the solution only
 
   if ispc  
@@ -1920,15 +2261,16 @@ if isempty(h);
       fprintf(fid,'%s\r\n','  ');    
       fprintf(fid,'%s\r\n','Moment Tensor Solution  ');    
       fprintf(fid,'%s  %i    %s','No of Stations:', nstations , '(');
-      for i=1:nstations-1,
+      for i=1:nstations-1
       fprintf(fid,'%s', [stanames{i} '-'] );
       end
       fprintf(fid,'%s', stanames{nstations} );
       fprintf(fid,'%s\r\n', ')' );
       %%%%break up invband string..!!
-      iband = sscanf(invband,'%f');
+      iband = sscanf(invband,'%f %*s %f');
       fprintf(fid,'%s\r\n','Freq band (Hz)');    
-      fprintf(fid,'%s%s%s  %s %s%s%s %s %s%s%s\r\n',num2str(iband(2)),'-',num2str(iband(3)),'tapered', num2str(iband(1)),'-',num2str(iband(2)),'and' ,num2str(iband(3)),'-',num2str(iband(4))   );    
+%      fprintf(fid,'%s%s%s  %s %s%s%s %s %s%s%s\r\n',num2str(iband(2)),'-',num2str(iband(3)),'tapered', num2str(iband(1)),'-',num2str(iband(2)),'and' ,num2str(iband(3)),'-',num2str(iband(4))   );    
+      fprintf(fid,'%s %s \r\n',num2str(iband(1)),'-',num2str(iband(2)));
 %       fprintf(fid,'%s\r\n',invband);    
       fprintf(fid,'%s\r\n',['Variance Reduction (%): '  num2str(round(varred(psrcpos)*100))  ]  );
       fprintf(fid,'%s\r\n','  ');    
@@ -1950,7 +2292,7 @@ if isempty(h);
       fprintf(fid,'        %s      %s     %s\r\n', num2str(str2(psrcpos)),  num2str(dip2(psrcpos)) , num2str(rake2(psrcpos)));
 
       fid2 = fopen('dsretc.lst','r');
-                for i=1:22,
+                for i=1:22
                    tline = fgets(fid2);
                    fprintf(fid,'%s', tline); 
                 end
@@ -1978,16 +2320,17 @@ if isempty(h);
       fprintf(fid,'%s\n','  ');    
       fprintf(fid,'%s\n','Moment Tensor Solution  ');    
       fprintf(fid,'%s  %i    %s','No of Stations:', nstations , '(');
-      for i=1:nstations-1,
+      for i=1:nstations-1
       fprintf(fid,'%s', [stanames{i} '-'] );
       end
       fprintf(fid,'%s', stanames{nstations} );
       fprintf(fid,'%s\n', ')' );
       %%%%break up invband string..!!
-      iband = sscanf(invband,'%f');
+      iband = sscanf(invband,'%f %*s %f');
       fprintf(fid,'%s\n','Freq band (Hz)');    
       fprintf(fid,'%s%s%s  %s %s%s%s %s %s%s%s\n',num2str(iband(2)),'-',num2str(iband(3)),'tapered', num2str(iband(1)),'-',num2str(iband(2)),'and' ,num2str(iband(3)),'-',num2str(iband(4))   );    
-%       fprintf(fid,'%s\n',invband);    
+      fprintf(fid,'%s %s \r\n',num2str(iband(1)),'-',num2str(iband(2)));
+      %       fprintf(fid,'%s\n',invband);    
       fprintf(fid,'%s\n',['Variance Reduction (%): '  num2str(round(varred(psrcpos)*100))  ]  );
       fprintf(fid,'%s\n','  ');    
       fprintf(fid,'%s%s %s\n','Moment Tensor (Nm) :  Exponent 10**', num2str(maxexp));
@@ -2008,7 +2351,7 @@ if isempty(h);
       fprintf(fid,'        %s      %s     %s\n', num2str(str2(psrcpos)),  num2str(dip2(psrcpos)) , num2str(rake2(psrcpos)));
 
       fid2 = fopen('dsretc.lst','r');
-                for i=1:22,
+                for i=1:22
                    tline = fgets(fid2);
                    fprintf(fid,'%s', tline); 
                 end
@@ -2067,15 +2410,16 @@ fclose(fido);
       fprintf(fid,'%s\r\n','  ');    
       fprintf(fid,'%s\r\n','======================================');
       fprintf(fid,'%s  %i    %s','No of Stations:', nstations , '(');
-      for i=1:nstations-1,
+      for i=1:nstations-1
       fprintf(fid,'%s', [stanames{i} '-'] );
       end
       fprintf(fid,'%s', stanames{nstations} );
       fprintf(fid,'%s\r\n', ')' );
       %%%%break up invband string..!!
-      iband = sscanf(invband,'%f');
+      iband = sscanf(invband,'%f %*s %f');
       fprintf(fid,'%s\r\n','Freq band (Hz)');    
-      fprintf(fid,'%s%s%s  %s %s%s%s %s %s%s%s\r\n',num2str(iband(2)),'-',num2str(iband(3)),'tapered', num2str(iband(1)),'-',num2str(iband(2)),'and' ,num2str(iband(3)),'-',num2str(iband(4))   );    
+     % fprintf(fid,'%s%s%s  %s %s%s%s %s %s%s%s\r\n',num2str(iband(2)),'-',num2str(iband(3)),'tapered', num2str(iband(1)),'-',num2str(iband(2)),'and' ,num2str(iband(3)),'-',num2str(iband(4))   );    
+      fprintf(fid,'%s %s %s\r\n',num2str(iband(1)),'-',num2str(iband(2)));
 %     fprintf(fid,'%s\r\n',invband);    
       fprintf(fid,'%s\r\n',['Variance Reduction (%): '  num2str(round(varred(psrcpos)*100))  ]  );
       fprintf(fid,'%s\r\n','  ');    
@@ -2096,7 +2440,7 @@ fclose(fido);
       fprintf(fid,'%s\r\n','NP2:   Strike   Dip   Rake');
       fprintf(fid,'        %s      %s     %s\r\n', num2str(str2(psrcpos)),  num2str(dip2(psrcpos)) , num2str(rake2(psrcpos)));
       fid2 = fopen('dsretc.lst','r');
-                      for i=1:22,
+                      for i=1:22
                         tline = fgets(fid2);
                         fprintf(fid,'%s', tline); 
                      end
@@ -2132,15 +2476,16 @@ fclose(fido);
       fprintf(fid,'%s\n','  ');    
       fprintf(fid,'%s\n','======================================');
       fprintf(fid,'%s  %i    %s','No of Stations:', nstations , '(');
-      for i=1:nstations-1,
+      for i=1:nstations-1
       fprintf(fid,'%s', [stanames{i} '-'] );
       end
       fprintf(fid,'%s', stanames{nstations} );
       fprintf(fid,'%s\n', ')' );
       %%%%break up invband string..!!
-      iband = sscanf(invband,'%f');
+      iband = sscanf(invband,'%f %*s %f');
       fprintf(fid,'%s\n','Freq band (Hz)');    
-      fprintf(fid,'%s%s%s  %s %s%s%s %s %s%s%s\n',num2str(iband(2)),'-',num2str(iband(3)),'tapered', num2str(iband(1)),'-',num2str(iband(2)),'and' ,num2str(iband(3)),'-',num2str(iband(4))   );    
+     % fprintf(fid,'%s%s%s  %s %s%s%s %s %s%s%s\n',num2str(iband(2)),'-',num2str(iband(3)),'tapered', num2str(iband(1)),'-',num2str(iband(2)),'and' ,num2str(iband(3)),'-',num2str(iband(4))   );    
+      fprintf(fid,'%s %s \n',num2str(iband(1)),'-',num2str(iband(2)));
 %     fprintf(fid,'%s\n',invband);    
       fprintf(fid,'%s\n',['Variance Reduction (%): '  num2str(round(varred(psrcpos)*100))  ]  );
       fprintf(fid,'%s\n','  ');    
@@ -2161,7 +2506,7 @@ fclose(fido);
       fprintf(fid,'%s\n','NP2:   Strike   Dip   Rake');
       fprintf(fid,'        %s      %s     %s\n', num2str(str2(psrcpos)),  num2str(dip2(psrcpos)) , num2str(rake2(psrcpos)));
       fid2 = fopen('dsretc.lst','r');
-                      for i=1:22,
+                      for i=1:22
                         tline = fgets(fid2);
                         fprintf(fid,'%s', tline); 
                      end
@@ -2178,7 +2523,7 @@ end
 %%%%check for footer..
 h=dir('footer.txt');
 
-if length(h) == 1; 
+if length(h) == 1
     disp('Found footer.txt')
 %%add footer...
 fido  = fopen('footer.txt','r');
@@ -2199,6 +2544,18 @@ fclose(fid);
 else
 end
 
+%% new code to prepare a QuakeMl file also 
+% we just call the proper function with needed attributes
+
+auth='UPSL';
+
+ok = write_qkml1(num2str(str1(psrcpos)),num2str(dip1(psrcpos)),num2str(rake1(psrcpos)),...
+    num2str(str2(psrcpos)),num2str(dip2(psrcpos)),num2str(rake2(psrcpos)),...
+    num2str(150),num2str(150),num2str(150),num2str(150),num2str(150),num2str(150),num2str(150),num2str(150),num2str(150),auth,...
+    num2str(inv1_clvd),num2str(inv1_dc),num2str(inv1_vol),num2str(mo(psrcpos),'%6.3e'),...
+    num2str(harcof(1)),num2str(harcof(2)),num2str(harcof(3)),num2str(harcof(4)),num2str(harcof(5)),num2str(harcof(6)));
+
+ 
 
 
 else
@@ -2221,18 +2578,39 @@ end
 
 cd .. %%% return to main folder before plotting.... this should solve problems if user tried to plot waveforms before closing ps file...
 
+% read the gsview version from defaults
+psview=handles.psview;
 
 if ispc
     try 
-      system(['gsview32 .\invert\' eventidnew  '_best.ps']);
+      system([psview ' .\invert\' eventidnew  '_best.ps']);
     catch exception 
         disp(exception.message)
     end
 else
-system(['gv ./invert/' eventidnew  '_best.ps']);
+    system([psview ' ./invert/' eventidnew  '_best.ps']);
 end
 
 pwd
+
+
+%% export to handles
+Clon=num2str(srclon(psrcpos,1));
+Clat=num2str(srclat(psrcpos,1));
+Cdepth=num2str(depth(srcpos(psrcpos)));
+CMo=num2str(mo(psrcpos),'%6.3e');
+
+Ctime=srctime2(psrcpos);
+
+handles.Clon=Clon;
+handles.Clat=Clat;
+handles.Cdepth=Cdepth;
+handles.CMo=CMo;
+handles.Corigin=Ctime;
+
+
+% Update handles structure
+guidata(hObject, handles);
 
 % catch
 %     cd ..
@@ -2298,7 +2676,7 @@ function stationslistbox_Callback(hObject, eventdata, handles)
 %%%%%%%%%%% %%%%%%%%%%%%IN A NEW FIGURE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function plotallstations(nostations,staname,normalized,invband,ftime,totime,uselimits,dtime,eventid,addvarred,pbw)
+function plotallstations(nostations,staname,normalized,invband,ftime,totime,uselimits,dtime,eventid,addvarred,pbw,net_use,fullstationfile,normsynth,npts)
 %%%%%prepare filenames  
 %%% we keep fixed that data will be e.g. evrfil.dat
 %%% and synthetics will be               evrsyn.dat
@@ -2312,20 +2690,23 @@ realdatafilename=realdatafilename';
 syntdatafilename=syntdatafilename';
 % 
 % whos staname realdatafilename syntdatafilename
-    
+ 
 %try    
 %%%%%%%%%NOW WE KNOW FILENAMES AND WE CAN PLOT .....
 %%%%%%%%%go in invert first
- 
+
+%%
 cd invert
 
 %%%%%%%%%%%initialize data matrices
-realdataall=zeros(8192,4,nostations);    %%%% 8192 points  fixed....
-syntdataall=zeros(8192,4,nostations); 
+realdataall=zeros(npts,4,nostations);    %%%% npts according to isolacfg.isl
+syntdataall=zeros(npts,4,nostations); 
 maxmindataindex=zeros(1,2,nostations);
+maxreal4sta=zeros(nostations);
+maxsynt4sta=zeros(nostations);
+
 %%%%open data files and read data
 for i=1:nostations
-    
 fid1  = fopen(realdatafilename{i},'r');
 fid2  = fopen(syntdatafilename{i},'r');
 
@@ -2389,7 +2770,8 @@ end
 %%%% return to isola
 
 cd ..
-     
+%%  out of invert
+ 
 %catch
 %        helpdlg('Error in file plotting. Check if all files exist');
 %    cd ..
@@ -2426,34 +2808,67 @@ end
 % staname
 %%%%%%%%%%%%%%%%%%% normalize 23/06/05
 
+% if normalized == 1
+% 
+%     disp('Normalized plot')
+% 
+%     for i=1:nostations
+%         for j=2:4
+% 
+%              maxreal(i,j)=max(abs(realdataall(:,j,i)));
+%              maxsynt(i,j)=max(abs(syntdataall(:,j,i)));
+% 
+% %                     maxstring=[   num2str(maxreal(i,j)) '  '  staname{i} ];
+% %                     disp(maxstring)
+% % 
+%              
+%              realdataall(:,j,i) = realdataall(:,j,i)/max(abs(realdataall(:,j,i)));
+%              syntdataall(:,j,i) = syntdataall(:,j,i)/max(abs(syntdataall(:,j,i)));
+%              
+% %              max(abs(realdataall(:,j,i)))
+% %              max(abs(syntdataall(:,j,i)))
+% %              
+%              
+%          end
+%     end
+%     
+%     
+% else
+% end
+
+%% New type of normalization, based on maximum amplitude of component per station NOT TOTAL maximum
+
 if normalized == 1
 
-    disp('Normalized plot')
+    disp('Normalized plot. Using normalization per component ')
 
     for i=1:nostations
         for j=2:4
-
              maxreal(i,j)=max(abs(realdataall(:,j,i)));
              maxsynt(i,j)=max(abs(syntdataall(:,j,i)));
-
-%                     maxstring=[   num2str(maxreal(i,j)) '  '  staname{i} ];
-%                     disp(maxstring)
-% 
+        end
+        
+             maxreal4sta(i)=max(maxreal(i,:)); % maximum per station per component
+             maxsynt4sta(i)=max(maxsynt(i,:)); % maximum per station per component for synthetic data
              
-             realdataall(:,j,i) = realdataall(:,j,i)/max(abs(realdataall(:,j,i)));
-             syntdataall(:,j,i) = syntdataall(:,j,i)/max(abs(syntdataall(:,j,i)));
+        for j=2:4                                              
              
-%              max(abs(realdataall(:,j,i)))
-%              max(abs(syntdataall(:,j,i)))
-%              
+             realdataall(:,j,i) = realdataall(:,j,i)/maxreal4sta(i);
              
-         end
+             if normsynth==1
+                 syntdataall(:,j,i) = syntdataall(:,j,i)/maxsynt4sta(i);  % normalize synthetic 
+             else
+                 syntdataall(:,j,i) = syntdataall(:,j,i)/maxreal4sta(i);
+             end
+             
+        end
+        
+        
     end
     
     
 else
 end
-
 %%%%%%%%%%%%  write varred per component in a file 
 try
   cd output
@@ -2478,9 +2893,8 @@ try
   fclose(fid);
   cd ..
 catch
-    cd ..
+  cd ..
 end
-
 
 %%%%%%%%%% normalize
 % realdataall=cat(3,realdataall,realdata);
@@ -2495,6 +2909,9 @@ scrsz = get(0,'ScreenSize');
 %fh=figure('Tag','Syn vs Obs','Position',[5 scrsz(4)*1/6 scrsz(3)*5/6 scrsz(4)*5/6-50], 'Name','Plotting Obs vs Syn');
 
 fh=figure('Tag','Syn vs Obs','Position',get(0,'Screensize'), 'Name','Plotting Obs vs Syn');
+set(gcf,'PaperPositionMode','auto')
+set(fh,'defaultaxesfontname','AvantGarde')
+
 
 mh = uimenu(fh,'Label','Export Figure');
 eh1 = uimenu(mh,'Label','Convert to PNG','Callback','exportgraph(1)');
@@ -2503,7 +2920,18 @@ eh3 = uimenu(mh,'Label','Convert to EPS','Callback','exportgraph(3)');
 eh4 = uimenu(mh,'Label','Convert to TIFF','Callback','exportgraph(4)');
 eh5 = uimenu(mh,'Label','Convert to EMF','Callback','exportgraph(5)');
 eh6 = uimenu(mh,'Label','Convert to JPG','Callback','exportgraph(6)');
-eh7 = uimenu(mh,'Label','Prepare a GMT script','Callback','makegmtscript4synobsplot'); 
+
+%% select code based on GMT version
+% read ISOLA defaults
+[gmt_ver,psview,npts] = readisolacfg;
+ 
+
+if gmt_ver==4
+      eh7 = uimenu(mh,'Label','Prepare a GMT script','Callback','makegmtscript4synobsplot'); 
+else
+   %% put code for GMT5 !
+      eh7 = uimenu(mh,'Label','Prepare a GMT script','Callback','makegmtscript4synobsplot5'); 
+end
 
 % create structure of handles
 handles1 = guihandles(fh); 
@@ -2524,60 +2952,91 @@ guidata(fh, handles1);
 %[100 100 scrsz(3)-200 scrsz(4)-200])
 % subplot(nostations+1,3,1:3)
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Start making legend
-
+%%  Start by making legend  (top row of plots)
 %subplot(nostations+1,3,1)
-subplot1(nostations+1,3)
-subplot1(1)
 
-title(['Event date-time: ' strrep(eventid,'_','\_')],'FontSize',10,'FontWeight','bold')
+subplot1(nostations+1,3)  % initialize all plots
+
+subplot1(1)    % select top left plot
+v=axis;
+text( v(1), .7,['Event date-time: ' strrep(eventid,'_','\_')],'FontSize',12)%,'FontWeight','bold')
 axis off
-
+% top mid plot
 subplot1(2)
-
-if pbw == 1
-          plot(realdataall(:,1,1),realdataall(:,1+1,1),'k','Visible','off');      
-          hold on
-          plot(syntdataall(:,1,1),syntdataall(:,1+1,1),'k','Visible','off');      
-          hold off
-                   [legend_h,object_h,plot_h,text_strings]= legend('Observed','Synthetic',2);
-                    set(legend_h,'FontSize',12)
-                    set(object_h,'LineWidth',2)
-                    set(plot_h(1),'LineWidth',1.5)
-                    set(plot_h(2),'LineWidth',1)
-                    title(['Displacement (m).  Inversion band (Hz)  ' invband],'FontSize',10,'FontWeight','bold')
+% 
+% if pbw == 1
+%           plot(realdataall(:,1,1),realdataall(:,1+1,1),'k','Visible','off');      
+%           hold on
+%           plot(syntdataall(:,1,1),syntdataall(:,1+1,1),'k','Visible','off');      
+%           hold off
+%                    [legend_h,object_h,plot_h,text_strings]= legend('Observed','Synthetic',2);
+%                     set(legend_h,'FontSize',12)
+%                     set(object_h,'LineWidth',2)
+%                     set(plot_h(1),'LineWidth',1.5)
+%                     set(plot_h(2),'LineWidth',1)
+v=axis;
+text( v(1), .7,['Displacement (m).  Inversion band (Hz)  ' invband],'FontSize',12)%,'FontWeight','bold')
 axis off
+% 
+% else
+%           plot(realdataall(:,1,1),realdataall(:,1+1,1),'k','Visible','off');      
+%           hold on
+%           plot(syntdataall(:,1,1),syntdataall(:,1+1,1),'r','Visible','off');      
+%           hold off
+%                    [legend_h,object_h,plot_h,text_strings]= legend('Observed','Synthetic',2);
+%                     set(legend_h,'FontSize',12)
+%                     set(object_h,'LineWidth',2)
+%                     set(plot_h(1),'LineWidth',1.5)
+%                     set(plot_h(2),'LineWidth',1)
+%                     title(['Displacement (m).  Inversion band (Hz)  ' invband],'FontSize',10,'FontWeight','bold')
+% axis off
+% end
 
-else
-          plot(realdataall(:,1,1),realdataall(:,1+1,1),'k','Visible','off');      
-          hold on
-          plot(syntdataall(:,1,1),syntdataall(:,1+1,1),'r','Visible','off');      
-          hold off
-                   [legend_h,object_h,plot_h,text_strings]= legend('Observed','Synthetic',2);
-                    set(legend_h,'FontSize',12)
-                    set(object_h,'LineWidth',2)
-                    set(plot_h(1),'LineWidth',1.5)
-                    set(plot_h(2),'LineWidth',1)
-                    title(['Displacement (m).  Inversion band (Hz)  ' invband],'FontSize',10,'FontWeight','bold')
-axis off
-end
 
 %subplot(nostations+1,3,3)
+% top right plot
 subplot1(3)
 
-          plot(realdataall(:,1,1),realdataall(:,1+1,1),'k','Visible','off');      
-          hold on
-          plot(syntdataall(:,1,1),syntdataall(:,1+1,1),'k','Visible','off');      
-          hold off
-
-          v=axis;
+%           plot(realdataall(:,1,1),realdataall(:,1+1,1),'k','Visible','off');      
+%           hold on
+%           plot(syntdataall(:,1,1),syntdataall(:,1+1,1),'k','Visible','off');      
+%           hold off
+% 
+%           v=axis;
           
-text( v(1), 1,'Gray waveforms weren''t used in inversion.','Color','k','FontSize',8,'FontWeight','bold');
-text( v(3), 0.5, 'Blue numbers are variance reduction','Color','k','FontSize',8,'FontWeight','bold');
+% text( v(1), 1,'Gray waveforms weren''t used in inversion.','Color','k','FontSize',8,'FontWeight','bold');
+% text( v(3), 0.5, 'Blue numbers are variance reduction','Color','k','FontSize',8,'FontWeight','bold');
 
-axis off
+if pbw == 1
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Finish with legend
+    % dummy plot just for legend
+    % line(nan,nan,'Color','black');hold on;line(nan,nan,'Color','black');hold off
+      line([1 1],[1 1],'Color','black');hold on;line([1 1],[1 1],'Color','black');hold off
+    
+         [legend_h,object_h,plot_h,~]= legend('Observed','Synthetic');
+         set(legend_h,'FontSize',12); set(object_h,'LineWidth',2);
+         set(plot_h(1),'LineWidth',1.5); set(plot_h(2),'LineWidth',1)
+         
+     v=axis;
+     text( v(1), 1.5,'Gray waveforms weren''t used in inversion.','Color','k','FontSize',12)%,'FontWeight','bold');
+     text( v(3), 1.0, 'Blue numbers are variance reduction','Color','k','FontSize',12)% ,'FontWeight','bold');
+     axis off
+
+else  % color
+     % dummy plot just for legend
+         % L(1)=line(nan,nan,'Color','black','LineWidth',1.5);hold on;  %L(2)=line(nan,nan,'Color','red','LineWidth',1.);hold off
+          line([1 1],[1 1],'Color','black','LineWidth',1.5);hold on;line([1 1],[1 1],'Color','red','LineWidth',1.);hold off
+          
+          [legend_h,object_h,plot_h,~]= legend('Observed','Synthetic');
+          set(legend_h,'FontSize',12); set(object_h,'LineWidth',2);
+          set(plot_h(1),'LineWidth',1.5); set(plot_h(2),'LineWidth',1);
+      v=axis ;
+      text( v(1), 1.5,'Gray waveforms weren''t used in inversion.','Color','k','FontSize',12)%,'FontWeight','bold') %,'FontName','Courier');
+      text( v(1), 1.0,'Blue numbers are variance reduction','Color','k','FontSize',12)% ,'FontWeight','bold');
+      axis off
+end
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Finish with legend
 
 k=0;
 for i=1:nostations    %%%%%%loop over stations
@@ -2671,7 +3130,7 @@ for i=1:nostations    %%%%%%loop over stations
                 
           if i==1
             title(componentname{j},...
-              'FontSize',9,...
+              'FontSize',11,...
               'FontWeight','bold');
           end
           
@@ -2686,11 +3145,39 @@ for i=1:nostations    %%%%%%loop over stations
           end
           
           if  j==1 
-          ylabel(staname{i},...
-              'FontSize',12,...
-              'FontWeight','bold');
+            % check if we need network code
+               if net_use ==0
+                  y=ylabel(staname{i},'FontSize',12,'FontWeight','bold');
+                    set(get(gca,'YLabel'),'Rotation',0)
+                    set(y, 'Units', 'Normalized', 'Position', [-0.12, 0.5, 0]);
+               else
+                  %  disp(['Using ' fullstationfile ' station file'])
+                    %read data in 3 arrays
+					%fullstationfile
+                    fid  = fopen(fullstationfile,'r');
+					 if fid==-1
+					   f = errordlg('Cannot opean station file','File Error');
+					   return
+					 else
+					 end
+                        C= textscan(fid,'%s %f %f %s',-1);
+                    fclose(fid);
+                    staname_stn=C{1};netcode=C{4};
+                      for ii=1:nostations
+                          for jj=1:length(staname_stn)
+                              if strcmp(char(staname{ii}),char(staname_stn(jj)))
+                                    st_netcode(ii)=netcode(jj);
+                                  %  disp(['Code for ' char(staname{ii}) ' is ' char(st_netcode(ii))])
+                              else
+                              end
+                          end
+                      end
+                %% ploting
+                    y=ylabel([char(st_netcode(i)) '.' char(staname{i})],'FontSize',12,'FontWeight','bold');
+                    set(get(gca,'YLabel'),'Rotation',0);set(y, 'Units', 'Normalized', 'Position', [-0.12, 0.5, 0]);  
+               end
           end
-          
+
 %           if  j==2 
 %           ylabel('Displacement')
 %           end
@@ -2700,9 +3187,15 @@ for i=1:nostations    %%%%%%loop over stations
 %%%%%%%%%          
         if normalized == 1
             if uselimits == 1
-                text( ftime,  1.1, num2str(maxreal(i,j+1),'%8.2E'),'HorizontalAlignment','left','FontSize',8,'FontWeight','bold');   %%% max values
-                text( totime, 1.1, num2str(maxsynt(i,j+1),'%8.2E'),'Color','r','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');
-
+                %text( ftime,  1.1, num2str(maxreal(i,j+1),'%8.2E'),'HorizontalAlignment','left','FontSize',8,'FontWeight','bold');   %%% max values
+                if j==3
+                 text(totime+(totime/10), 0, num2str(maxreal4sta(i),'%8.2E'),'Color','k','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');  % add max value of station
+                   if normsynth==1
+                     text(totime+(totime/10), -0.5, num2str(maxsynt4sta(i),'%8.2E'),'Color','r','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');  % add max syntetic value of station
+                   else
+                   end
+                end
+                
                if addvarred == 1   %%%%%%%%%%  print variance                
 %                  text( ftime+15, -.65, num2str(variance_reduction(i,j),'%4.2f'),'Color','b','HorizontalAlignment','right','FontSize',10,'FontWeight','bold');
                    text((totime-ftime)*0.05, -.65, num2str(variance_reduction(i,j),'%4.2f'),'Color','b','HorizontalAlignment','left','FontSize',10,...
@@ -2711,9 +3204,16 @@ for i=1:nostations    %%%%%%loop over stations
                end
 %%%%%%%%%%%%%%%%               
             else  % not use limits
-                text( min(realdataall(:,1,i)), 1.2, num2str(maxreal(i,j+1),'%8.2E'),'HorizontalAlignment','left','FontSize',8,'FontWeight','bold');  % max values
-                text( max(realdataall(:,1,i)), 1.2, num2str(maxsynt(i,j+1),'%8.2E'),'Color','r','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');
-
+                %text( min(realdataall(:,1,i)), 1.2, num2str(maxreal(i,j+1),'%8.2E'),'HorizontalAlignment','left','FontSize',8,'FontWeight','bold');  % max values
+                %text( max(realdataall(:,1,i)), 1.2, num2str(maxsynt(i,j+1),'%8.2E'),'Color','r','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');
+                if j==3
+                 text(totime+(totime/10), 0, num2str(maxreal4sta(i),'%8.2E'),'Color','k','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');  % add max value of station
+                   if normsynth==1
+                     text(totime+(totime/10), -0.5, num2str(maxsynt4sta(i),'%8.2E'),'Color','r','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');  % add max syntetic value of station
+                   else
+                   end
+                end
+                
                if addvarred == 1   %%%%%%%%%%print variance 
                  v=axis;
                  text((v(2)-v(1))*0.95, -0.65, num2str(variance_reduction(i,j),'%4.2f'),'Color','b','HorizontalAlignment','right','FontSize',10,...
@@ -2747,12 +3247,10 @@ for i=1:nostations    %%%%%%loop over stations
        
 end   %%%%%%%loop over stations
 
-
-%%%%%%%%%%%%%%%%%%OUTPUT options in isl file
-
-
+%% OUTPUT options in isl file
     fid2 = fopen('waveplotoptions.isl','w');
-     if normalized == 1
+
+    if normalized == 1
        if ispc  
          fprintf(fid2,'%c\r\n','1');
        else
@@ -2765,7 +3263,7 @@ end   %%%%%%%loop over stations
          fprintf(fid2,'%c\n','0');
        end
      end
-     
+%%     
      if uselimits == 1
         if ispc 
          fprintf(fid2,'%c\r\n','1');
@@ -2779,7 +3277,7 @@ end   %%%%%%%loop over stations
            fprintf(fid2,'%c\n','0');
          end
      end
-     
+%%     
      if ispc
           fprintf(fid2,'%f\r\n',ftime);
           fprintf(fid2,'%f\r\n',totime);
@@ -2787,7 +3285,7 @@ end   %%%%%%%loop over stations
           fprintf(fid2,'%f\n',ftime);
           fprintf(fid2,'%f\n',totime);
      end
-     
+%%     
      if addvarred == 1
          if ispc 
             fprintf(fid2,'%c\r\n','1');
@@ -2801,7 +3299,7 @@ end   %%%%%%%loop over stations
            fprintf(fid2,'%c\n','0');
         end
      end
-     
+%%     
      if pbw==1
         if ispc 
          fprintf(fid2,'%c\r\n','1');
@@ -2815,10 +3313,40 @@ end   %%%%%%%loop over stations
          fprintf(fid2,'%c\n','0');
         end
      end
-     
+
+%% add new extra features     
+      if normsynth==1
+        if ispc 
+         fprintf(fid2,'%c\r\n','1');
+        else
+         fprintf(fid2,'%c\n','1');
+        end
+     else
+        if ispc 
+         fprintf(fid2,'%c\r\n','0');
+        else
+         fprintf(fid2,'%c\n','0');
+        end
+     end
+%%
+      if net_use==1
+        if ispc 
+         fprintf(fid2,'%c\r\n','1');
+        else
+         fprintf(fid2,'%c\n','1');
+        end
+     else
+        if ispc 
+         fprintf(fid2,'%c\r\n','0');
+        else
+         fprintf(fid2,'%c\n','0');
+        end
+     end
+% 
+
     fclose(fid2);
 
-
+%%
 mh = uimenu(fh,'Label','Export Figure');
 eh1 = uimenu(mh,'Label','Convert to PNG','Callback','exportgraph(1)');
 eh2 = uimenu(mh,'Label','Convert to PS','Callback','exportgraph(2)');
@@ -2826,9 +3354,21 @@ eh3 = uimenu(mh,'Label','Convert to EPS','Callback','exportgraph(3)');
 eh4 = uimenu(mh,'Label','Convert to TIFF','Callback','exportgraph(4)');
 eh5 = uimenu(mh,'Label','Convert to EMF','Callback','exportgraph(5)');
 eh6 = uimenu(mh,'Label','Convert to JPG','Callback','exportgraph(6)');
-eh7 = uimenu(mh,'Label','Prepare a GMT script','Callback','makegmtscript4synobsplot'); 
+%% select code based on GMT version
+% read ISOLA defaults
+[gmt_ver,psview,npts] = readisolacfg;
+ 
+
+if gmt_ver==4
+      eh7 = uimenu(mh,'Label','Prepare a GMT script','Callback','makegmtscript4synobsplot'); 
+else
+   %% put code for GMT5 !
+   
+      eh7 = uimenu(mh,'Label','Prepare a GMT script','Callback','makegmtscript4synobsplot5'); 
+   
+end
     
-    
+    set(get(gca,'YLabel'),'Rotation',0)
  %       cpng
  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2836,7 +3376,7 @@ eh7 = uimenu(mh,'Label','Prepare a GMT script','Callback','makegmtscript4synobsp
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%IN A NEW FIGURE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function plotonestation(stationname,normalized,ftime,totime,uselimits)
+function plotonestation(stationname,normalized,ftime,totime,uselimits,normsynth,npts)
 
 %%%%%prepare filenames  
 %%% we keep fixed that data will be e.g. evrfil.dat
@@ -2846,8 +3386,8 @@ function plotonestation(stationname,normalized,ftime,totime,uselimits)
     syntdatafilename=[stationname 'syn.dat'];
  
 %%%%%%%%%%%initialize data matrices
-realdata=zeros(8192,4);   
-syntdata=zeros(8192,4); 
+realdata=zeros(npts,4);   
+syntdata=zeros(npts,4); 
 
 try
     
@@ -2881,73 +3421,109 @@ end
 % whos realdata
 % realdata(1:10,2)
 %%%%%%%%%%%%%%%%%%% normalize 23/06/05
-
+%% old type
+% if normalized == 1
+% 
+%     disp('Normalized plot')
+% 
+%     for i=2:4
+%         maxreal(i)=max(abs(realdata(:,i)));
+%         maxsynt(i)=max(abs(syntdata(:,i)));
+% 
+%         realdata(:,i) = realdata(:,i)/max(abs(realdata(:,i)));
+%         syntdata(:,i) = syntdata(:,i)/max(abs(syntdata(:,i)));
+%     
+%     end
+%     
+% else
+% end
+%%%%%%%%%%%%%%%%%%% normalize  realdata=zeros(8192,4); 
 if normalized == 1
+   disp('Normalized plot. Using normalization per component ')
+        for j=2:4
+             maxreal(j)=max(abs(realdata(:,j)));
+             maxsynt(j)=max(abs(syntdata(:,j)));
+        end
+             [maxreal4sta,index_real]=max(maxreal); % maximum per station per component
+             [maxsynt4sta,index_synt]=max(maxsynt); % maximum per station per component for synthetic data
 
-    disp('Normalized plot')
-
-    for i=2:4
-        maxreal(i)=max(abs(realdata(:,i)));
-        maxsynt(i)=max(abs(syntdata(:,i)));
-
-        realdata(:,i) = realdata(:,i)/max(abs(realdata(:,i)));
-        syntdata(:,i) = syntdata(:,i)/max(abs(syntdata(:,i)));
-    
-    end
-    
+        for j=2:4  
+            
+             realdata(:,j) = realdata(:,j)/maxreal4sta;
+             
+             if normsynth==1
+                    syntdata(:,j) = syntdata(:,j)/maxsynt4sta;
+             else
+                    syntdata(:,j) = syntdata(:,j)/maxreal4sta;
+             end
+        end
+        
 else
 end
-%%%%%%%%%%%%%%%%%%% normalize
 
 %%%%%%%%%PLOTTING   
 componentname=cellstr(['NS';'EW';'Z ']);
 
+
 figure
 
-   for j=1:3                %%%%%%%%loop over components
+
+for j=1:3                %%%%%%%%loop over components
          
           subplot(3,1,j);
-         
-          plot(realdata(:,1),realdata(:,j+1),'k');
+          plot(realdata(:,1),realdata(:,j+1),'k', 'LineWidth', 1.5);
           hold on
-          
 %%%%%%%           h = vline(50,'k');
-
-          plot(syntdata(:,1),syntdata(:,j+1),'r');
+          plot(syntdata(:,1),syntdata(:,j+1),'r', 'LineWidth', 1.5);
           hold off
-          
 %           legend('Real','Synthetic',1); 
-          ylabel('Displacement (m)')
+          ylabel('Displacement (m)','FontSize',11)
         
           if  j==1 
           title(stationname,...
               'FontSize',12,...
               'FontWeight','bold');
+          leg=legend('Real','Synthetic'); 
+          set(leg,'Color','none')
           end
           
           if  j==3 
-          xlabel('Time (Sec)')
+          xlabel('Time (Sec)','FontSize',11)
           end
           
-          %%%% Normalized plotting
-           if normalized == 1
-                text( 10, 0.7, num2str(maxreal(j+1)));
-                text( 10, 0.5, num2str(maxsynt(j+1)),'Color','r');
-                
-                legend('Real','Synthetic',1); 
-           else
-               legend('Real','Synthetic',1); 
-           end    
-           
+%           %%%% Normalized plotting
+%           if normalized == 1
+%           %      text( 10, 0.7, num2str(maxreal(j+1)));
+%                % text( 10, 0.5, num2str(maxsynt(j+1)),'Color','r');
+%                 v=axis
+%                 axis([v(1) v(2) -1.0 1.0 ]) ;  
+%                 legend('Real','Synthetic'); 
+%           else
+%                legend('Real','Synthetic'); 
+%           end      
+ 
          %%%%%%%%%%%%%%%
-           if uselimits == 1
-                  if normalized == 1
+     if uselimits == 1
+              
+              if normalized == 1
 %                     axis ([ftime totime min(realdataall(:,j+1,i)) max(realdataall(:,j+1,i)) ]) ;   
                       axis ([ftime totime -1.0 1.0 ]) ;       
-
-                      text( totime-10  ,  -0.7   , componentname{j},'FontSize',12,'FontWeight','bold');
-    
-                  else
+                      text( totime-10  ,  -0.7   , componentname{j},'FontSize',11,'FontWeight','bold');
+                      
+                      if index_real==(j+1)
+                       text( totime+1, 0, num2str(maxreal(j+1),'%8.2e'),'FontSize',10,'FontWeight','bold');
+                      else
+                      end
+                      
+                      if normsynth==1
+                          if index_synt==(j+1)
+                              text( totime+1, -0.5, num2str(maxsynt(j+1),'%8.2e'),'Color','r','FontSize',10,'FontWeight','bold');
+                          else
+                          end
+                      else
+                      end
+                      
+              else
                       %%which is larger smaller..?? synth or real..!!
                          if min(realdata(:,j+1)) <= min(syntdata(:,j+1))
                              yli1=min(realdata(:,j+1));
@@ -2964,28 +3540,51 @@ figure
                       axis([ftime totime maxmin_onedataindex(2) maxmin_onedataindex(1)]);
 %                      axis ([ftime totime yli1 yli2 ])
  
-                      text( totime-10  ,   yli1+(yli2/3)      , componentname{j},'FontSize',12,'FontWeight','bold');
+                      text( totime-10  ,   yli1+(yli2/3)      , componentname{j},'FontSize',11,'FontWeight','bold');
 
-                 end
-           else
-             v=axis;
-             text( max(realdata(:,1)) - (max(realdata(:,1))*0.05)   ,  min(realdata(:,j+1)) - (min(realdata(:,j+1))*0.5)   , componentname{j},'FontSize',12,'FontWeight','bold');
+              end
+     else
+              if normalized ==1 
+                v=axis; 
+                axis([v(1) v(2) -1.0 1.0 ]) ;  
+                text( v(2)-10  ,  -0.7   , componentname{j},'FontSize',11,'FontWeight','bold');
+                
+                if index_real==(j+1)
+                   text( v(2)+1   , 0, num2str(maxreal(j+1),'%8.2e'),'FontSize',10,'FontWeight','bold');
+                else
+                end
+                  
+                if normsynth==1
+                    if index_synt==(j+1)
+                        text( totime+1, -0.5, num2str(maxsynt(j+1),'%8.2e'),'Color','r','FontSize',10,'FontWeight','bold');
+                    else
+                    end
+                else
+                end
+                
+              else
+                v=axis;
+                text( max(realdata(:,1)) - (max(realdata(:,1))*0.05)   ,  min(realdata(:,j+1)) - (min(realdata(:,j+1))*0.5)   , componentname{j},'FontSize',11,'FontWeight','bold');
+                axis([v(1) v(2) maxmin_onedataindex(2) maxmin_onedataindex(1)]);
+              end
              
-              axis([v(1) v(2) maxmin_onedataindex(2) maxmin_onedataindex(1)]);
-           end
-
+     end
          
-         
-     end   %%% main loop over components
-
      
-
+             set(gca,'fontsize',11)
+             set(gca,'linewidth',1.5)
      
+     
+end   %%% main loop over components
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% FUNCTIONS TO PLOT ALL STATIONS (REAL) %%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% %%%%%%%%%%%%IN A NEW FIGURE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function plotallstationsReal(nostations,staname,uselimits,ftime,totime)
+function plotallstationsReal(nostations,staname,uselimits,ftime,totime,npts)
 %%%%%prepare filenames  
 %%% we keep fixed that data will be e.g. evrfil.dat
 %%% and synthetics will be               evrsyn.dat
@@ -3002,7 +3601,7 @@ try
   cd invert
 
 %%%%%%%%%%%initialize data matrices
-realdataall=zeros(8192,4);    %%%% 8192 points  fixed....
+realdataall=zeros(npts,4);    %%%% 8192 points  fixed....
 maxmindataindex=zeros(1,2,nostations);
 
 %%%%open data files and read data
@@ -3035,24 +3634,29 @@ componentname=cellstr(['NS';'EW';'Z ']);
 %%%%%%%%%PLOTTING   
 scrsz = get(0,'ScreenSize');
 figure('Position',[100 100 scrsz(3)-200 scrsz(4)-200])
-          
-          subplot(nostations+1,3,1);
+
+%% Ploting
+subplot1(nostations+1,3)  % initialize all plots
+%          subplot(nostations+1,3,1);
+subplot1(1) 
           axis off
-          
-          subplot(nostations+1,3,2);
+%          subplot(nostations+1,3,2);
+subplot1(2) 
            plot(realdataall(:,1,1),realdataall(:,2,1),'Visible','off')
                          title('Real data displacement (m)','FontSize',12,'FontWeight','bold')
           axis off
-          
-          subplot(nostations+1,3,3);
+%          subplot(nostations+1,3,3);
+subplot1(3) 
           axis off
+          
+%%          
 k=0;
- 
 for i=1:nostations    %%%%%%loop over stations
 %    realdataall    8192x4x6 
-
      for j=1:3   %%%%%%%%loop over components
-          subplot(nostations+1,3,j+k+3);
+          %subplot(nostations+1,3,j+k+3);
+          subplot1(j+k+3);
+          
           plot(realdataall(:,1,i),realdataall(:,j+1,i),'k','LineWidth',1);   
           %%%%%  h = vline(50,'k');
           v=axis;
@@ -3062,10 +3666,10 @@ for i=1:nostations    %%%%%%loop over stations
             title(componentname{j},'FontSize',12,'FontWeight','bold');
           end
           if i==nostations
-          xlabel('Sec')
+            xlabel('Sec')
           end
           if  j==1 
-          ylabel(staname{i},'FontSize',12,'FontWeight','bold');
+            ylabel(staname{i},'FontSize',12,'FontWeight','bold');
           end
           
                 if uselimits == 1
@@ -3082,7 +3686,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%IN A NEW FIGURE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function plotonestationReal(stationname,uselimits,ftime,totime)
+function plotonestationReal(stationname,uselimits,ftime,totime,npts)
 
 %%%%%prepare filenames  
 %%% we keep fixed that data will be e.g. evrfil.dat
@@ -3090,7 +3694,7 @@ function plotonestationReal(stationname,uselimits,ftime,totime)
 
 realdatafilename=[stationname 'fil.dat'];
 %%%%%%%%%%%initialize data matrices
-realdata=zeros(8192,4);   
+realdata=zeros(npts,4);   
 
 %%%go in invert
 cd invert
@@ -3142,7 +3746,7 @@ figure
 %%%%%%%%%%% %%%%%%%%%%%%IN A NEW FIGURE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%      
 
-function plotallstationssyn(nostations,staname,uselimits,ftime,totime)
+function plotallstationssyn(nostations,staname,uselimits,ftime,totime,npts)
 %%%%%prepare filenames  
 %%% we keep fixed that data will be e.g. evrfil.dat
 %%% and synthetics will be               evrsyn.dat
@@ -3161,7 +3765,7 @@ try
     
   cd invert
 %%%%%%%%%%%initialize data matrices
-syntdataall=zeros(8192,4); 
+syntdataall=zeros(npts,4); 
 maxmindataindex=zeros(1,2,nostations);
 
 %%%%open data files and read data
@@ -3242,7 +3846,7 @@ for i=1:nostations    %%%%%%loop over stations
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%IN A NEW FIGURE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function plotonestationsyn(stationname,uselimits,ftime,totime)
+function plotonestationsyn(stationname,uselimits,ftime,totime,npts)
 
 %%%%%prepare filenames  
 %%% we keep fixed that data will be e.g. evrfil.dat
@@ -3251,7 +3855,7 @@ function plotonestationsyn(stationname,uselimits,ftime,totime)
     syntdatafilename=[stationname 'syn.dat'];
  
 %%%%%%%%%%%initialize data matrices
-syntdata=zeros(8192,4); 
+syntdata=zeros(npts,4); 
 
 %%%go in invert
 cd invert
@@ -3373,6 +3977,31 @@ if isempty(h);
 else
 end
 
+%% Open source.dat and put the selected depth
+selected_depth=str2double(get(handles.depth,'String'));
+
+%%%%%OUTPUT SOURCE LOCATION %%%%%%%%%%%%%%%%%
+if ispc
+  fid = fopen('source.dat','w');
+    fprintf(fid,'%s\r\n',' Source parameters');
+    fprintf(fid,'%s\r\n',' x(N>0,km),y(E>0,km),z(km),magnitude,date');
+    fprintf(fid,'%10.4f%10.4f%10.4f%10.4f  %c%s%c\r\n',0,0, selected_depth,magn, '''', eventdate, '''');
+  fclose(fid);
+
+else
+  fid = fopen('source.dat','w');
+    fprintf(fid,'%s\n',' Source parameters');
+    fprintf(fid,'%s\n',' x(N>0,km),y(E>0,km),z(km),magnitude,date');
+    fprintf(fid,'%10.4f%10.4f%10.4f%10.4f  %c%s%c\n',0,0, selected_depth,magn, '''', eventdate, '''');
+  fclose(fid);
+end
+
+disp(' ')
+disp('Updated source.dat with selected depth')
+disp(' ')
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%
 %%%%%check if extrapol.pol exists...
 h=dir('extrapol.pol');
 if isempty(h); 
@@ -3429,9 +4058,7 @@ else
     [s,mess,messid]=movefile('extrapol.pol','extrapol.done');
   %%%%%
 end
-%%%
-
-
+%%
 if get(handles.autocopy,'Value') == 1
 
 %%%%% get crustal.dat from green
@@ -3455,8 +4082,7 @@ else
     
 end
 
-
-%%%%run angm    !!!!!!!!!!!  check if source is on some interface..???
+%% run angone    !!!!!!!!!!!  check if source is on some interface..???
 
 %%%read crustal model...
 fid  = fopen('crustal.dat','r');
@@ -3478,6 +4104,7 @@ fid  = fopen('crustal.dat','r');
     c = c';
 fclose(fid);
 model_depths=c(:,1);
+
 %%%%read source.dat
 fid  = fopen('source.dat','r');
 [lon,lat,depth,mag,tt] = textread('source.dat','%f %f %f %f %s','headerlines',2);
@@ -3486,10 +4113,10 @@ fclose(fid);
 
 for i=1:length(model_depths)
     if depth == model_depths(i)
-        disp(['Source depth  ' num2str(depth) ' equals CRUSTAL.DAT interface no ' num2str(i) ' ANGM.EXE doesn''t like this. Adding 0.1 to depth'])
-        warndlg(sprintf(['Source depth  ' num2str(depth) ' equals CRUSTAL.DAT interface no ' num2str(i) ' \n ANGM.EXE doesn''t like this. Adding 0.1 to depth']))
+        disp(['Source depth  ' num2str(depth) ' equals CRUSTAL.DAT interface no ' num2str(i) ' ANGONE.EXE doesn''t like this. Adding 0.2 to depth'])
+        warndlg(sprintf(['Source depth  ' num2str(depth) ' equals CRUSTAL.DAT interface no ' num2str(i) ' \n ANGONE.EXE doesn''t like this. Adding 0.2 to depth']))
         
-        depth=depth+0.1;
+        depth=depth+0.2;
         
         %%%%prepare new source.dat ...
                  fid = fopen('source.dat','w');
@@ -3522,7 +4149,7 @@ if depth >= model_depths(nlayers)
     newlastdepth=depth+5;
     
     c(nlayers+1,1)=newlastdepth;
-    c(nlayers+1,2)=c(nlayers,2);
+    c(nlayers+1,2)=c(nlayers,2)+0.01;
     c(nlayers+1,3)=c(nlayers,3);
     c(nlayers+1,4)=c(nlayers,4);
     c(nlayers+1,5)=c(nlayers,5);
@@ -3564,9 +4191,9 @@ if depth >= model_depths(nlayers)
 else
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  RUN ANGM  %%%%%%%%%%%%%%
+%%   RUN ANGONE  %%%%%%%%%%%%%%
 
-[status, result] = system('angm.exe');
+[status, result] = system('angone.exe');
 
 %% find how many stations we have check the station.dat
 
@@ -3583,6 +4210,11 @@ end
 % [staname,d1,d2,pol,d4,d5] = textread('mypol.dat','%s %f %f %s %f %f ',nostations,'headerlines',1);
 % 
 % fclose(fid);
+
+%%  pause here if user wants to change mypol...
+
+uiwait(helpdlg('Edit .\polarity\mypol.dat (IF you want) and press OK'));
+
 
 %% new code that checks length of line
 
@@ -3640,7 +4272,7 @@ else
 end
 
 fid  = fopen('onemech.dat','r');
-[iso,tim,mom,s1,di1,r1,s2,di2,r2,aziP,plungeP,aziT,plungeT,aziB,plungeB,dc,var] = textread('onemech.dat','%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f');
+[iso,tim,mom,s1,di1,r1,s2,di2,r2,aziP,plungeP,aziT,plungeT,aziB,plungeB,dc,var] = textread('onemech.dat','%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f',-1);
 fclose(fid);
 
 %%%
@@ -3649,25 +4281,249 @@ h=dir('moremech.dat');
 if isempty(h);
     warndlg('moremech.dat doesn''t exist. Plotting one mechanism only.','Info');
 else
+    
+   
 fid  = fopen('moremech.dat','r');
-[isom,timm,momm,s1m,di1m,r1m,s2m,di2m,r2m,aziPm,plungePm,aziTm,plungeTm,aziBm,plungeBm,dcm,varm] = textread('moremech.dat','%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f');
+[isom,timm,momm,s1m,di1m,r1m,s2m,di2m,r2m,aziPm,plungePm,aziTm,plungeTm,aziBm,plungeBm,dcm,varm] = textread('moremech.dat','%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f',-1);
 fclose(fid);
 end
 
-%%%
-cd ..
+ 
+cd ..  % out of polarity
 
-%    catch
-%    h=msgbox('File problem in polarity folder...','Error');
-%    cd ..
+%%
+%   catch
+%   h=msgbox('File problem in polarity folder...','Error');
+%   cd ..
 %   return
 %   end
 
 pwd
-%%%PLOT
-%%prepare a circle
 
-h1=figure %('Renderer','zbuffer');
+%% PLOT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% decide if we need full MT or DC 
+
+if get(handles.full_DC,'Value') == 1  % plot full
+
+    %%prepare a circle
+    % full MT plot based on code by V?clav Vavry?uk
+    % http://www.ig.cas.cz/en/research-teaching/software-download/
+    disp('full mt plot based on codes by V?clav Vavrycuk')
+
+    %% read inv3
+    cd invert
+        pwd
+    h=dir('inv3.dat');
+    if isempty(h); 
+        errordlg('inv3.dat file doesn''t exist. Run Invert. ','File Error');
+        cd ..
+    return    
+    else
+        fid = fopen('inv3.dat','r');
+            [~,~,mrr, mtt, mff, mrt, mrf, mtf ] = textread('inv3.dat','%f %f %f %f %f %f %f %f');
+        fclose(fid);
+    end
+
+    %  find moment
+    nsources=handles.nsources;
+    [~,~,inv1_mom,~,~,~,~,~,~,~]=readinv1(nsources,1);
+    mfive=4.0e23;
+        
+    cd ..
+    %%
+    % change system
+    moment_11= mtt; moment_12= -1*mtf; moment_13= mrt;moment_22= mff;moment_23= -1*mrf;moment_33= mrr;
+ 
+    m=[moment_11,moment_12,moment_13;...
+       moment_12,moment_22,moment_23;...
+       moment_13,moment_23,moment_33];
+    %----------------------------------------------------------------------------------------
+    % calculation of a fault normal and slip from the moment tensor
+    %----------------------------------------------------------------------------------------
+    angles_all(1,:) = angles(m);
+    
+    strike_1 = angles_all(1,1);
+    dip_1    = angles_all(1,2);
+    rake_1   = angles_all(1,3);
+
+    mech=[s1(1,1) di1(1,1) r1(1,1)];
+    figure; hold on; axis equal;  axis off; 
+    shadowing(m);
+% boundary circle;
+    Fi=0:0.1:361;
+    plot(cos(Fi*pi/180.),sin(Fi*pi/180.),'k','LineWidth',1.5)
+ 
+% denoting the North direction
+    plot([0 0], [1 1.07],'k','LineWidth',1.5);
+    text(-0.035, 1.15,'N','FontSize',14);
+    nodal_lines_(strike_1, dip_1, rake_1);
+    
+    P_T_axes_(strike_1, dip_1, rake_1);
+
+%plot polarities
+    for i=1:length(staname)
+    [x3(i),y3(i)]=pltsym(d2(i),d1(i));
+    tt(i)=staname(i);
+    text(x3(i)+0.05,y3(i)+0.05,tt(i),'FontSize',14,...
+                            'HorizontalAlignment','left',...
+                            'VerticalAlignment','bottom');
+    text(x3(i),y3(i),pol(i),'FontSize',14,...
+                            'FontWeight','bold',...
+                            'HorizontalAlignment','center',...
+                            'VerticalAlignment','middle');
+    end
+    
+%%    moremech 
+    if length(isom) > 1
+        
+        for i=2:length(isom)
+            nodal_lines_(s1m(i,1),di1m(i,1), r1m(i,1));
+            P_T_axes_(s1m(i,1),di1m(i,1),r1m(i,1));
+        end
+        
+%      make a file for GMT also
+            if ispc
+            fid = fopen('.\polarity\more_mech.gmt','w');
+              for ii=2:length(isom)
+                fprintf(fid,'%f %f %f %f %f %f %f\r\n',5 , 5, 5, s1m(ii,1),di1m(ii,1), r1m(ii,1),5);
+              end
+            fclose(fid);
+            else
+              fid = fopen('./polarity/more_mech.gmt','w');
+              for ii=2:length(isom)
+                fprintf(fid,'%f %f %f %f %f %f %f\r\n',5 , 5, 5, s1m(ii,1),di1m(ii,1), r1m(ii,1),5);
+              end
+            fclose(fid);
+            end          
+        
+        
+    else
+    end
+    
+  plot(0,0,'+','MarkerSize',8)
+  text (.6 ,1,['Source depth (km)  ' num2str(selected_depth)],'FontSize',14);  
+  
+%% prepare a GMT file also..!!
+% write reference solution
+%     if ispc
+%     fid = fopen('.\polarity\ref_mech.gmt','w');
+%         fprintf(fid,'%f %f %f %f %f %f %f\r\n',5 , 5, 5, s1(1,1), di1(1,1), r1(1,1),5);
+%     fclose(fid);
+%     else
+%     fid = fopen('./polarity/ref_mech.gmt','w');
+%         fprintf(fid,'%f %f %f %f %f %f %f\n',5 , 5, 5, s1(1,1), di1(1,1), r1(1,1),5);
+%     fclose(fid);
+%     end
+
+% check if we have GMT 4 or 5
+    gmt_ver=handles.gmt_ver;
+
+%  mrr, mtt, mff, mrt, mrf, mtf
+    harv=[(mrr/inv1_mom)*mfive;(mtt/inv1_mom)*mfive;(mff/inv1_mom)*mfive;(mrt/inv1_mom)*mfive;(mrf/inv1_mom)*mfive;(mtf/inv1_mom)*mfive];
+    T = evalc('disp(harv)');
+    start = regexp(T,'\n');
+    Ta=T(1:start(1));
+    format long
+    Ta1=strrep(strrep(strrep(strrep(Ta,'+',' '),'*','  '),'e',' '),'E',' ');
+    Atmp = sscanf(Ta1,'%f')  ;
+    maxexp=Atmp(2);
+    Tb=T((start(2)+1):length(T));
+    harcof = sscanf(Tb,'%f',6);
+    format
+% write reference solution for non DC  mrr, mtt, mff, mrt, mrf, mtf in 10*exponent dynes-cm  exponent 
+% fprintf(fid,'%g  %g  %g  %f  %f  %f  %f  %f  %f  %f  %g %g\r\n',5.5,5.5,5,harcof(1), harcof(2), harcof(3), harcof(4), harcof(5), harcof(6), maxexp+7 ,0,0);
+    if ispc
+    fid = fopen('.\polarity\ref_mech2.gmt','w');
+    fprintf(fid,'%g  %g  %g  %f  %f  %f  %f  %f  %f  %f  %g %g\r\n',5,5,5,harcof(1), harcof(2), harcof(3), harcof(4), harcof(5), harcof(6), 23 , 0 ,0);
+    fclose(fid);
+    else
+    fid = fopen('./polarity/ref_mech2.gmt','w');
+     fprintf(fid,'%g  %g  %g  %f  %f  %f  %f  %f  %f  %f  %g %g\r\n',5,5,5,harcof(1), harcof(2), harcof(3), harcof(4), harcof(5), harcof(6), 23 , 0 ,0);
+    fclose(fid);
+    end
+    
+%% write batch
+
+    if ispc
+    
+    fid = fopen('.\polarity\plot_pol_gmt.bat','w');
+    if gmt_ver==4
+        fprintf(fid,'%s\r\n', 'psmeca ref_mech2.gmt   -R0/10/0/10 -JX17c -Sm15c -K - a0.3c/cc  -ewhite  -t0.1p  -gblack   -W1p -Glightgray -T0 > pol_plot.ps'  );
+    elseif gmt_ver==5
+        fprintf(fid,'%s\r\n', 'psmeca ref_mech2.gmt   -R0/10/0/10 -JX17c -Sm15c -K -Fa0.3c/cc -Fewhite -Ft0.1p -Fgblack   -W1p -Glightgray -T0 > pol_plot.ps'  );
+    end
+   % fprintf(fid,'%s\r\n', 'psmeca ref_mech.gmt    -R0/10/0/10 -JX17c -Sa14.6c -K -O  -T0 -W1p >> pol_plot.ps'  );
+    if length(isom) > 1
+       if gmt_ver==4
+        fprintf(fid,'%s\r\n', 'psmeca more_mech.gmt -R -J -Sa16.1c -T0 -K -O  -a0.3c/cc  -ewhite  -t0.1p  -gblack   -W1.p >> pol_plot.ps '  );
+       elseif gmt_ver==5
+        fprintf(fid,'%s\r\n', 'psmeca more_mech.gmt -R -J -Sa16.1c -T0 -K -O -Fa0.3c/cc -Fewhite -Ft0.1p -Fgblack   -W1.p >> pol_plot.ps '  );
+       end
+    else
+    end
+    fprintf(fid,'%s\r\n', 'gawk "{if (NR>1) print $1,$2,$3,$4}" mypol.dat > 4pspolar.txt');
+    
+    if gmt_ver==4
+        fprintf(fid,'%s\r\n', 'pspolar 4pspolar.txt -R -J -N -Ss0.7c  -D5/5  -M15c  -e0.5p  -O -K -T0/0/5/18  >>  pol_plot.ps ');
+    elseif gmt_ver==5
+        fprintf(fid,'%s\r\n', 'pspolar 4pspolar.txt -R -J -N -Ss0.7c  -D5/5  -M15c  -Qe  -O -K -T0/0/5/18  >>  pol_plot.ps ');
+    end
+   % fprintf(fid,'%s\r\n', 'pstext ref_mech_text.gmt -R -J -O -K -m -N  >> csps_gmt_plot.ps '  );
+   if gmt_ver==4 
+        fprintf(fid,'%s\r\n', 'echo .5  2   | psxy -R -J -O  -K -Ss.6c -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.5 | psxy -R -J -O  -K -Ss.6c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.0 | psxy -R -J -O  -K -Sc.3c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  0.6 | psxy -R -J -O  -K -Sc.3c    -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 2.0 12 0 1 CM D, - | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.5 12 0 1 CM C, + | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.0 12 0 1 CM P    | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 0.6 12 0 1 CM T    | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 0.4 0.2 12 0 1 LM X - polarity not defined | pstext -R -J -O  -K   >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', ['echo 0.4 9.5 12 0 1 LM Source depth (km)  ' num2str(selected_depth)  ' | pstext -R -J -O     >> pol_plot.ps ']  );
+        fprintf(fid,'%s\r\n', 'ps2raster pol_plot.ps -A -P -Tg '  );
+   elseif gmt_ver==5
+        fprintf(fid,'%s\r\n', 'echo .5  2   | psxy -R -J -O  -K -Ss.6c -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.5 | psxy -R -J -O  -K -Ss.6c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.0 | psxy -R -J -O  -K -Sc.3c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  0.6 | psxy -R -J -O  -K -Sc.3c    -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 2.0 D, - | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.5 C, + | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.0 P    | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 0.6 T    | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 0.4 0.2 X - polarity not defined | pstext -R -J -O -F+f12+jLM -K   >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', ['echo 0.4 9.5 Source depth (km)  ' num2str(selected_depth)  ' | pstext -R -J -O -F+f12+jLM    >> pol_plot.ps ']  );
+        fprintf(fid,'%s\r\n', 'psconvert pol_plot.ps -A -P -Tg '  );
+   end
+    
+  fclose(fid);
+
+	
+	disp('Check the  .\polarity\plot_pol_gmt.bat file for GMT plotting')
+
+    %% 	
+    else % Linux
+    
+
+	    disp('Not ready for Linux yet..!!')
+        
+    	% disp('Check the  ./polarity/plot_pol_gmt.bat file for GMT plotting')
+    end
+    
+h = msgbox('A GMT batch file called plot_pol_gmt.bat was created in POLARITY folder. Run this file from a command window to get a high quality GMT plot.','GMT plot file.','help');
+
+else %%% DC plot
+% prepare a circle
+disp('DC plot')
+
+% PLOT
+% prepare a circle
+
+h1=figure; %('Renderer','zbuffer');
 % THETA=linspace(0,2*pi,2000);
 % RHO=ones(1,2000)*5;
 % [X,Y] = pol2cart(THETA,RHO);
@@ -3678,18 +4534,20 @@ h1=figure %('Renderer','zbuffer');
 %circle([10,10],5,2000,'-'); 
 mech=[s1(1,1) di1(1,1) r1(1,1)];
 
-bb([s1(1,1) di1(1,1) r1(1,1)],10,10,5,0,[138/255 138/255 138/255])
-hold on
+% plot of onemech.dat
 
+bb([s1(1,1) di1(1,1) r1(1,1)],10,10,5,0,[138/255 138/255 138/255])    % plot beach ball
+hold on
 axis square;
 axis off
-%%% plot onemech
+
+%%% plot onemech P,T axis
 for i=1:length(iso)
 %     [x,y]=plpl(s1(i,1),di1(i,1));
 %     plot(x,y,'r.-')
 %     [x1,y1]=plpl(s2(i,1),di2(i,1));
 %     plot(x1,y1,'r.-')
-    [ax2,ay2]=pltsym(90-plungeP(i,1),aziP(i,1));
+    [ax2,ay2]=pltsymdc(90-plungeP(i,1),aziP(i,1));
     plot(ax2,ay2,'Marker','s',...
                  'MarkerEdgeColor','b',...
                  'MarkerFaceColor','b')
@@ -3698,7 +4556,7 @@ for i=1:length(iso)
                             'VerticalAlignment','bottom',...
                             'Color','b',...
                             'FontWeight','bold');
-    [ax2,ay2]=pltsym(90-plungeT(i,1),aziT(i,1));
+    [ax2,ay2]=pltsymdc(90-plungeT(i,1),aziT(i,1));
     plot(ax2,ay2,'Marker','o',...
                  'MarkerEdgeColor','y',...
                  'MarkerFaceColor','y')
@@ -3712,7 +4570,7 @@ end
  
 %plot polarities
 for i=1:length(staname)
-    [x3(i),y3(i)]=pltsym(d2(i),d1(i));
+    [x3(i),y3(i)]=pltsymdc(d2(i),d1(i));
     tt(i)=staname(i);
     text(x3(i)+0.1,y3(i)+0.1,tt(i),'FontSize',14,...
                             'HorizontalAlignment','left',...
@@ -3740,13 +4598,16 @@ for i=1:length(staname)
 end
 % 
 %%% plot moremech
-if ~isempty(isom)
+%whos isom s1m
+
+
+if length(isom) > 1
   for i=2:length(isom)
-    [x,y]=plpl(s1m(i,1),di1m(i,1));
+    [x,y]=plpldc(s1m(i,1),di1m(i,1));
     plot(x,y,'k')
-    [x1,y1]=plpl(s2m(i,1),di2m(i,1));
+    [x1,y1]=plpldc(s2m(i,1),di2m(i,1));
     plot(x1,y1,'k')
-    [ax2m,ay2m]=pltsym(90-plungePm(i,1),aziPm(i,1));
+    [ax2m,ay2m]=pltsymdc(90-plungePm(i,1),aziPm(i,1));
     plot(ax2m,ay2m,'Marker','s',...
                  'MarkerEdgeColor','b',...
                  'MarkerFaceColor','b')
@@ -3754,7 +4615,7 @@ if ~isempty(isom)
 %                             'HorizontalAlignment','left',...
 %                             'VerticalAlignment','bottom',...
 %                             'Color','k');
-    [ax2m,ay2m]=pltsym(90-plungeTm(i,1),aziTm(i,1));
+    [ax2m,ay2m]=pltsymdc(90-plungeTm(i,1),aziTm(i,1));
     plot(ax2m,ay2m,'Marker','o',...
                  'MarkerEdgeColor','y',...)
                  'MarkerFaceColor','y')
@@ -3763,19 +4624,178 @@ if ~isempty(isom)
 %                             'VerticalAlignment','bottom',...
 %                             'Color','k');
   end
+%%  make a file for GMT also
+        if ispc
+            fid = fopen('.\polarity\more_mech.gmt','w');
+              for i=2:length(isom)
+                fprintf(fid,'%f %f %f %f %f %f %f\r\n',5 , 5, 5, s1m(i,1),di1m(i,1), r1m(i,1),5);
+              end
+            fclose(fid);
+        else
+              fid = fopen('./polarity/more_mech.gmt','w');
+              for i=2:length(isom)
+                fprintf(fid,'%f %f %f %f %f %f %f\r\n',5 , 5, 5, s1m(i,1),di1m(i,1), r1m(i,1),5);
+              end
+            fclose(fid);
+        end
+
+   
 else
 end
 
 % h = legend('U','D',4); 
 %legend
-%%
+%
 plot(10,10,'+','MarkerSize',8)
 text (10,15.2,'0','FontSize',12);          
 text (9.6,4.5,'180','FontSize',12);  
 text (15.2,10,'90','FontSize',12);          
 text (4. ,10,'270','FontSize',12);        
-% 
-% 
+text (11 ,15.2,['Source depth (km)  ' num2str(selected_depth)],'FontSize',14);  
+
+%% prepare a GMT file also..!!
+
+% check if we have GMT 4 or 5
+gmt_ver=handles.gmt_ver;
+  
+    
+% write reference solution
+if ispc
+  fid = fopen('.\polarity\ref_mech.gmt','w');
+    fprintf(fid,'%f %f %f %f %f %f %f\r\n',5 , 5, 5, s1(1,1), di1(1,1), r1(1,1),5);
+  fclose(fid);
+else
+  fid = fopen('./polarity/ref_mech.gmt','w');
+    fprintf(fid,'%f %f %f %f %f %f %f\n',5 , 5, 5, s1(1,1), di1(1,1), r1(1,1),5);
+  fclose(fid);
+end
+
+% write batch
+if ispc
+    
+  fid = fopen('.\polarity\plot_pol_gmt.bat','w');
+    if gmt_ver==4
+        fprintf(fid,'%s\r\n', 'psmeca ref_mech.gmt   -R0/10/0/10 -JX17c -Sa15c -K -a0.3c/cc -ewhite -t0.1p -gblack   -W1p -Glightgray > pol_plot.ps'  );
+        fprintf(fid,'%s\r\n', 'psmeca ref_mech.gmt   -R0/10/0/10 -JX17c -Sa15c -K -O  -T0 -W1p >> pol_plot.ps'  );
+    elseif gmt_ver==5
+        fprintf(fid,'%s\r\n', 'psmeca ref_mech.gmt   -R0/10/0/10 -JX17c -Sa15c -K -Fa0.3c/cc -Fewhite -Ft0.1p -Fgblack   -W1p -Glightgray > pol_plot.ps'  );
+        fprintf(fid,'%s\r\n', 'psmeca ref_mech.gmt   -R0/10/0/10 -JX17c -Sa15c -K -O  -T0 -W1p >> pol_plot.ps'  );
+    end
+    
+    if length(isom) > 1
+        if gmt_ver==4
+            fprintf(fid,'%s\r\n', 'psmeca more_mech.gmt -R -J -Sa15c -T0 -K -O -a0.3c/cc -ewhite -t0.1p -gblack   -W1.p >> pol_plot.ps '  );
+        elseif gmt_ver==5
+            fprintf(fid,'%s\r\n', 'psmeca more_mech.gmt -R -J -Sa15c -T0 -K -O -Fa0.3c/cc -Fewhite -Ft0.1p -Fgblack   -W1.p >> pol_plot.ps '  );
+        end
+    else
+    end
+    fprintf(fid,'%s\r\n', 'gawk "{if (NR>1) print $1,$2,$3,$4}" mypol.dat > 4pspolar.txt');
+    if gmt_ver==4
+        fprintf(fid,'%s\r\n', 'pspolar 4pspolar.txt -R -J -N -Ss0.7c  -D5/5  -M15c  -e0.5p  -O -K -T0/0/5/18  >>  pol_plot.ps ');
+    elseif gmt_ver==5
+        fprintf(fid,'%s\r\n', 'pspolar 4pspolar.txt -R -J -N -Ss0.7c  -D5/5  -M15c  -Qe  -O -K -T0/0/5/18  >>  pol_plot.ps ');
+    end
+   % fprintf(fid,'%s\r\n', 'pstext ref_mech_text.gmt -R -J -O -K -m -N  >> csps_gmt_plot.ps '  );
+   if gmt_ver==4 
+        fprintf(fid,'%s\r\n', 'echo .5  2   | psxy -R -J -O  -K -Ss.6c -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.5 | psxy -R -J -O  -K -Ss.6c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.0 | psxy -R -J -O  -K -Sc.3c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  0.6 | psxy -R -J -O  -K -Sc.3c    -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 2.0 12 0 1 CM D, - | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.5 12 0 1 CM C, + | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.0 12 0 1 CM P    | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 0.6 12 0 1 CM T    | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 0.4 0.2 12 0 1 LM X - polarity not defined | pstext -R -J -O  -K   >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', ['echo 0.4 9.5 12 0 1 LM Source depth (km)  ' num2str(selected_depth)  ' | pstext -R -J -O     >> pol_plot.ps ']  );
+        fprintf(fid,'%s\r\n', 'ps2raster pol_plot.ps -A -P -Tg '  );
+   elseif gmt_ver==5
+        fprintf(fid,'%s\r\n', 'echo .5  2   | psxy -R -J -O  -K -Ss.6c -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.5 | psxy -R -J -O  -K -Ss.6c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.0 | psxy -R -J -O  -K -Sc.3c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  0.6 | psxy -R -J -O  -K -Sc.3c    -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 2.0 D, - | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.5 C, + | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.0 P    | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 0.6 T    | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 0.4 0.2 X - polarity not defined | pstext -R -J -O -F+f12+jLM -K   >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', ['echo 0.4 9.5 Source depth (km)  ' num2str(selected_depth)  ' | pstext -R -J -O -F+f12+jLM    >> pol_plot.ps ']  );
+        fprintf(fid,'%s\r\n', 'psconvert pol_plot.ps -A -P -Tg '  );
+   end
+    
+  fclose(fid);
+	
+	disp('Check the  .\polarity\plot_pol_gmt.bat file for GMT plotting')
+ 	
+else  % Linux
+
+disp('not tested for Linux yet..!!')
+
+
+  fid = fopen('./polarity/plot_pol_gmt.bat','w');
+    if gmt_ver==4
+        fprintf(fid,'%s\r\n', 'psmeca ref_mech.gmt   -R0/10/0/10 -JX17c -Sa15c -K -a0.3c/cc -ewhite -t0.1p -gblack   -W1p -Glightgray > pol_plot.ps'  );
+        fprintf(fid,'%s\r\n', 'psmeca ref_mech.gmt   -R0/10/0/10 -JX17c -Sa15c -K -O  -T0 -W1p >> pol_plot.ps'  );
+    elseif gmt_ver==5
+        fprintf(fid,'%s\r\n', 'psmeca ref_mech.gmt   -R0/10/0/10 -JX17c -Sa15c -K -Fa0.3c/cc -Fewhite -Ft0.1p -Fgblack   -W1p -Glightgray > pol_plot.ps'  );
+        fprintf(fid,'%s\r\n', 'psmeca ref_mech.gmt   -R0/10/0/10 -JX17c -Sa15c -K -O  -T0 -W1p >> pol_plot.ps'  );
+    end
+    
+    if length(isom) > 1
+        if gmt_ver==4
+            fprintf(fid,'%s\r\n', 'psmeca more_mech.gmt -R -J -Sa15c -T0 -K -O -a0.3c/cc -ewhite -t0.1p -gblack   -W1.p >> pol_plot.ps '  );
+        elseif gmt_ver==5
+            fprintf(fid,'%s\r\n', 'psmeca more_mech.gmt -R -J -Sa15c -T0 -K -O -Fa0.3c/cc -Fewhite -Ft0.1p -Fgblack   -W1.p >> pol_plot.ps '  );
+        end
+    else
+    end
+    fprintf(fid,'%s\r\n', 'gawk "{if (NR>1) print $1,$2,$3,$4}" mypol.dat > 4pspolar.txt');
+    if gmt_ver==4
+        fprintf(fid,'%s\r\n', 'pspolar 4pspolar.txt -R -J -N -Ss0.7c  -D5/5  -M15c  -e0.5p  -O -K -T0/0/5/18  >>  pol_plot.ps ');
+    elseif gmt_ver==5
+        fprintf(fid,'%s\r\n', 'pspolar 4pspolar.txt -R -J -N -Ss0.7c  -D5/5  -M15c  -Qe  -O -K -T0/0/5/18  >>  pol_plot.ps ');
+    end
+   % fprintf(fid,'%s\r\n', 'pstext ref_mech_text.gmt -R -J -O -K -m -N  >> csps_gmt_plot.ps '  );
+   if gmt_ver==4 
+        fprintf(fid,'%s\r\n', 'echo .5  2   | psxy -R -J -O  -K -Ss.6c -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.5 | psxy -R -J -O  -K -Ss.6c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.0 | psxy -R -J -O  -K -Sc.3c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  0.6 | psxy -R -J -O  -K -Sc.3c    -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 2.0 12 0 1 CM D, - | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.5 12 0 1 CM C, + | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.0 12 0 1 CM P    | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 0.6 12 0 1 CM T    | pstext -R -J -O  -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 0.4 0.2 12 0 1 LM X - polarity not defined | pstext -R -J -O  -K   >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', ['echo 0.4 9.5 12 0 1 LM Source depth (km)  ' num2str(selected_depth)  ' | pstext -R -J -O     >> pol_plot.ps ']  );
+        fprintf(fid,'%s\r\n', 'ps2raster pol_plot.ps -A -P -Tg '  );
+   elseif gmt_ver==5
+        fprintf(fid,'%s\r\n', 'echo .5  2   | psxy -R -J -O  -K -Ss.6c -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.5 | psxy -R -J -O  -K -Ss.6c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  1.0 | psxy -R -J -O  -K -Sc.3c  -Gblack  >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo .5  0.6 | psxy -R -J -O  -K -Sc.3c    -W0.5p >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 2.0 D, - | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.5 C, + | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 1.0 P    | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 1.0 0.6 T    | pstext -R -J -O -F+f12+jCM -K >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', 'echo 0.4 0.2 X - polarity not defined | pstext -R -J -O -F+f12+jLM -K   >> pol_plot.ps '  );
+        fprintf(fid,'%s\r\n', ['echo 0.4 9.5 Source depth (km)  ' num2str(selected_depth)  ' | pstext -R -J -O -F+f12+jLM    >> pol_plot.ps ']  );
+        fprintf(fid,'%s\r\n', 'psconvert pol_plot.ps -A -P -Tg '  );
+   end
+    
+  fclose(fid);
+	
+	disp('Check the  ./polarity/plot_pol_gmt.bat file for GMT plotting')
+end
+
+
+
+h = msgbox('A GMT batch file called plot_pol_gmt.bat was created in POLARITY folder. Run this file from a command window to get a high quality GMT plot.','GMT plot file.','help');
+    
+    
+end
+
+
+
 
 % --- Executes on button press in addpol.
 function addpol_Callback(hObject, eventdata, handles)
@@ -3815,6 +4835,50 @@ catch
 cd ..
 end
 
+%% Copy files also
+%%% Copy inv2.dat from invert to polarity and rename to onemech.dat
+
+
+cd polarity
+
+disp('Copying inv2.dat from INVERT folder')
+if ispc
+ [s,mess,messid]=copyfile('..\invert\inv2.dat','.\onemech.tmp');
+else
+ [s,mess,messid]=copyfile('../invert/inv2.dat','./onemech.tmp');
+end
+if s== 1
+    disp('Copied inv2.dat in POLARITY folder as onemech.dat')
+end
+
+if ispc
+ [s,mess,messid]=copyfile('..\invert\inv2.dat','.\moremech.dat');
+else
+ [s,mess,messid]=copyfile('../invert/inv2.dat','./moremech.dat');
+end
+
+if s== 1
+    disp('Copied inv2.dat in POLARITY folder as moremech.dat')
+    disp('Check the manual for the use of these files')
+end
+%%%now we have to leave just one subevent in onemech.tmp....
+      fid  = fopen('onemech.tmp','r');
+      fid2 = fopen('onemech.dat','w');
+                        tline = fgets(fid);
+                        fprintf(fid2,'%s', tline); 
+      fclose(fid);               
+      fclose(fid2);
+delete('onemech.tmp')
+
+cd ..
+
+%%
+% handles on
+on =[handles.plpol];
+enableon(on)
+
+
+
 
 % --- Executes on button press in check2.
 function check2_Callback(hObject, eventdata, handles)
@@ -3833,12 +4897,15 @@ function inv1_Callback(hObject, eventdata, handles)
 
 %%
 eventid=handles.eventid;
-
 %%  plot results in GMT ..using inv1.dat
+
+
+% check if we have GMT 4 or 5
+gmt_ver=handles.gmt_ver;
 
 h=dir('tsources.isl');
 
-if isempty(h); 
+if isempty(h) 
     errordlg('tsources.isl file doesn''t exist. Run Source create. ','File Error');
   return    
 else
@@ -3883,46 +4950,67 @@ end
 %check if INVERT exists..!
 h=dir('invert');
 
-if isempty(h);
+if isempty(h) 
     errordlg('Invert folder doesn''t exist. Please create it. ','Folder Error');
     return
 else
 end
 %%
-
-try
-    
 cd invert
 
-h=dir('inv1.dat');    % It will read the first subevent only......
+% read how many subevents we have   
+    [id,tstep,nsources,tshifts,nsub,freq,var] = readinpinv('inpinv.dat');
 
-if isempty(h); 
-    errordlg('inv1.dat file doesn''t exist. Run Invert. ','File Error');
-    cd ..
-  return    
-else
-    fid = fopen('inv1.dat','r');
-       line=fgets(fid);        %01 line
-       line=fgets(fid);         %02 line
-       line=fgets(fid);        %03 line
-%%%%%%%%%%%%  sourcepos, time, varred, moment,dc , str1,dip1,rake1,str2,dip2,rake2
-       a=fscanf(fid,'%f %f %f %e %f %f %f %f %f %f %f',[11 nsources]);
-            linetmp=fgets(fid);         %01 line
-            linetmp=fgets(fid);         %01 line
-            linetmp=fgets(fid);         %01 line
-            linetmp=fgets(fid);         %01 line
-            linetmp=fgets(fid);         %01 line
-            linetmpf=fgets(fid);        %01 line
-            eigen=fscanf(fid,'%f %f %f',3);
-       a=a';
-    fclose(fid);
-end
+    
+    q1=['Inversion was run with ' num2str(nsub) ' subevents. Select which one you want to use ?'];
+    
+    if nsub~=1
+       prompt = {q1}; dlg_title = 'Input subevent number for plotting.'; num_lines = 1; defaultans = {'1'};
+       answer = inputdlg(prompt,dlg_title,num_lines,defaultans);
+       disp(['Selected subevent is ' num2str(cell2mat(answer))])
+       selsub=str2double(cell2mat(answer));
+    else
+       selsub= 1;
+    end
+    
+    
+%% old code
+% 
+% h=dir('inv1.dat');    % It will read the first subevent only......
+% 
+% if isempty(h); 
+%     errordlg('inv1.dat file doesn''t exist. Run Invert. ','File Error');
+%     cd ..
+%   return    
+% else
+%     fid = fopen('inv1.dat','r');
+%        line=fgets(fid);        %01 line
+%        line=fgets(fid);         %02 line
+%        line=fgets(fid);        %03 line
+% %%%%%%%%%%%%  sourcepos, time, varred, moment,dc , str1,dip1,rake1,str2,dip2,rake2
+%        a=fscanf(fid,'%f %f %f %e %f %f %f %f %f %f %f',[11 nsources]);
+%             linetmp=fgets(fid);         %01 line
+%             linetmp=fgets(fid);         %01 line
+%             linetmp=fgets(fid);         %01 line
+%             linetmp=fgets(fid);         %01 line
+%             linetmp=fgets(fid);         %01 line
+%             linetmpf=fgets(fid);        %01 line
+%             eigen=fscanf(fid,'%f %f %f',3);
+%        a=a';
+%     fclose(fid);
+% end
+%% old code
+[~,~,~,~,~,~,~,~,~,~,~,~,cor_src]=readinv1new('inv1.dat',nsources,selsub);
+a=cor_src';
 
+%%
 %   Calculate Mw 
-    a(:,4)=(2/3)*(log10(a(:,4))-9.1);         % %! Hanks & Kanamori (1979)
-%
-  r1= min(a);
-  r2= max(a);
+%   mommag =(2.0/3.0)*log10(mo(psrcpos)) - 6.0333;  % changed 06/11/2020 
+
+    a(:,4)=(2.0/3.0)*log10(a(:,4))-6.0333;         % %! Hanks & Kanamori (1979)
+  
+    r1= min(a);   r2= max(a);
+  
 %   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      if r2(3) < 0.1
        vstep=0.02;
@@ -3931,6 +5019,7 @@ end
      else
        vstep=0.1;
      end
+     
 %%
 if  strcmp(tsource,'depth')          % X axis as depth....distep  ~= -1000.0 
      hstep=distep;
@@ -3982,59 +5071,95 @@ scaley  = get(handles.scaley,'String');
 
 bbscale  = get(handles.bbscale,'String');
 
+disp('  ')
+disp('  ')
+disp('Creating gmt batch file')
+pwd
+disp('  ')
+disp('  ')
+
+
 if ispc
 %%%%%%%%%%%%%%% PREPARE THE GMT FILE    
   fid = fopen('plinv1.bat','w');
       fprintf(fid,'%s\r\n','del .gmtdefaults4 .gmtcommands4');
-      fprintf(fid,'%s\r\n','gmtset PAPER_MEDIA A4 HEADER_FONT_SIZE 18 LABEL_FONT_SIZE 16 ANNOT_FONT_SIZE_PRIMARY 12');
+      
+      if gmt_ver==4
+        fprintf(fid,'%s\r\n','gmtset PAPER_MEDIA A4 HEADER_FONT_SIZE 18 LABEL_FONT_SIZE 16 ANNOT_FONT_SIZE_PRIMARY 12');
+      else
+        fprintf(fid,'%s\r\n','gmtset PS_MEDIA A4 FONT_TITLE 18 FONT_LABEL 16 FONT_ANNOT_PRIMARY 12');
+      end
+      
       fprintf(fid,'%s\r\n','   ');
       fprintf(fid,'%s\r\n','makecpt -Cno_green -T0/100/10 > inv1.cpt');
       fprintf(fid,'%s\r\n','   ');
       % 0 to max correlation     
-      fprintf(fid,'%s\r\n',['psxy   -R' num2str(min(dep)-1) '/' num2str(max(dep)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Depth (km)":/' num2str(vstep) 'g' num2str(vstep) title  ':WeSn > ' eventid  '_inv1.ps']);
+      if gmt_ver==4
+         fprintf(fid,'%s\r\n',['psxy   -R' num2str(min(dep)-1) '/' num2str(max(dep)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Depth (km)":/' num2str(vstep) 'g' num2str(vstep) title  ':WeSn > ' eventid  '_inv1.ps']);
+         fprintf(fid,'%s\r\n',['psmeca -R -J  -Sa' bbscale 'c/12 -K -O inv1.foc -V -Zinv1.cpt  >> ' eventid  '_inv1.ps']);
+      else
+         fprintf(fid,'%s\r\n',['psxy   -R' num2str(min(dep)-1) '/' num2str(max(dep)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p,black,- -K -B' num2str(hstep) 'g1:"Depth (km)":/' num2str(vstep) 'g' num2str(vstep) title  ':WeSn > ' eventid  '_inv1.ps']);
+         fprintf(fid,'%s\r\n',['psmeca -R -J  -Sa' bbscale 'c/12 -K -O inv1.foc -V -Cinv1.cpt  >> ' eventid  '_inv1.ps']);
+      end
 % fixed correlation
 %     fprintf(fid,'%s\r\n',['psxy   -R' num2str(min(dep)-1) '/' num2str(max(dep)+1) '/0.4/1  -JX' scalex 'c/' scaley 'c' '  inv1.gmt -W1.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Depth (km)":/' num2str(vstep) 'g' num2str(vstep) ':"Correlation":WeSn > inv1.ps']);
-%
 % read beachball scale feature added 11/12/2013
 
-      fprintf(fid,'%s\r\n',['psmeca -R -J  -Sa' bbscale 'c/12 -K -O inv1.foc -V -Zinv1.cpt  >> ' eventid  '_inv1.ps']);
       fprintf(fid,'%s\r\n',['psmeca -R -J  -Sa' bbscale 'c/12 -K -O inv1.foc -V -T >> ' eventid  '_inv1.ps']);
 % disable condition number plotting     fprintf(fid,'%s\r\n',['pstext -R -JX inv1text.gmt -K -O  -V -N >> inv1.ps']);
       fprintf(fid,'%s\r\n',['psscale -D25c/4c/8c/0.5c -O -Cinv1.cpt -B::/:DC\045: >> ' eventid  '_inv1.ps']);
-      %%% Clean up move to gmtfile instead of keeping in invert
       fprintf(fid,'%s\r\n','   ');
+      if gmt_ver==4
+        fprintf(fid,'%s\r\n',['ps2raster ' eventid  '_inv1.ps -Tg -P   -D..\output']);
+      else
+        fprintf(fid,'%s\r\n',['psconvert ' eventid  '_inv1.ps -Tg -P   -D..\output']);
+      end      
+      %%% Clean up move to gmtfiles folder instead of keeping in invert
+      fprintf(fid,'%s\r\n',[' copy '  eventid  '_inv1.ps ..\output']);
       fprintf(fid,'%s\r\n','move inv1.cpt ..\gmtfiles');
       fprintf(fid,'%s\r\n','move inv1.gmt ..\gmtfiles');
       fprintf(fid,'%s\r\n','move inv1.foc ..\gmtfiles');
       fprintf(fid,'%s\r\n','move plinv1.bat ..\gmtfiles');
-      
-      fprintf(fid,'%s\r\n','   ');
-      fprintf(fid,'%s\r\n',['ps2raster ' eventid  '_inv1.ps -Tg -P   -D..\output']);
-      
   fclose(fid);
 else % linux
   fid = fopen('plinv1.bat','w');
       fprintf(fid,'%s\n','rm .gmtdefaults4 .gmtcommands4');
-      fprintf(fid,'%s\n','gmtset PAPER_MEDIA A4 HEADER_FONT_SIZE 18 LABEL_FONT_SIZE 16 ANNOT_FONT_SIZE_PRIMARY 12');
+      if gmt_ver==4
+        fprintf(fid,'%s\n','gmtset PAPER_MEDIA A4 HEADER_FONT_SIZE 18 LABEL_FONT_SIZE 16 ANNOT_FONT_SIZE_PRIMARY 12');
+      else
+        fprintf(fid,'%s\n','gmtset PS_MEDIA A4 FONT_TITLE 18 FONT_LABEL 16 FONT_ANNOT_PRIMARY 12');
+      end
       fprintf(fid,'%s\n','   ');
       fprintf(fid,'%s\n','makecpt -Cno_green -T0/100/10 > inv1.cpt');
       fprintf(fid,'%s\n','   ');
       % 0 to max correlation     
-      fprintf(fid,'%s\n',['psxy   -R' num2str(min(dep)-1) '/' num2str(max(dep)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Depth (km)":/' num2str(vstep) 'g' num2str(vstep) title  ':WeSn > ' eventid  '_inv1.ps']);
-% fixed correlation
+      if gmt_ver==4
+         fprintf(fid,'%s\n',['psxy   -R' num2str(min(dep)-1) '/' num2str(max(dep)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Depth (km)":/' num2str(vstep) 'g' num2str(vstep) title  ':WeSn > ' eventid  '_inv1.ps']);
+         fprintf(fid,'%s\n',['psmeca -R -J  -Sa' bbscale 'c/12 -K -O inv1.foc -V -Zinv1.cpt  >> ' eventid  '_inv1.ps']);
+      else
+         fprintf(fid,'%s\n',['psxy   -R' num2str(min(dep)-1) '/' num2str(max(dep)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p,black,- -K -B' num2str(hstep) 'g1:"Depth (km)":/' num2str(vstep) 'g' num2str(vstep) title  ':WeSn > ' eventid  '_inv1.ps']);
+         fprintf(fid,'%s\n',['psmeca -R -J  -Sa' bbscale 'c/12 -K -O inv1.foc -V -Cinv1.cpt  >> ' eventid  '_inv1.ps']);
+      end% fixed correlation
 %     fprintf(fid,'%s\r\n',['psxy   -R' num2str(min(dep)-1) '/' num2str(max(dep)+1) '/0.4/1  -JX' scalex 'c/' scaley 'c' '  inv1.gmt -W1.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Depth (km)":/' num2str(vstep) 'g' num2str(vstep) ':"Correlation":WeSn > inv1.ps']);
 %
-      fprintf(fid,'%s\n',['psmeca -R -J  -Sa' bbscale 'c/12 -K -O inv1.foc -V -Zinv1.cpt  >> ' eventid  '_inv1.ps']);
       fprintf(fid,'%s\n',['psmeca -R -J  -Sa' bbscale 'c/12 -K -O inv1.foc -V -T >> ' eventid  '_inv1.ps']);
 % disable condition number plotting     fprintf(fid,'%s\r\n',['pstext -R -JX inv1text.gmt -K -O  -V -N >> inv1.ps']);
       fprintf(fid,'%s\n',['psscale -D25c/4c/8c/0.5c -O -Cinv1.cpt -B::/:DC\045: >> ' eventid  '_inv1.ps']);
+      fprintf(fid,'%s\n','   ');
+      if gmt_ver==4
+        fprintf(fid,'%s\n',['ps2raster ' eventid  '_inv1.ps -Tg -P   -D../output']);
+      else
+        fprintf(fid,'%s\n',['psconvert ' eventid  '_inv1.ps -Tg -P   -D../output']);
+      end
       %%% Clean up
-      fprintf(fid,'%s\n','   ');
-      fprintf(fid,'%s\n','rm inv1.cpt inv1.gmt inv1.foc');
-      
-      fprintf(fid,'%s\n','   ');
-      fprintf(fid,'%s\n',['ps2raster ' eventid  '_inv1.ps -Tg -P   -D..\output']);
-      
+%       fprintf(fid,'%s\n','   ');
+%       fprintf(fid,'%s\n','rm inv1.cpt inv1.gmt inv1.foc');
+      %%% Clean up move to gmtfiles folder instead of keeping in invert
+      fprintf(fid,'%s\r\n',[' cp '  eventid  '_inv1.ps ../output']);
+      fprintf(fid,'%s\r\n','mv inv1.cpt ../gmtfiles');
+      fprintf(fid,'%s\r\n','mv inv1.gmt ../gmtfiles');
+      fprintf(fid,'%s\r\n','mv inv1.foc ../gmtfiles');
+      fprintf(fid,'%s\r\n','mv plinv1.bat ../gmtfiles');
   fclose(fid);
 end % linux
    
@@ -4087,16 +5212,29 @@ if ispc
 %%%%%%%%%%%%%%%%%%   
   fid = fopen('plinv1.bat','w');
       fprintf(fid,'%s\r\n','del .gmtdefaults4 .gmtcommands4');
-      fprintf(fid,'%s\r\n','gmtset PAPER_MEDIA A4 HEADER_FONT_SIZE 18 LABEL_FONT_SIZE 16 ANNOT_FONT_SIZE_PRIMARY 12');
+      
+      if gmt_ver==4
+        fprintf(fid,'%s\r\n','gmtset PAPER_MEDIA A4 HEADER_FONT_SIZE 18 LABEL_FONT_SIZE 16 ANNOT_FONT_SIZE_PRIMARY 12');
+      else
+        fprintf(fid,'%s\r\n','gmtset PS_MEDIA A4 FONT_TITLE 18 FONT_LABEL 16 FONT_ANNOT_PRIMARY 12');
+      end
+      
       fprintf(fid,'%s\r\n','   ');
       fprintf(fid,'%s\r\n','makecpt -Cno_green -T0/100/10 > inv1.cpt');
       fprintf(fid,'%s\r\n','   ');
 % 0 to max correlation     
-      fprintf(fid,'%s\r\n',['psxy   -R' num2str(r1(1)-1) '/' num2str(r2(1)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Source number":/' num2str(vstep) 'g' num2str(vstep) ':"Correlation"::."Correlation vs Source number Plot":WeSn > ' eventid  '_inv1.ps']);
+      if gmt_ver==4
+         fprintf(fid,'%s\r\n',['psxy   -R' num2str(r1(1)-1) '/' num2str(r2(1)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Source number":/' num2str(vstep) 'g' num2str(vstep) ':"Correlation"::."Correlation vs Source number Plot":WeSn > ' eventid  '_inv1.ps']);
+         fprintf(fid,'%s\r\n',['psmeca -R -J  -Sa1.3c/12 -K -O inv1.foc -V -Zinv1.cpt  >> ' eventid  '_inv1.ps']);
+      else
+         fprintf(fid,'%s\r\n',['psxy   -R' num2str(r1(1)-1) '/' num2str(r2(1)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p,black,- -K -B' num2str(hstep) 'g1:"Source number":/' num2str(vstep) 'g' num2str(vstep) ':"Correlation"::."Correlation vs Source number Plot":WeSn > ' eventid  '_inv1.ps']);
+         fprintf(fid,'%s\r\n',['psmeca -R -J  -Sa1.3c/12 -K -O inv1.foc -V -Cinv1.cpt  >> ' eventid  '_inv1.ps']);
+      end
+      
 % fixed correlation
 %     fprintf(fid,'%s\r\n',['psxy   -R' num2str(min(dep)-1) '/' num2str(max(dep)+1) '/0.4/1  -JX' scalex 'c/' scaley 'c' '  inv1.gmt -W1.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Depth (km)":/' num2str(vstep) 'g' num2str(vstep) ':"Correlation":WeSn > inv1.ps']);
 %%%%
-      fprintf(fid,'%s\r\n',['psmeca -R -J  -Sa1.3c/12 -K -O inv1.foc -V -Zinv1.cpt  >> ' eventid  '_inv1.ps']);
+
       fprintf(fid,'%s\r\n',['psmeca -R -J  -Sa1.3c/12 -K -O inv1.foc -V -T >> ' eventid  '_inv1.ps']);
 % disable condition number plotting     fprintf(fid,'%s\r\n',['pstext -R -JX inv1text.gmt -K -O  -V -N >> inv1.ps']);
       fprintf(fid,'%s\r\n',['psscale -D25c/4c/8c/0.5c -O -Cinv1.cpt -B::/:DC\045: >> ' eventid  '_inv1.ps']);
@@ -4104,24 +5242,50 @@ if ispc
       fprintf(fid,'%s\r\n','   ');
       fprintf(fid,'%s\r\n','del inv1.cpt inv1.gmt inv1.foc');
       fprintf(fid,'%s\r\n','   ');
-      fprintf(fid,'%s\r\n',['ps2raster ' eventid  '_inv1.ps -Tg -P   -D..\output']);
+      if gmt_ver==4
+        fprintf(fid,'%s\r\n',['ps2raster ' eventid  '_inv1.ps -Tg -P   -D..\output']);
+      else
+        fprintf(fid,'%s\r\n',['psconvert ' eventid  '_inv1.ps -Tg -P   -D..\output']);
+      end
    fclose(fid);
 else  % linux
   fid = fopen('plinv1.bat','w');
-      fprintf(fid,'%s\n','rm .gmtdefaults4 .gmtcommands4');
-      fprintf(fid,'%s\n','gmtset PAPER_MEDIA A4 HEADER_FONT_SIZE 18 LABEL_FONT_SIZE 16 ANNOT_FONT_SIZE_PRIMARY 12');
+      fprintf(fid,'%s\n','del .gmtdefaults4 .gmtcommands4');
+      
+      if gmt_ver==4
+        fprintf(fid,'%s\n','gmtset PAPER_MEDIA A4 HEADER_FONT_SIZE 18 LABEL_FONT_SIZE 16 ANNOT_FONT_SIZE_PRIMARY 12');
+      else
+        fprintf(fid,'%s\n','gmtset PS_MEDIA A4 FONT_TITLE 18 FONT_LABEL 16 FONT_ANNOT_PRIMARY 12');
+      end
+      
       fprintf(fid,'%s\n','   ');
       fprintf(fid,'%s\n','makecpt -Cno_green -T0/100/10 > inv1.cpt');
       fprintf(fid,'%s\n','   ');
-      fprintf(fid,'%s\n',['psxy   -R' num2str(r1(1)-1) '/' num2str(r2(1)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Source number":/' num2str(vstep) 'g' num2str(vstep) ':"Correlation"::."Correlation vs Source number Plot":WeSn > ' eventid  '_inv1.ps']);
-      fprintf(fid,'%s\n',['psmeca -R -J  -Sa1.3c/12 -K -O inv1.foc -V -Zinv1.cpt  >> ' eventid  '_inv1.ps']);
+% 0 to max correlation     
+      if gmt_ver==4
+         fprintf(fid,'%s\n',['psxy   -R' num2str(r1(1)-1) '/' num2str(r2(1)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Source number":/' num2str(vstep) 'g' num2str(vstep) ':"Correlation"::."Correlation vs Source number Plot":WeSn > ' eventid  '_inv1.ps']);
+         fprintf(fid,'%s\n',['psmeca -R -J  -Sa1.3c/12 -K -O inv1.foc -V -Zinv1.cpt  >> ' eventid  '_inv1.ps']);
+      else
+         fprintf(fid,'%s\n',['psxy   -R' num2str(r1(1)-1) '/' num2str(r2(1)+1) '/' num2str(r1(3)-0.1) '/' num2str(r2(3)+0.1)  ' -JX' scalex 'c/' scaley 'c inv1.gmt  -W2.5p,black,- -K -B' num2str(hstep) 'g1:"Source number":/' num2str(vstep) 'g' num2str(vstep) ':"Correlation"::."Correlation vs Source number Plot":WeSn > ' eventid  '_inv1.ps']);
+         fprintf(fid,'%s\n',['psmeca -R -J  -Sa1.3c/12 -K -O inv1.foc -V -Cinv1.cpt  >> ' eventid  '_inv1.ps']);
+      end
+      
+% fixed correlation
+%     fprintf(fid,'%s\r\n',['psxy   -R' num2str(min(dep)-1) '/' num2str(max(dep)+1) '/0.4/1  -JX' scalex 'c/' scaley 'c' '  inv1.gmt -W1.5p/0/0/0,- -K -B' num2str(hstep) 'g1:"Depth (km)":/' num2str(vstep) 'g' num2str(vstep) ':"Correlation":WeSn > inv1.ps']);
+%%%%
       fprintf(fid,'%s\n',['psmeca -R -J  -Sa1.3c/12 -K -O inv1.foc -V -T >> ' eventid  '_inv1.ps']);
+% disable condition number plotting     fprintf(fid,'%s\r\n',['pstext -R -JX inv1text.gmt -K -O  -V -N >> inv1.ps']);
       fprintf(fid,'%s\n',['psscale -D25c/4c/8c/0.5c -O -Cinv1.cpt -B::/:DC\045: >> ' eventid  '_inv1.ps']);
+      %%% Clean up
       fprintf(fid,'%s\n','   ');
-      fprintf(fid,'%s\n','rm inv1.cpt inv1.gmt inv1.foc');
+      fprintf(fid,'%s\n','del inv1.cpt inv1.gmt inv1.foc');
       fprintf(fid,'%s\n','   ');
-      fprintf(fid,'%s\n',['ps2raster ' eventid  '_inv1.ps -Tg -P   -D..\output']);
-   fclose(fid);
+      if gmt_ver==4
+        fprintf(fid,'%s\n',['ps2raster ' eventid  '_inv1.ps -Tg -P   -D../output']);
+      else
+        fprintf(fid,'%s\n',['psconvert ' eventid  '_inv1.ps -Tg -P   -D../output']);
+      end
+  fclose(fid);
     
 end % linux
     
@@ -4137,19 +5301,31 @@ end
 
 cd ..%%% return to main folder before plotting.... this should solve problems if user tried to plot waveforms before closing ps file...
 
+eventid 
+
+%aa=['gsview32 .\invert\' eventid  '_inv1.ps']
+
+% read the gsview version from defaults
+psview=handles.psview;
 % 
 if ispc
-  system(['gsview32 .\invert\' eventid  '_inv1.ps']');      
+    try 
+      system([psview ' .\invert\' eventid  '_inv1.ps']);
+    catch exception 
+        disp(exception.message)
+    end
 else
-  system(['gv ./invert/' eventid  '_inv1.ps']');   
+    system([psview ' ./invert/' eventid  '_inv1.ps']);
 end
-% 
+
+pwd
 
 
+
 % 
-catch
-       cd ..
-end
+%catch
+%       cd ..
+%end
 
   
 % --- Executes on button press in checkinv1.
@@ -4744,7 +5920,7 @@ xlabel('Correlation','FontSize',12)
 ylabel('DC%','FontSize',12)
 grid on
 
-legend('All grid search', 'Best space position', 'Best time position',0)
+legend('All grid search', 'Best space position', 'Best time position')
  
  
  bestsourcecor
@@ -5266,9 +6442,9 @@ end
   if ispc       
     fprintf(fid,'%s\r\n',mecstring);
   else
-    fprintf(fid,'%s\n',mecstring);
+    fprintf(fid,'%s\n',mecstring);        
   end
-       mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2num(fscale)+0.1) ' -O maxval.foc -G255/0/0 >> ' psname ];
+       mecstringmax =['psmeca -R -JX' scalex 'c/' scaley 'c -Sa' num2str(str2double(fscale)+0.3) ' -O maxval.foc -Zdc.cpt >> ' psname ];
   if ispc
      fprintf(fid,'%s\r\n',mecstringmax);
   else
@@ -5599,9 +6775,6 @@ end
 end  % end of conplane if
     
 
-
-
-
 %%
 %%% run batch file...
 if ispc
@@ -5614,18 +6787,19 @@ end
 
 cd .. %%% return to main folder before plotting.... this should solve problems if user tried to plot waveforms before closing ps file...
 
-if ispc
-  system(['gsview32 .\invert\' psname]);
-else
-  system(['gv ./invert/' psname]);
+% read the gsview version from defaults
+psview=handles.psview;
 
+if ispc
+    try 
+     system([psview ' .\invert\' psname]);
+    catch
+     disp(exception.message)   
+    end
+else
+  system([psview ' ./invert/' psname]);
 end
   
-
-
-
-
-
 
 % --- Executes on button press in tsvar.
 function tsvar_Callback(hObject, eventdata, handles)
@@ -5871,7 +7045,7 @@ disp(' ')
 %title(['\fontsize{16}black {\color{magenta}magenta '...
 %'\color[rgb]{0 .5 .5}teal \color{red}red} black again'])     
 else
-    disp('Error....')
+    disp('Error with corr_kag. Please check if it is installed.')
 end
 
 %%
@@ -5954,11 +7128,12 @@ hold
 % load data
 
 fid = fopen('corrselect.dat');
-SDR = textscan(fid, '%f %f %f');
+SDR = textscan(fid, '%f %f %f %f %f %f','HeaderLines',1);
 fclose(fid);
 
 str1=SDR{1};dip1=SDR{2};
-
+str2=SDR{4};dip2=SDR{5};
+ 
 tic
  for i=1:length(str1)
      
@@ -5969,8 +7144,8 @@ tic
 %      [xp,yp] = StCoordLine(deg2rad(aziP(i)),deg2rad(plungeP(i)),1);
 %      plot(xp,yp,'ko','MarkerFaceColor','k');
 
-%     path = GreatCircle(deg2rad(str2(i)),deg2rad(dip2(i)),1);
-%     plot(path(:,1),path(:,2),'r-')
+      path2 = GreatCircle(deg2rad(str2(i)),deg2rad(dip2(i)),1);
+      plot(path2(:,1),path2(:,2),'r-')
  
 %      Plot T axis (black, filled circle)
 %      [xp,yp] = StCoordLine(deg2rad(aziT(i)),deg2rad(plungeT(i)),1);
@@ -5982,14 +7157,33 @@ toc
 
      
 %% plot the nodal lines
+
+% we need to know GMT version !!
+gmt_ver=handles.gmt_ver;
+% 
+% handles.psview=psview;
+%
 if ispc
     fid = fopen('plselnod.bat','w');
      fprintf(fid,'%s\r\n','del nodals.png');
      fprintf(fid,'%s\r\n','gawk "{print 10,10,10,$1,$2,$3,6}" corrselect.dat > nodals.dat');
-     fprintf(fid,'%s\r\n','psmeca -R0/20/0/20 -JX15c nodals.dat  -Sa10c -T0 -K  -a0.2c/cc -pthinner -tthinner  -gblack > nodals.ps');
-     fprintf(fid,'%s\r\n',['gawk "{print 10,10,10,$4,$5,$6,6}" inv2.dat |  psmeca -R -J  -Sa10c -T0 -K -O -Wthick,red -a0.4c/hh -eblack  -gwhite  -pthinner -tthinner >> nodals.ps  ']);
+     if gmt_ver==4
+        fprintf(fid,'%s\r\n','psmeca -R0/20/0/20 -JX15c nodals.dat  -Sa10c -T0 -K  -a0.2c/cc -pthinner -tthinner  -gblack > nodals.ps');
+     else
+        fprintf(fid,'%s\r\n','psmeca -R0/20/0/20 -JX15c nodals.dat  -Sa10c -T0 -K  -Fa0.2c/cc -Fpthinner -Ftthinner  -Fgblack > nodals.ps');
+     end
+     if gmt_ver==4
+        fprintf(fid,'%s\r\n',['gawk "{print 10,10,10,$4,$5,$6,6}" inv2.dat |  psmeca -R -J  -Sa10c -T0 -K -O -Wthick,red -a0.4c/hh -eblack  -gwhite  -pthinner -tthinner >> nodals.ps  ']);
+     else
+        fprintf(fid,'%s\r\n',['gawk "{print 10,10,10,$4,$5,$6,6}" inv2.dat |  psmeca -R -J  -Sa10c -T0 -K -O -Wthick,red -Fa0.4c/hh -Feblack  -Fgwhite  -Fpthinner -Ftthinner >> nodals.ps  ']);
+     end
+     
      fprintf(fid,'%s\r\n','echo 10 10 10 0 0 0 6 | psmeca -R -J     -Sa10c -T1  -O -Wthick   >> nodals.ps');
-     fprintf(fid,'%s\r\n','ps2raster nodals.ps -P -Tg -A');
+     if gmt_ver==4
+       fprintf(fid,'%s\r\n','ps2raster nodals.ps -P -Tg -A');
+     else
+       fprintf(fid,'%s\r\n','psconvert nodals.ps -P -Tg -A');
+     end
      fprintf(fid,'%s\r\n','del nodals.dat');
     fclose(fid);
     %%% run batch file...
@@ -6010,10 +7204,25 @@ else
     fid = fopen('plselnod.bat','w');
      fprintf(fid,'%s\n','rm nodals.png');
      fprintf(fid,'%s\n','awk ''{print 10,10,10,$1,$2,$3,6}'' corrselect.dat > nodals.dat');
-     fprintf(fid,'%s\n','psmeca -R0/20/0/20 -JX15c nodals.dat  -Sa10c -T0 -K  -a0.2c/cc -pthinner -tthinner  -gblack > nodals.ps');
-     fprintf(fid,'%s\n',['awk ''{print 10,10,10,$4,$5,$6,6}'' inv2.dat |  psmeca -R -J  -Sa10c -T0 -K -O -Wthick,red -a0.4c/hh -eblack  -gwhite  -pthinner -tthinner >> nodals.ps  ']);
+     
+     if gmt_ver==4
+        fprintf(fid,'%s\n','psmeca -R0/20/0/20 -JX15c nodals.dat  -Sa10c -T0 -K  -a0.2c/cc -pthinner -tthinner  -gblack > nodals.ps');
+     else
+        fprintf(fid,'%s\n','psmeca -R0/20/0/20 -JX15c nodals.dat  -Sa10c -T0 -K  -Fa0.2c/cc -Fpthinner -Ftthinner  -Fgblack > nodals.ps');
+     end
+     
+     if gmt_ver==4
+        fprintf(fid,'%s\n',['awk ''{print 10,10,10,$4,$5,$6,6}'' inv2.dat |  psmeca -R -J  -Sa10c -T0 -K -O -Wthick,red -a0.4c/hh -eblack  -gwhite  -pthinner -tthinner >> nodals.ps  ']);
+     else
+        fprintf(fid,'%s\n',['awk ''{print 10,10,10,$4,$5,$6,6}'' inv2.dat |  psmeca -R -J  -Sa10c -T0 -K -O -Wthick,red -Fa0.4c/hh -Feblack  -Fgwhite  -Fpthinner -Ftthinner >> nodals.ps  ']);
+     end
+     
      fprintf(fid,'%s\n','echo 10 10 10 0 0 0 6 | psmeca -R -J     -Sa10c -T1  -O -Wthick   >> nodals.ps');
-     fprintf(fid,'%s\n','ps2raster nodals.ps -P -Tg -A');
+     if gmt_ver==4
+       fprintf(fid,'%s\n','ps2raster nodals.ps -P -Tg -A');
+     else
+       fprintf(fid,'%s\n','psconvert nodals.ps -P -Tg -A');
+     end
      fprintf(fid,'%s\n','rm nodals.dat');
     fclose(fid);
     
@@ -6092,3 +7301,853 @@ function useBB_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of useBB
+
+
+
+function depth_Callback(hObject, eventdata, handles)
+% hObject    handle to depth (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of depth as text
+%        str2double(get(hObject,'String')) returns contents of depth as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function depth_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to depth (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in stacode.
+function stacode_Callback(hObject, eventdata, handles)
+% hObject    handle to stacode (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of stacode
+
+if get(hObject,'Value') == 1
+    disp('Station file should have an extra column with network code')
+    
+    %% check if we have station_file.isl  
+    
+    if exist([pwd '\station_file.isl'],'file')
+           fid = fopen('station_file.isl','r'); 
+              fullstationfile=fgetl(fid);
+           fclose(fid);
+           handles.fullstationfile=fullstationfile;
+           disp([ fullstationfile ' will be used for network code'])
+    else  
+        [stationfile, newdir] = uigetfile('*.stn;*.dat;*.txt', 'Select seismic station file');
+            if stationfile == 0
+                disp('Cancel file load')
+                handles.fullstationfile='';
+            return
+            else
+                fullstationfile=[ newdir  stationfile]; 
+                handles.fullstationfile=fullstationfile;
+            end
+    end
+
+else
+    disp('net code not needed')
+end 
+
+guidata(hObject, handles);
+
+
+
+
+% --- Executes on button press in full_DC.
+function full_DC_Callback(hObject, eventdata, handles)
+% hObject    handle to full_DC (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of full_DC
+
+
+% --- Executes on button press in normsyn.
+function normsyn_Callback(hObject, eventdata, handles)
+% hObject    handle to normsyn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of normsyn
+
+function plotselectedstations(nostations,staname,normalized,invband,ftime,totime,uselimits,dtime,eventid,addvarred,pbw,net_use,fullstationfile,normsynth)
+%%%%%prepare filenames  
+%%% we keep fixed that data will be e.g. evrfil.dat
+%%% and synthetics will be               evrsyn.dat
+
+for i=1:nostations
+    realdatafilename{i}=[staname{i} 'fil.dat'];
+    syntdatafilename{i}=[staname{i} 'syn.dat'];
+end
+
+realdatafilename=realdatafilename';
+syntdatafilename=syntdatafilename';
+
+% 
+% whos staname realdatafilename syntdatafilename
+    
+%try    
+%%%%%%%%%NOW WE KNOW FILENAMES AND WE CAN PLOT .....
+%%%%%%%%%go in invert first
+ 
+cd invert
+
+%%%%%%%%%%%initialize data matrices
+realdataall=zeros(8192,4,nostations);    %%%% 8192 points  fixed....
+syntdataall=zeros(8192,4,nostations); 
+maxmindataindex=zeros(1,2,nostations);
+maxreal4sta=zeros(nostations);
+maxsynt4sta=zeros(nostations);
+
+%%%%open data files and read data
+for i=1:nostations
+fid1  = fopen(realdatafilename{i},'r');
+fid2  = fopen(syntdatafilename{i},'r');
+
+        a=fscanf(fid1,'%f %f %f %f',[4 inf]);
+        realdata=a';
+        b=fscanf(fid2,'%f %f %f %f',[4 inf]);
+        syntdata=b';
+
+fclose(fid1);
+fclose(fid2);
+ 
+
+realdataall(:,:,i)=realdata;
+maxmindataindex(:,:,i)=findlimits4plot(realdata);    %%% find data limits for plotting  ... June 2010 
+syntdataall(:,:,i)=syntdata;
+end
+
+% fid  = fopen('allstat.dat','r');
+% [station1,useornot,nsw,eww,vew,station] = textread('allstat.dat','%s %u %f %f %f %s');
+% fclose(fid);
+
+% only new version of allstat is allowed...
+
+   [station,useornot,nsw,eww,vew,f1,f2,f3,f4] = textread('allstat.dat','%s %u %f %f %f %f %f %f %f',-1);
+
+ %          if isequal(char(station1(1)),'001') && (length(char(station(1)))~=0)
+% 
+%            disp('Found new allstat.dat format')
+%          else
+%            [station1,useornot,nsw,eww,vew] = textread('allstat.dat','%s %u %f %f %f',-1); 
+%            disp('Found old allstat.dat format')
+%            % number of stations
+%          end 
+
+for i=1:nostations    %%%%%%loop over stations
+      if useornot(i) == 0
+          compuse(1,i) = 0;
+          compuse(2,i) = 0;
+          compuse(3,i) = 0;
+      elseif useornot(i) == 1
+          if nsw(i) == 0         %%   if weight == 0 component is not used..
+             compuse(1,i) = 0;  
+          else
+             compuse(1,i) = 1;  
+          end   
+
+          if eww(i) == 0 
+             compuse(2,i) = 0;  
+          else
+             compuse(2,i) = 1;  
+          end   
+          
+          if vew(i) == 0 
+             compuse(3,i) = 0;  
+          else
+             compuse(3,i) = 1;  
+          end   
+      end
+end
+%whos station useornot nsw eww vew
+%%%% return to isola
+
+cd ..
+     
+%catch
+%        helpdlg('Error in file plotting. Check if all files exist');
+%    cd ..
+%end
+     
+% realdataall=realdataall(:,:,2:nostations+1);
+% syntdataall=syntdataall(:,:,2:nostations+1);
+% 
+% 
+% whos realdata syntdata 
+%whos realdataall syntdataall
+
+
+%%%%%%%%%%%%new code to compute varred per comp
+k=0;
+disp('Variance Reduction per component')
+
+      fprintf(1,'%s \t\t %s \t\t %s \t\t %s\n', 'Station','NS','EW','Z')
+
+for i=1:nostations    %%%%%%loop over stations
+  
+     for j=1:3                %%%%%%%%loop over components
+%          disp(componentname{j})
+         
+         variance_reduction(i,j)= vared(realdataall(:,j+1,i),syntdataall(:,j+1,i),dtime);
+     
+     end   
+     
+fprintf(1, '\t%s \t\t %4.2f \t\t %4.2f \t\t %4.2f\n', staname{i}, variance_reduction(i,1),variance_reduction(i,2),variance_reduction(i,3))
+     
+end                   
+
+% whos variance_reduction staname
+% staname
+%%%%%%%%%%%%%%%%%%% normalize 23/06/05
+
+% if normalized == 1
+% 
+%     disp('Normalized plot')
+% 
+%     for i=1:nostations
+%         for j=2:4
+% 
+%              maxreal(i,j)=max(abs(realdataall(:,j,i)));
+%              maxsynt(i,j)=max(abs(syntdataall(:,j,i)));
+% 
+% %                     maxstring=[   num2str(maxreal(i,j)) '  '  staname{i} ];
+% %                     disp(maxstring)
+% % 
+%              
+%              realdataall(:,j,i) = realdataall(:,j,i)/max(abs(realdataall(:,j,i)));
+%              syntdataall(:,j,i) = syntdataall(:,j,i)/max(abs(syntdataall(:,j,i)));
+%              
+% %              max(abs(realdataall(:,j,i)))
+% %              max(abs(syntdataall(:,j,i)))
+% %              
+%              
+%          end
+%     end
+%     
+%     
+% else
+% end
+
+%% New type of normalization, based on maximum amplitude of component per station NOT TOTAL maximum
+
+if normalized == 1
+
+    disp('Normalized plot. Using normalization per component ')
+
+    for i=1:nostations
+        for j=2:4
+             maxreal(i,j)=max(abs(realdataall(:,j,i)));
+             maxsynt(i,j)=max(abs(syntdataall(:,j,i)));
+        end
+        
+             maxreal4sta(i)=max(maxreal(i,:)); % maximum per station per component
+             maxsynt4sta(i)=max(maxsynt(i,:)); % maximum per station per component for synthetic data
+             
+        for j=2:4                                              
+             
+             realdataall(:,j,i) = realdataall(:,j,i)/maxreal4sta(i);
+             
+             if normsynth==1
+                 syntdataall(:,j,i) = syntdataall(:,j,i)/maxsynt4sta(i);  % normalize synthetic 
+             else
+                 syntdataall(:,j,i) = syntdataall(:,j,i)/maxreal4sta(i);
+             end
+             
+        end
+        
+        
+    end
+    
+    
+else
+end
+
+%%%%%%%%%%%%  write varred per component in a file 
+try
+  cd output
+  
+   disp(['Saving Variance Reduction per component in ' eventid '_varred_info.txt file in \output folder.']);
+
+    fid = fopen([eventid '_varred_info.txt'],'w');
+       if ispc
+          fprintf(fid,'%s \t %s \t %s \t %s\r\n', 'Station','NS','EW','Z');
+       else
+          fprintf(fid,'%s \t %s \t %s \t %s\n', 'Station','NS','EW','Z');
+       end
+    
+    for i=1:nostations    %%%%%%loop over stations
+        if ispc
+         fprintf(fid, '%s \t\t %4.2f \t %4.2f \t %4.2f\r\n', staname{i}, variance_reduction(i,1),variance_reduction(i,2),variance_reduction(i,3));
+        else
+         fprintf(fid, '%s \t\t %4.2f \t %4.2f \t %4.2f\n', staname{i}, variance_reduction(i,1),variance_reduction(i,2),variance_reduction(i,3));
+        end
+    end                   
+
+  fclose(fid);
+  cd ..
+catch
+    cd ..
+end
+
+
+%%%%%%%%%% normalize
+% realdataall=cat(3,realdataall,realdata);
+% syntdataall=cat(3,syntdataall,syntdata);
+
+%%%%%%%%%PLOTTING   
+componentname=cellstr(['NS';'EW';'Z ']);
+
+% h=figure
+scrsz = get(0,'ScreenSize');
+
+%fh=figure('Tag','Syn vs Obs','Position',[5 scrsz(4)*1/6 scrsz(3)*5/6 scrsz(4)*5/6-50], 'Name','Plotting Obs vs Syn');
+
+fh=figure('Tag','Syn vs Obs','Position',get(0,'Screensize'), 'Name','Plotting Obs vs Syn');
+set(gcf,'PaperPositionMode','auto')
+
+mh = uimenu(fh,'Label','Export Figure');
+eh1 = uimenu(mh,'Label','Convert to PNG','Callback','exportgraph(1)');
+eh2 = uimenu(mh,'Label','Convert to PS','Callback','exportgraph(2)');
+eh3 = uimenu(mh,'Label','Convert to EPS','Callback','exportgraph(3)');
+eh4 = uimenu(mh,'Label','Convert to TIFF','Callback','exportgraph(4)');
+eh5 = uimenu(mh,'Label','Convert to EMF','Callback','exportgraph(5)');
+eh6 = uimenu(mh,'Label','Convert to JPG','Callback','exportgraph(6)');
+%% select code based on GMT version
+% read ISOLA defaults
+[gmt_ver,psview,npts] = readisolacfg;
+ 
+
+if gmt_ver==4
+      eh7 = uimenu(mh,'Label','Prepare a GMT script','Callback','makegmtscript4synobsplot'); 
+else
+   %% put code for GMT5 !
+   
+      eh7 = uimenu(mh,'Label','Prepare a GMT script','Callback','makegmtscript4synobsplot5'); 
+   
+end
+
+% create structure of handles
+handles1 = guihandles(fh); 
+handles1.nostations=nostations;
+handles1.realdatafilename=realdatafilename;
+handles1.syntdatafilename=syntdatafilename;
+handles1.station=station;
+handles1.useornot=useornot;
+handles1.compuse=compuse;
+handles1.variance_reduction=variance_reduction;
+handles1.eventid=eventid;
+handles1.ftime=ftime;
+handles1.totime=totime;
+handles1.maxmindataindex=maxmindataindex;
+handles1.invband=invband;
+guidata(fh, handles1);
+
+%[100 100 scrsz(3)-200 scrsz(4)-200])
+% subplot(nostations+1,3,1:3)
+
+%%  Start by making legend  (top row of plots)
+%subplot(nostations+1,3,1)
+
+subplot1(nostations+1,3)  % initialize all plots
+
+subplot1(1)    % selecte top left plot
+v=axis;
+text( v(1), .7,['Event date-time: ' strrep(eventid,'_','\_')],'FontSize',10,'FontWeight','bold')
+axis off
+% top mid plot
+subplot1(2)
+% 
+% if pbw == 1
+%           plot(realdataall(:,1,1),realdataall(:,1+1,1),'k','Visible','off');      
+%           hold on
+%           plot(syntdataall(:,1,1),syntdataall(:,1+1,1),'k','Visible','off');      
+%           hold off
+%                    [legend_h,object_h,plot_h,text_strings]= legend('Observed','Synthetic',2);
+%                     set(legend_h,'FontSize',12)
+%                     set(object_h,'LineWidth',2)
+%                     set(plot_h(1),'LineWidth',1.5)
+%                     set(plot_h(2),'LineWidth',1)
+v=axis;
+text( v(1), .7,['Displacement (m).  Inversion band (Hz)  ' invband],'FontSize',10,'FontWeight','bold')
+axis off
+% 
+% else
+%           plot(realdataall(:,1,1),realdataall(:,1+1,1),'k','Visible','off');      
+%           hold on
+%           plot(syntdataall(:,1,1),syntdataall(:,1+1,1),'r','Visible','off');      
+%           hold off
+%                    [legend_h,object_h,plot_h,text_strings]= legend('Observed','Synthetic',2);
+%                     set(legend_h,'FontSize',12)
+%                     set(object_h,'LineWidth',2)
+%                     set(plot_h(1),'LineWidth',1.5)
+%                     set(plot_h(2),'LineWidth',1)
+%                     title(['Displacement (m).  Inversion band (Hz)  ' invband],'FontSize',10,'FontWeight','bold')
+% axis off
+% end
+
+
+%subplot(nostations+1,3,3)
+% top right plot
+subplot1(3)
+
+%           plot(realdataall(:,1,1),realdataall(:,1+1,1),'k','Visible','off');      
+%           hold on
+%           plot(syntdataall(:,1,1),syntdataall(:,1+1,1),'k','Visible','off');      
+%           hold off
+% 
+%           v=axis;
+          
+% text( v(1), 1,'Gray waveforms weren''t used in inversion.','Color','k','FontSize',8,'FontWeight','bold');
+% text( v(3), 0.5, 'Blue numbers are variance reduction','Color','k','FontSize',8,'FontWeight','bold');
+
+if pbw == 1
+          plot(realdataall(:,1,1),realdataall(:,1+1,1),'k','Visible','off');      
+          hold on
+          plot(syntdataall(:,1,1),syntdataall(:,1+1,1),'k','Visible','off');      
+          hold off
+                   [legend_h,object_h,plot_h,text_strings]= legend('Observed','Synthetic');
+                    set(legend_h,'FontSize',12)
+                    set(object_h,'LineWidth',2)
+                    set(plot_h(1),'LineWidth',1.5)
+                    set(plot_h(2),'LineWidth',1)
+%                    title(['Displacement (m).  Inversion band (Hz)  ' invband],'FontSize',10,'FontWeight','bold')
+v=axis;
+text( v(1), 1,'Gray waveforms weren''t used in inversion.','Color','k','FontSize',8,'FontWeight','bold');
+text( v(3), 0.5, 'Blue numbers are variance reduction','Color','k','FontSize',8,'FontWeight','bold');
+
+axis off
+
+else
+          p1=plot(realdataall(:,1,1),realdataall(:,1+1,1),'k', 'LineWidth',1.5);      
+          hold on
+          p2=plot(syntdataall(:,1,1),syntdataall(:,1+1,1),'r', 'LineWidth',1.);      
+          hold off
+v=axis;
+text( v(1), 0.7,'Gray waveforms weren''t used in inversion.','Color','k','FontSize',8,'FontWeight','bold');
+text( v(1), 0.5,'Blue numbers are variance reduction','Color','k','FontSize',8,'FontWeight','bold');
+                    leg=legend('Observed','Synthetic','HandleVisibility','on');
+                    
+                    set(p1, 'visible', 'off');
+                    set(p2, 'visible', 'off');   
+                    set(leg, 'visible', 'on'); 
+
+axis off
+end
+
+
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Finish with legend
+
+k=0;
+for i=1:nostations    %%%%%%loop over stations
+%    realdataall    8192x4x6 
+     for j=1:3                %%%%%%%%loop over components
+          subplot1(j+k+3);
+%          set(gca,'FontSize',8)
+          %%%%%%%%%%%%%%%%%%%%%%%%%%%
+      if pbw == 1      %% we need b&w plot
+           
+          if  compuse(j,i) == 1  
+          plot(realdataall(:,1,i),realdataall(:,j+1,i),'k',...
+                             'LineWidth',2);      
+          elseif compuse(j,i) == 0     %%% not used in inversion
+          plot(realdataall(:,1,i),realdataall(:,j+1,i),...
+                             'LineWidth',2,'Color',[.5,0.5,.5]);      
+                       
+          end                         
+          hold on
+%%%%%%%%%%                          h = vline(50,'k');
+          if  compuse(j,i) == 1  
+          plot(syntdataall(:,1,i),syntdataall(:,j+1,i),'k',...
+                             'LineWidth',.8 );  
+                         
+          elseif compuse(j,i) == 0     %%% not used in inversion
+          plot(syntdataall(:,1,i),syntdataall(:,j+1,i),...
+                             'LineWidth',.8,'Color',[.5,0,0]);   
+                         
+ %                set(subplot(nostations+1,3,j+k+3),'Color',[.1,0.1,.1])     
+                 
+          end                         
+          hold off
+%     
+      else   %%%pbw=0
+          
+          if  compuse(j,i) == 1  
+          plot(realdataall(:,1,i),realdataall(:,j+1,i),'k',...
+                             'LineWidth',1.5);      
+          elseif compuse(j,i) == 0     %%% not used in inversion
+          plot(realdataall(:,1,i),realdataall(:,j+1,i),...
+                             'LineWidth',1.5,'Color',[.5,0.5,.5]);      
+          end                         
+          hold on
+%%%%%%%%%%                          h = vline(50,'k');
+          if  compuse(j,i) == 1  
+          plot(syntdataall(:,1,i),syntdataall(:,j+1,i),'r',...
+                             'LineWidth',1. );  
+          elseif compuse(j,i) == 0     %%% not used in inversion
+          plot(syntdataall(:,1,i),syntdataall(:,j+1,i),...
+                             'LineWidth',1.,'Color',[.5,0,0]);      
+          end                         
+          hold off
+      end   %%end pbw
+          
+         if uselimits == 1
+                  if normalized == 1
+%                     axis ([ftime totime min(realdataall(:,j+1,i)) max(realdataall(:,j+1,i)) ]) ;   
+                      axis ([ftime totime -1.0 1.0 ]) ;       
+                  else
+%                       %%which is larger smaller..?? synth or real..!!
+%                          if min(realdataall(:,j+1,i)) <= min(syntdataall(:,j+1,i))
+%                              yli1=min(realdataall(:,j+1,i));
+%                          else
+%                              yli1=min(syntdataall(:,j+1,i));
+%                          end
+%                          
+%                          if max(realdataall(:,j+1,i)) >= max(syntdataall(:,j+1,i))
+%                              yli2=max(realdataall(:,j+1,i));
+%                          else
+%                              yli2=max(syntdataall(:,j+1,i));
+%                          end
+%                              axis ([ftime totime yli1 yli2 ]) 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   Plot using max min values  from real data
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   only
+
+                            axis([ftime totime maxmindataindex(1,2,i) maxmindataindex(1,1,i)]);
+                  end
+         else   %%% not use time limits
+                 if normalized == 1
+                     v=axis;
+                     axis([v(1) v(2) -1.0 1.0 ]) ;  
+                 else
+                     v=axis;
+                     axis([v(1) v(2) maxmindataindex(1,2,i) maxmindataindex(1,1,i)]);
+                 end
+         end
+
+%%%%%%%%%%%%%%%%%%%%%%% Add text in graph 
+%%%% AXIS SCALE.....
+                
+          if i==1
+            title(componentname{j},...
+              'FontSize',9,...
+              'FontWeight','bold');
+          end
+          
+          if i==nostations
+          xlabel('Time (sec)')
+          
+          elseif i~=nostations
+               set(gca,'Xtick',[-10 1000])
+%               set(gca,'Ytick',[-5 5])
+%               set(gca,'Color','none')
+              
+          end
+          
+          if  j==1 
+            % check if we need network code
+               if net_use ==0
+                  y=ylabel(staname{i},'FontSize',12,'FontWeight','bold');
+                    set(get(gca,'YLabel'),'Rotation',0)
+                    set(y, 'Units', 'Normalized', 'Position', [-0.12, 0.5, 0]);
+               else
+                  %  disp(['Using ' fullstationfile ' station file'])
+                    %read data in 3 arrays
+                    fullstationfile
+                    fid  = fopen(fullstationfile,'r');
+                        C= textscan(fid,'%s %f %f %s',-1);
+                    fclose(fid);
+                    staname_stn=C{1}
+                    netcode=C{4}
+                      for ii=1:nostations
+                          for jj=1:length(staname_stn)
+                              if strcmp(char(staname{ii}),char(staname_stn(jj)))
+                                    st_netcode(ii)=netcode(jj);
+                                  %  disp(['Code for ' char(staname{ii}) ' is ' char(st_netcode(ii))])
+                              else
+                              end
+                          end
+                      end
+                %% ploting
+                    y=ylabel([char(st_netcode(i)) '.' char(staname{i})],'FontSize',12,'FontWeight','bold');
+                    set(get(gca,'YLabel'),'Rotation',0);set(y, 'Units', 'Normalized', 'Position', [-0.12, 0.5, 0]);  
+               end
+          end
+
+%           if  j==2 
+%           ylabel('Displacement')
+%           end
+
+%%%%%%%%%
+%%%%%%%%%                Normalized plotting
+%%%%%%%%%          
+        if normalized == 1
+            if uselimits == 1
+                %text( ftime,  1.1, num2str(maxreal(i,j+1),'%8.2E'),'HorizontalAlignment','left','FontSize',8,'FontWeight','bold');   %%% max values
+                if j==3
+                 text(totime+(totime/10), 0, num2str(maxreal4sta(i),'%8.2E'),'Color','k','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');  % add max value of station
+                   if normsynth==1
+                     text(totime+(totime/10), -0.5, num2str(maxsynt4sta(i),'%8.2E'),'Color','r','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');  % add max syntetic value of station
+                   else
+                   end
+                end
+                
+               if addvarred == 1   %%%%%%%%%%  print variance                
+%                  text( ftime+15, -.65, num2str(variance_reduction(i,j),'%4.2f'),'Color','b','HorizontalAlignment','right','FontSize',10,'FontWeight','bold');
+                   text((totime-ftime)*0.05, -.65, num2str(variance_reduction(i,j),'%4.2f'),'Color','b','HorizontalAlignment','left','FontSize',10,...
+                      'FontWeight','bold','FontName','FixedWidth');  
+               else
+               end
+%%%%%%%%%%%%%%%%               
+            else  % not use limits
+                %text( min(realdataall(:,1,i)), 1.2, num2str(maxreal(i,j+1),'%8.2E'),'HorizontalAlignment','left','FontSize',8,'FontWeight','bold');  % max values
+                %text( max(realdataall(:,1,i)), 1.2, num2str(maxsynt(i,j+1),'%8.2E'),'Color','r','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');
+                if j==3
+                 text(totime+(totime/10), 0, num2str(maxreal4sta(i),'%8.2E'),'Color','k','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');  % add max value of station
+                   if normsynth==1
+                     text(totime+(totime/10), -0.5, num2str(maxsynt4sta(i),'%8.2E'),'Color','r','HorizontalAlignment','right','FontSize',8,'FontWeight','bold');  % add max syntetic value of station
+                   else
+                   end
+                end
+                
+               if addvarred == 1   %%%%%%%%%%print variance 
+                 v=axis;
+                 text((v(2)-v(1))*0.95, -0.65, num2str(variance_reduction(i,j),'%4.2f'),'Color','b','HorizontalAlignment','right','FontSize',10,...
+                   'FontWeight','bold','FontName','FixedWidth');  
+               else
+               end
+               
+            end
+%%%%%%%%%%%%%%%%%%%%
+         else    %%% not normalized
+            if addvarred == 1
+                if uselimits == 0
+                    v=axis;
+                    ((v(2)-v(1))*0.02)+v(1);
+                    text((v(2)-v(1))*0.95, v(4)/2, num2str(variance_reduction(i,j),'%4.2f'),'Color','b','HorizontalAlignment','right','FontSize',10,...
+                    'FontWeight','bold','FontName','FixedWidth');
+                else
+                    v=axis;
+ %                  text(ftime+15 , v(3)/2, num2str(variance_reduction(i,j),'%4.2f'),'Color','b','HorizontalAlignment','right','FontSize',10,'FontWeight','bold');
+                   text(((totime-ftime)*0.03)+ftime , v(3)/2, num2str(variance_reduction(i,j),'%4.2f'),'Color','b','HorizontalAlignment','left','FontSize',10,...
+                       'FontWeight','bold','FontName','FixedWidth');
+                    
+                end
+            else
+            end
+        end    %%%end of Normalized  if
+
+      end       %%%%%%%loop over components
+      
+       k=k+3;
+       
+end   %%%%%%%loop over stations
+
+
+
+%% OUTPUT options in isl file
+    fid2 = fopen('waveplotoptions.isl','w');
+
+    if normalized == 1
+       if ispc  
+         fprintf(fid2,'%c\r\n','1');
+       else
+         fprintf(fid2,'%c\n','1');
+       end
+     else
+       if ispc  
+         fprintf(fid2,'%c\r\n','0');
+       else
+         fprintf(fid2,'%c\n','0');
+       end
+     end
+%%     
+     if uselimits == 1
+        if ispc 
+         fprintf(fid2,'%c\r\n','1');
+        else
+         fprintf(fid2,'%c\n','1');
+        end
+     else
+         if ispc
+           fprintf(fid2,'%c\r\n','0');
+         else
+           fprintf(fid2,'%c\n','0');
+         end
+     end
+%%     
+     if ispc
+          fprintf(fid2,'%f\r\n',ftime);
+          fprintf(fid2,'%f\r\n',totime);
+     else
+          fprintf(fid2,'%f\n',ftime);
+          fprintf(fid2,'%f\n',totime);
+     end
+%%     
+     if addvarred == 1
+         if ispc 
+            fprintf(fid2,'%c\r\n','1');
+         else
+            fprintf(fid2,'%c\n','1');
+         end
+     else
+        if ispc 
+           fprintf(fid2,'%c\r\n','0');
+        else
+           fprintf(fid2,'%c\n','0');
+        end
+     end
+%%     
+     if pbw==1
+        if ispc 
+         fprintf(fid2,'%c\r\n','1');
+        else
+         fprintf(fid2,'%c\n','1');
+        end
+     else
+        if ispc 
+         fprintf(fid2,'%c\r\n','0');
+        else
+         fprintf(fid2,'%c\n','0');
+        end
+     end
+
+%% add new extra features     
+      if normsynth==1
+        if ispc 
+         fprintf(fid2,'%c\r\n','1');
+        else
+         fprintf(fid2,'%c\n','1');
+        end
+     else
+        if ispc 
+         fprintf(fid2,'%c\r\n','0');
+        else
+         fprintf(fid2,'%c\n','0');
+        end
+     end
+%%
+      if net_use==1
+        if ispc 
+         fprintf(fid2,'%c\r\n','1');
+        else
+         fprintf(fid2,'%c\n','1');
+        end
+     else
+        if ispc 
+         fprintf(fid2,'%c\r\n','0');
+        else
+         fprintf(fid2,'%c\n','0');
+        end
+     end
+%     
+    fclose(fid2);
+
+
+%%
+mh = uimenu(fh,'Label','Export Figure');
+eh1 = uimenu(mh,'Label','Convert to PNG','Callback','exportgraph(1)');
+eh2 = uimenu(mh,'Label','Convert to PS','Callback','exportgraph(2)');
+eh3 = uimenu(mh,'Label','Convert to EPS','Callback','exportgraph(3)');
+eh4 = uimenu(mh,'Label','Convert to TIFF','Callback','exportgraph(4)');
+eh5 = uimenu(mh,'Label','Convert to EMF','Callback','exportgraph(5)');
+eh6 = uimenu(mh,'Label','Convert to JPG','Callback','exportgraph(6)');
+%% select code based on GMT version
+% read ISOLA defaults
+[gmt_ver,psview,npts] = readisolacfg;
+ 
+
+if gmt_ver==4
+      eh7 = uimenu(mh,'Label','Prepare a GMT script','Callback','makegmtscript4synobsplot'); 
+else
+   %% put code for GMT5 !
+   
+      eh7 = uimenu(mh,'Label','Prepare a GMT script','Callback','makegmtscript4synobsplot5'); 
+   
+end
+    
+    set(get(gca,'YLabel'),'Rotation',0)
+ %       cpng
+
+
+% --- Executes on button press in html.
+function html_Callback(hObject, eventdata, handles)
+% hObject    handle to html (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+htmlfolder=handles.htmlfolder;
+
+if ~strcmp(htmlfolder,'null')
+
+   lon=handles.Clon; lat=handles.Clat; depth=handles.Cdepth; Mo=handles.CMo; Ctime=handles.Corigin;
+   evt_id=handles.eventidnew;
+   eventorign=handles.evtorigin;
+   
+   % we need to calculate the Centroid Time exactly not relative to Origin
+   % start from 
+   AA=sscanf(eventorign,'%f',4);
+   OriginTime=datetime(str2num(eventorign(1:4)),str2num(eventorign(5:6)),str2num(eventorign(7:8)),AA(2),AA(3),AA(4));
+   CentroidTime=datestr(OriginTime+seconds(Ctime),'yyyy/mm/dd HH:MM:SS.FFF');
+   
+   mw=(2.0/3.0)*log10(str2num(Mo)) - 6.0333;  % changed 06/11/2020 
+      
+   ok=htmlexport(evt_id,CentroidTime,lat,lon,depth,num2str(mw,'%4.2f') ,Mo);
+   
+   % check if we have the png files we need in output folder
+    inv1=[evt_id '_inv1.png'];best=[evt_id '_best.png'];corr=[evt_id '_corr01.png'];wave=[evt_id '_wave.png'];
+       if ~exist(['.\output\' inv1])
+          errordlg(['File '  inv1  ' not found in output folder'],'File Error');
+       else
+       end
+       if ~exist(['.\output\' best])
+          errordlg(['File '  best  ' not found in output folder'],'File Error');
+       else
+       end
+       if ~exist(['.\output\' corr])
+          errordlg(['File '  corr  ' not found in output folder'],'File Error');
+       else
+       end
+       if ~exist(['.\output\' wave])
+          errordlg(['File '  wave  ' not found in output folder'],'File Error');
+       else
+       end
+       
+       %% make event folder in web solution html folder
+       [status, msg, msgID] = mkdir([htmlfolder evt_id]);
+          
+       %% copy files to proper folder
+       filename=[evt_id '_MTsol.html'];
+       copyfile(filename,[htmlfolder evt_id])
+       %% 
+       copyfile(['.\output\' inv1],[htmlfolder evt_id])
+       copyfile(['.\output\' best],[htmlfolder evt_id])
+       copyfile(['.\output\' corr],[htmlfolder evt_id])
+       copyfile(['.\output\' wave],[htmlfolder evt_id])
+       copyfile('.\invert\mtsol.txt',[htmlfolder evt_id])
+       
+       msgbox('Operation Completed. Check command window for errors.');
+       
+
+else
+    
+    helpdlg('If you want html output change the HTML FOLDER variable in isolacfg.isl ','Info');
+    
+end
+
+

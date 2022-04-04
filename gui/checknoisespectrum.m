@@ -80,16 +80,29 @@ function load_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 
+% messtext=...
+%    ['Please select a datafile.                      '
+%     'This file should be a text file with           '
+%     'four columns separated by spaces.              '
+%     'Each column should contain one data channel and'
+%     'the succession should be time, NS, EW and Z    '];
+
+
 messtext=...
-   ['Please select a datafile.                      '
-    'This file should be a text file with           '
-    'four columns separated by spaces.              '
-    'Each column should contain one data channel and'
-    'the succession should be time, NS, EW and Z    '];
+   ['Please load an uncorrected (*unc.dat) file         '
+    'from the DATA folder. These files are good         '
+    'for inspection of SNR because they have enough data'
+    'before signal onset.                               '];
 
-%uiwait(msgbox(messtext,'Message','warn','modal'));
+uiwait(msgbox(messtext,'Message','warn','modal'));
 
-[file1,path1] = uigetfile([ '*.dat'],' Earthquake Datafile');
+if ispc
+    [file1,path1] = uigetfile('.\data\*unc.dat','Select an uncorrected data file');
+else
+    [file1,path1] = uigetfile('./data/*unc.dat','Select an uncorrected data file');
+end
+
+%[file1,path1] = uigetfile([ '*.dat'],' Earthquake Datafile');
 
    lopa = [path1 file1];
    name = file1;
@@ -132,6 +145,8 @@ if k ~=0
 else
     stname=[]
 end
+ 
+set(handles.staname,'String',stname)
 
 %save RAW data to handles 
 handles.ew = ew;
@@ -152,14 +167,14 @@ guidata(hObject,handles)
 % change slider values
 
 % get station name from file name
-k=strfind(file1, 'unc.dat');
+% k=strfind(file1,'unc.dat');
+% 
+% if k~=0 
+%     staname=file1(1:k-1);
+% else
+%     staname=[];
+% end
 
-if k~=0 
-    staname=file1(1:k-1);
-else
-    staname=[];
-end
-set(handles.staname,'String',staname)
 %
 
 % set slider according to signal 
@@ -287,13 +302,25 @@ ew=handles.ew;
 ns=handles.ns;
 ver=handles.ver;
 
-noise_ns=ns(ppoint-nwin:ppoint);
-noise_ew=ew(ppoint -nwin:ppoint);
-noise_ver=ver(ppoint -nwin:ppoint);
+%% detrend
+% ew  =  detrend(ew,'constant');
+% ns  =  detrend(ns,'constant');
+% ver =  detrend(ver,'constant');
+% disp('Removing Mean')
+% %% Taper
+% taperv=5;
+% ew=taperd(ew,taperv/100);
+% ns=taperd(ns,taperv/100);
+% ver=taperd(ver,taperv/100);
 
-signal_ns=ns(ppoint:ppoint+nwin);
-signal_ew=ew(ppoint:ppoint+nwin);
-signal_ver=ver(ppoint:ppoint+nwin);
+%%
+noise_ns=detrend(ns(ppoint-nwin:ppoint));
+noise_ew=detrend(ew(ppoint -nwin:ppoint));
+noise_ver=detrend(ver(ppoint -nwin:ppoint));
+%%
+signal_ns=detrend(ns(ppoint:ppoint+nwin));
+signal_ew=detrend(ew(ppoint:ppoint+nwin));
+signal_ver=detrend(ver(ppoint:ppoint+nwin));
 %whos
 
 % fft of signal velocity
@@ -317,7 +344,7 @@ loglog(f,pnve,'k--')
 
 grid on
 xlabel('Frequency (Hz)')
-ylabel('Power')
+ylabel('Fourier Amplitude (counts*s)')
 
 h = legend('Signal NS','Signal EW','Signal Z','Noise NS','Noise EW','Noise Z','Location','NorthEast');
 % subplot
@@ -327,18 +354,22 @@ loglog(f,pns,'r')
 hold
 loglog(f,pnns,'k--')
 title('NS')
+xlabel('Frequency (Hz)')
+ylabel('Fourier Amplitude (counts*s)')
 
 subplot(1,3,2)
 loglog(f,pew,'r')
 hold
 loglog(f,pnew,'k--')
 title('EW')
+xlabel('Frequency (Hz)')
 
 subplot(1,3,3)
 loglog(f,pve,'r')
 hold
 loglog(f,pnve,'k--')
 title('Vertical')
+xlabel('Frequency (Hz)')
 
 %% save for latter plotting by gmt
 whos
@@ -502,7 +533,7 @@ disp(['Window length in samples = ' num2str(nwin) '  and in seconds = ' num2str(
 
 if nwin > ppoint
     disp('Out of limits')
-    errordlg('Too long window, passed signal start','Error'); 
+    errordlg('Too short pre-event time. Use data with larger pre-event time. At least as large as event duration.','Error'); 
     return
 else
     

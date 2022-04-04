@@ -55,7 +55,7 @@ function crustmodnew_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for crustmodnew
 handles.output = hObject;
 
-disp('This is Crustmodnew 27/11/2013');
+disp('This is Crustmodnew 14/10/2019');
 %
 % added crustalmodel.isl creation to remember last file
 % 999 is not used anymore to signal end of layers empty box is enough !!
@@ -149,46 +149,68 @@ else
        
        disp(['Model has ' num2str(nlayers) ' layers'])
        
-       %%%check if > 10 
-        if nlayers > 15
-            errordlg('Model has more than 15 layers','Error');
-        else
-        end
-        %%%%%
-       line=fgets(fid);         %04 line
-       line=fgets(fid);         %05 line
-
-    c=fscanf(fid,'%g %g %g %g %g %g',[6 nlayers]);
-    c = c';
-fclose(fid);
-% whos c
-%%%%%%%%%%%%PUT VALUES IN THE FORM........
-      %%%title
-      set(handles.mtitle,'String',title);
-      
-     for i=1:nlayers
+       %%%check if > 15
+     if nlayers > 15
+           %  errordlg('Model has more than 15 layers','Error');
+            warndlg({'Previoulsy selected model has more than 15 layers.'; 'It cannot be loaded here automatically. Default model will be loaded.'},'!! Warning !!');
+%             set(handles.mtitle,'String',title);
+%            %
+%             line=fgets(fid);         %04 line
+%             line=fgets(fid);         %05 line
+%             c=fscanf(fid,'%g %g %g %g %g %g',[6 nlayers]);       
+%             c = c';
+%             fclose(fid);
+%       
+%             %% PUT VALUES IN THE FORM........
+%             for i=1:15
+%             eval(['set(handles.depth'   num2str(i) ',''Enable'',''off'')']);
+%             eval(['set(handles.vp'      num2str(i) ',''Enable'',''off'')']);
+%             eval(['set(handles.vs'      num2str(i) ',''Enable'',''off'')']);
+%             eval(['set(handles.density' num2str(i) ',''Enable'',''off'')']);
+%             eval(['set(handles.qp'      num2str(i) ',''Enable'',''off'')']);
+%             eval(['set(handles.qs'      num2str(i) ',''Enable'',''off'')']);
+%             end
+%             
+%  
+%             % save all model in handles
+%                 handles.nlayers=nlayers;
+%                 handles.largemodel=c;
+%                 handles.modeltitle=title;   
+%             % Update handles structure
+%                 guidata(hObject, handles);
+     else
+       %%
+        line=fgets(fid);         %04 line
+        line=fgets(fid);         %05 line
+        c=fscanf(fid,'%g %g %g %g %g %g',[6 nlayers]);
+        c = c';
+        fclose(fid);
+        
+        % PUT VALUES IN THE FORM........
+        %title
+        set(handles.mtitle,'String',title);
+        for i=1:nlayers
            eval(['set(handles.depth' num2str(i) ',''String'',num2str(c(' num2str(i) ',1)))']);
            eval(['set(handles.vp' num2str(i) ',''String'',num2str(c(' num2str(i) ',2)))']);
            eval(['set(handles.vs' num2str(i) ',''String'',num2str(c(' num2str(i) ',3)))']);
            eval(['set(handles.density' num2str(i) ',''String'',num2str(c(' num2str(i) ',4)))']);
            eval(['set(handles.qp' num2str(i) ',''String'',num2str(c(' num2str(i) ',5)))']);
            eval(['set(handles.qs' num2str(i) ',''String'',num2str(c(' num2str(i) ',6)))']);
-     end
-     for i=nlayers+1:15
+        end
+        for i=nlayers+1:15
            eval(['set(handles.depth' num2str(i) ',''String'','''')']);
            eval(['set(handles.vp' num2str(i) ',''String'','''')']);
            eval(['set(handles.vs' num2str(i) ',''String'','''')']);
            eval(['set(handles.density' num2str(i) ',''String'','''')']);
            eval(['set(handles.qp' num2str(i) ',''String'','''')']);
            eval(['set(handles.qs' num2str(i) ',''String'','''')']);
-     end
+        end
+   
+     end  % nlayers if
 
-  end
+   end  % length(h) == 0;
 
-
-end
-
-
+end  % dir('crustalmodel.isl');  if
 
 % Update handles structure
 guidata(hObject, handles);
@@ -1134,34 +1156,124 @@ function Save_cru_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-
 % Here we save crustal model in a file....
-%
-%% find how many layers we have
-crustalmodel(1,1)=str2double(get(handles.depth1,'String'));
-crustalmodel(2,1)=str2double(get(handles.depth2,'String'));
-crustalmodel(3,1)=str2double(get(handles.depth3,'String'));
-crustalmodel(4,1)=str2double(get(handles.depth4,'String'));
-crustalmodel(5,1)=str2double(get(handles.depth5,'String'));
-crustalmodel(6,1)=str2double(get(handles.depth6,'String'));
-crustalmodel(7,1)=str2double(get(handles.depth7,'String'));
-crustalmodel(8,1)=str2double(get(handles.depth8,'String'));
-crustalmodel(9,1)=str2double(get(handles.depth9,'String'));
-crustalmodel(10,1)=str2double(get(handles.depth10,'String'));
-crustalmodel(11,1)=str2double(get(handles.depth11,'String'));
-crustalmodel(12,1)=str2double(get(handles.depth12,'String'));
-crustalmodel(13,1)=str2double(get(handles.depth13,'String'));
-crustalmodel(14,1)=str2double(get(handles.depth14,'String'));
-crustalmodel(15,1)=str2double(get(handles.depth15,'String'));
-%
-for i=15:-1:1
-   if isnan(crustalmodel(i,1))
-      nlayers=i-1;
-  end
-end
-disp(['Found crustal model with ' num2str(nlayers) '  layers'])
-%%
 
+%% decide is we have a model with > 15 layers or not
+
+if15=get(handles.depth1,'Enable');
+
+ 
+switch if15
+        
+    case 'off'  % >15layers
+        disp('Model has many layers > 15')
+        % we must read from handles and write file in proper folder
+        
+        %% read model info from handles
+        newdir=handles.newdir;stationfile=handles.stationfile;
+        crustalmodel=handles.largemodel;
+        mtitle=handles.modeltitle;
+        %%
+        [nlayers,~]=size(crustalmodel);
+        disp(['Found crustal model with ' num2str(nlayers) '  layers'])
+        %% we have to check if GREEN folder exists...
+        
+        h=dir('green');
+        if size(h) > 0 
+            cd green
+            if ispc
+                % KEEP THE NAME FIXED
+                fid = fopen('crustal.dat','w');
+                    fprintf(fid,'%s\r\n',['Crustal model                  ' mtitle]);
+                    fprintf(fid,'%s\r\n','number of layers ');
+                    fprintf(fid,'   %i\r\n',nlayers);
+                    fprintf(fid,'%s\r\n','Parameters of the layers');
+                    fprintf(fid,'%s\r\n','depth of layer top(km)   Vp(km/s)    Vs(km/s)    Rho(g/cm**3)    Qp     Qs');
+
+                    for i=1:nlayers
+                        fprintf(fid,'%9.3f%21.3f%12.3f%13.3f%12i%7i\r\n',crustalmodel(i,1),crustalmodel(i,2),crustalmodel(i,3),crustalmodel(i,4),crustalmodel(i,5),crustalmodel(i,6) );
+                    end
+
+                    fprintf(fid,'%s\r\n','*************************************************************************');
+               fclose(fid);
+            else
+                % KEEP THE NAME FIXED
+                fid = fopen('crustal.dat','w');
+                    fprintf(fid,'%s\n',['Crustal model                  ' mtitle]);
+                    fprintf(fid,'%s\n','number of layers ');
+                    fprintf(fid,'   %i\n',nlayers);
+                    fprintf(fid,'%s\n','Parameters of the layers');
+                    fprintf(fid,'%s\n','depth of layer top(km)   Vp(km/s)    Vs(km/s)    Rho(g/cm**3)    Qp     Qs');
+
+                    for i=1:nlayers
+                        fprintf(fid,'%9.3f%21.3f%12.3f%13.3f%12i%7i\n',crustalmodel(i,1),crustalmodel(i,2),crustalmodel(i,3),crustalmodel(i,4),crustalmodel(i,5),crustalmodel(i,6) );
+                    end
+
+                    fprintf(fid,'%s\n','*************************************************************************');
+                fclose(fid);
+            end
+        cd ..
+        pwd
+        else
+            errordlg('Green folder doesn''t exist. Please create it. ','Folder Error');
+        end
+        
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+       h=msgbox('Crustal model was saved in GREEN folder as crustal.dat file.','Save crustal model');
+
+%% now create crustalmodel.isl
+        try
+            newdir=handles.newdir;    stationfile=handles.stationfile;
+
+        fid = fopen('crustalmodel.isl','w');
+            if ispc
+            fprintf(fid,'%s\r\n',[newdir stationfile]);
+            else
+            fprintf(fid,'%s\n',[newdir stationfile]);
+            end
+    
+        fclose(fid);   
+
+        catch      %% in case user doesn't load a file but creates a new one
+    
+            newdir=pwd;  stationfile='\green\crustal.dat';
+  
+        fid = fopen('crustalmodel.isl','w');
+            if ispc 
+            fprintf(fid,'%s\r\n',[newdir stationfile]);
+            else
+            fprintf(fid,'%s\n',[newdir stationfile]);
+            end
+        fclose(fid);     
+    
+        end
+        
+        %%
+        set(handles.Cancel,'Enable','On')
+    
+        
+    case 'on'   % <= 15 layers
+      disp('Model number of layers is <= 15')
+    
+      
+      % find how many layers we have
+    crustalmodel(1,1)=str2double(get(handles.depth1,'String'));    crustalmodel(2,1)=str2double(get(handles.depth2,'String'));
+    crustalmodel(3,1)=str2double(get(handles.depth3,'String'));    crustalmodel(4,1)=str2double(get(handles.depth4,'String'));
+    crustalmodel(5,1)=str2double(get(handles.depth5,'String'));    crustalmodel(6,1)=str2double(get(handles.depth6,'String'));
+    crustalmodel(7,1)=str2double(get(handles.depth7,'String'));    crustalmodel(8,1)=str2double(get(handles.depth8,'String'));
+    crustalmodel(9,1)=str2double(get(handles.depth9,'String'));    crustalmodel(10,1)=str2double(get(handles.depth10,'String'));
+    crustalmodel(11,1)=str2double(get(handles.depth11,'String'));  crustalmodel(12,1)=str2double(get(handles.depth12,'String'));
+    crustalmodel(13,1)=str2double(get(handles.depth13,'String')); crustalmodel(14,1)=str2double(get(handles.depth14,'String'));
+    crustalmodel(15,1)=str2double(get(handles.depth15,'String'));
+%
+    for i=15:-1:1
+        if isnan(crustalmodel(i,1))
+            nlayers=i-1;
+        end
+    end
+
+    disp(['Found crustal model with ' num2str(nlayers) '  layers'])
 %% First we put values in a matrix....
      %read title
      mtitle=get(handles.mtitle,'String');
@@ -1175,7 +1287,7 @@ disp(['Found crustal model with ' num2str(nlayers) '  layers'])
           eval(['crustalmodel(' num2str(i) ',5)=str2double(get(handles.qp' num2str(i) ',''String''));']);
           eval(['crustalmodel(' num2str(i) ',6)=str2double(get(handles.qs' num2str(i) ',''String''));']);
      end
-%%
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %we have to check if GREEN folder exists...
 
@@ -1194,7 +1306,7 @@ if size(h) > 0
     fprintf(fid,'%s\r\n','depth of layer top(km)   Vp(km/s)    Vs(km/s)    Rho(g/cm**3)    Qp     Qs');
 
       for i=1:nlayers
-       fprintf(fid,'%9.1f%21.2f%12.3f%13.3f%12i%7i\r\n',crustalmodel(i,1),crustalmodel(i,2),crustalmodel(i,3),crustalmodel(i,4),crustalmodel(i,5),crustalmodel(i,6) );
+       fprintf(fid,'%9.3f%21.3f%12.3f%13.3f%12i%7i\r\n',crustalmodel(i,1),crustalmodel(i,2),crustalmodel(i,3),crustalmodel(i,4),crustalmodel(i,5),crustalmodel(i,6) );
       end
 
     fprintf(fid,'%s\r\n','*************************************************************************');
@@ -1209,7 +1321,7 @@ if size(h) > 0
     fprintf(fid,'%s\n','depth of layer top(km)   Vp(km/s)    Vs(km/s)    Rho(g/cm**3)    Qp     Qs');
 
       for i=1:nlayers
-       fprintf(fid,'%9.1f%21.2f%12.3f%13.3f%12i%7i\n',crustalmodel(i,1),crustalmodel(i,2),crustalmodel(i,3),crustalmodel(i,4),crustalmodel(i,5),crustalmodel(i,6) );
+       fprintf(fid,'%9.3f%21.3f%12.3f%13.3f%12i%7i\n',crustalmodel(i,1),crustalmodel(i,2),crustalmodel(i,3),crustalmodel(i,4),crustalmodel(i,5),crustalmodel(i,6) );
       end
 
     fprintf(fid,'%s\n','*************************************************************************');
@@ -1219,18 +1331,15 @@ if size(h) > 0
     pwd
 else
     errordlg('Green folder doesn''t exist. Please create it. ','Folder Error');
-    
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
    h=msgbox('Crustal model was saved in GREEN folder as crustal.dat file.','Save crustal model');
 
-   
-%%%% now create crustalmodel.isl
+%% %% now create crustalmodel.isl
 try
-   newdir=handles.newdir;
-   stationfile=handles.stationfile;
+   newdir=handles.newdir;    stationfile=handles.stationfile;
 
   fid = fopen('crustalmodel.isl','w');
     if ispc
@@ -1257,8 +1366,10 @@ catch      %% in case user doesn't load a file but creates a new one
 end
 
 set(handles.Cancel,'Enable','On')
+    
+end
 
-
+ 
 
 
 
@@ -1268,8 +1379,7 @@ function Read_cru_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-
-%%%%%%%%%%IF THE FORMAT IS RETAINED.................!!
+%% IF THE FORMAT IS RETAINED.................!!
 
 [stationfile, newdir] = uigetfile('*.cru', 'Select crustal model file');
 
@@ -1279,20 +1389,20 @@ function Read_cru_Callback(hObject, eventdata, handles)
    else
    end
 
-
+%%
 fid  = fopen([newdir, stationfile],'r');
        line=fgets(fid);         %01 line
        title=line(28:length(line)-2);
       
        line=fgets(fid);         %02 line
        line=fgets(fid);         %03 line
-       nlayers=sscanf(line,'%i');
+       nlayers=sscanf(line(1:length(line)-2),'%i');
        
        disp(['Model has ' num2str(nlayers) ' layers'])
        
-       %%%check if > 10 
-       if nlayers > 15
-            errordlg('Model has more than 15 layers','Error');
+       %%%check if > 15 
+        if nlayers > 15
+            warndlg({'Model has more than 15 layers.'; 'You cannot edit this model here but you can Save and Plot it.'},'!! Warning !!');
         else
         end
         %%%%%
@@ -1302,9 +1412,10 @@ fid  = fopen([newdir, stationfile],'r');
     c=fscanf(fid,'%g %g %g %g %g %g',[6 nlayers]);       
     c = c';
 fclose(fid);
-%%%%%%%%%%%%PUT VALUES IN THE FORM........
-    %%%title
-     set(handles.mtitle,'String',title);
+
+%% PUT VALUES IN THE FORM........
+if nlayers <=15
+      set(handles.mtitle,'String',title);
       
      for i=1:nlayers
            eval(['set(handles.depth' num2str(i) ',''String'',num2str(c(' num2str(i) ',1)))']);
@@ -1322,13 +1433,45 @@ fclose(fid);
            eval(['set(handles.qp' num2str(i) ',''String'','''')']);
            eval(['set(handles.qs' num2str(i) ',''String'','''')']);
      end
-
+     
 handles.newdir=newdir;
 handles.stationfile=stationfile;
+handles.nlayers=nlayers;
 % Update handles structure
 guidata(hObject, handles);
 
+else
+%% if the model has more than 15 layers we should save in handles!! and disable the text boxes
+      set(handles.mtitle,'String',title);
+      
+%      for i=1:15
+%            eval(['set(handles.depth' num2str(i) ',''String'',num2str(c(' num2str(i) ',1)))']);
+%            eval(['set(handles.vp' num2str(i) ',''String'',num2str(c(' num2str(i) ',2)))']);
+%            eval(['set(handles.vs' num2str(i) ',''String'',num2str(c(' num2str(i) ',3)))']);
+%            eval(['set(handles.density' num2str(i) ',''String'',num2str(c(' num2str(i) ',4)))']);
+%            eval(['set(handles.qp' num2str(i) ',''String'',num2str(c(' num2str(i) ',5)))']);
+%            eval(['set(handles.qs' num2str(i) ',''String'',num2str(c(' num2str(i) ',6)))']);
+%      end
 
+     for i=1:15
+           eval(['set(handles.depth'   num2str(i) ',''Enable'',''off'')']);
+           eval(['set(handles.vp'      num2str(i) ',''Enable'',''off'')']);
+           eval(['set(handles.vs'      num2str(i) ',''Enable'',''off'')']);
+           eval(['set(handles.density' num2str(i) ',''Enable'',''off'')']);
+           eval(['set(handles.qp'      num2str(i) ',''Enable'',''off'')']);
+           eval(['set(handles.qs'      num2str(i) ',''Enable'',''off'')']);
+     end
+    
+% save all model in handles
+handles.newdir=newdir;
+handles.stationfile=stationfile;
+handles.nlayers=nlayers;
+handles.largemodel=c;
+handles.modeltitle=title;   
+% Update handles structure
+guidata(hObject, handles);
+    
+end
 
 
 function vpvsvalue_Callback(hObject, eventdata, handles)
@@ -1422,7 +1565,14 @@ function depth1_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of depth1 as text
 %        str2double(get(hObject,'String')) returns contents of depth1 as a double
 
+d1=get(handles.depth1,'String');
 
+if str2num(d1)~= 0 
+    errordlg('First layers should start at depth = 0','Parameter Error');
+    
+else
+    
+end
 % --- Executes during object creation, after setting all properties.
 function depth1_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to depth1 (see GCBO)
@@ -1434,6 +1584,9 @@ function depth1_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+
 
 
 
@@ -1932,152 +2085,135 @@ function Plot_cru_Callback(hObject, eventdata, handles)
 % hObject    handle to Plot_cru (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+%% decide is we have a model with > 15 layers or not
 
 
 
-%%%%THIS IS DEPTH
-crustalmodel(1,1)=str2double(get(handles.depth1,'String'));
-crustalmodel(2,1)=str2double(get(handles.depth2,'String'));
-crustalmodel(3,1)=str2double(get(handles.depth3,'String'));
-crustalmodel(4,1)=str2double(get(handles.depth4,'String'));
-crustalmodel(5,1)=str2double(get(handles.depth5,'String'));
-crustalmodel(6,1)=str2double(get(handles.depth6,'String'));
-crustalmodel(7,1)=str2double(get(handles.depth7,'String'));
-crustalmodel(8,1)=str2double(get(handles.depth8,'String'));
-crustalmodel(9,1)=str2double(get(handles.depth9,'String'));
-crustalmodel(10,1)=str2double(get(handles.depth10,'String'));
-crustalmodel(11,1)=str2double(get(handles.depth11,'String'));
-crustalmodel(12,1)=str2double(get(handles.depth12,'String'));
-crustalmodel(13,1)=str2double(get(handles.depth13,'String'));
-crustalmodel(14,1)=str2double(get(handles.depth14,'String'));
-crustalmodel(15,1)=str2double(get(handles.depth15,'String'));
-%%%%THIS IS Vp
-crustalmodel(1,2)=str2double(get(handles.vp1,'String'));
-crustalmodel(2,2)=str2double(get(handles.vp2,'String'));
-crustalmodel(3,2)=str2double(get(handles.vp3,'String'));
-crustalmodel(4,2)=str2double(get(handles.vp4,'String'));
-crustalmodel(5,2)=str2double(get(handles.vp5,'String'));
-crustalmodel(6,2)=str2double(get(handles.vp6,'String'));
-crustalmodel(7,2)=str2double(get(handles.vp7,'String'));
-crustalmodel(8,2)=str2double(get(handles.vp8,'String'));
-crustalmodel(9,2)=str2double(get(handles.vp9,'String'));
-crustalmodel(10,2)=str2double(get(handles.vp10,'String'));
-crustalmodel(11,2)=str2double(get(handles.vp11,'String'));
-crustalmodel(12,2)=str2double(get(handles.vp12,'String'));
-crustalmodel(13,2)=str2double(get(handles.vp13,'String'));
-crustalmodel(14,2)=str2double(get(handles.vp14,'String'));
-crustalmodel(15,2)=str2double(get(handles.vp15,'String'));
-%%%%THIS IS Vs
-crustalmodel(1,3)=str2double(get(handles.vs1,'String'));
-crustalmodel(2,3)=str2double(get(handles.vs2,'String'));
-crustalmodel(3,3)=str2double(get(handles.vs3,'String'));
-crustalmodel(4,3)=str2double(get(handles.vs4,'String'));
-crustalmodel(5,3)=str2double(get(handles.vs5,'String'));
-crustalmodel(6,3)=str2double(get(handles.vs6,'String'));
-crustalmodel(7,3)=str2double(get(handles.vs7,'String'));
-crustalmodel(8,3)=str2double(get(handles.vs8,'String'));
-crustalmodel(9,3)=str2double(get(handles.vs9,'String'));
-crustalmodel(10,3)=str2double(get(handles.vs10,'String'));
-crustalmodel(11,3)=str2double(get(handles.vs11,'String'));
-crustalmodel(12,3)=str2double(get(handles.vs12,'String'));
-crustalmodel(13,3)=str2double(get(handles.vs13,'String'));
-crustalmodel(14,3)=str2double(get(handles.vs14,'String'));
-crustalmodel(15,3)=str2double(get(handles.vs15,'String'));
+if15=get(handles.depth1,'Enable');
 
-% %%%%THIS IS Density
-% crustalmodel(1,4)=str2double(get(handles.density1,'String'));
-% crustalmodel(2,4)=str2double(get(handles.density2,'String'));
-% crustalmodel(3,4)=str2double(get(handles.density3,'String'));
-% crustalmodel(4,4)=str2double(get(handles.density4,'String'));
-% crustalmodel(5,4)=str2double(get(handles.density5,'String'));
-% crustalmodel(6,4)=str2double(get(handles.density6,'String'));
-% crustalmodel(7,4)=str2double(get(handles.density7,'String'));
-% crustalmodel(8,4)=str2double(get(handles.density8,'String'));
-% crustalmodel(9,4)=str2double(get(handles.density9,'String'));
-% crustalmodel(10,4)=str2double(get(handles.density10,'String'));
-% crustalmodel(11,4)=str2double(get(handles.density11,'String'));
-% crustalmodel(12,4)=str2double(get(handles.density12,'String'));
-% crustalmodel(13,4)=str2double(get(handles.density13,'String'));
-% crustalmodel(14,4)=str2double(get(handles.density14,'String'));
-% crustalmodel(15,4)=str2double(get(handles.density15,'String'));
+switch if15
+        
+    case 'off'  % >15layers
+        disp('Model number of layers is > 15. ')
+        %% read model info from handles
+        newdir=handles.newdir;stationfile=handles.stationfile;
+        crustalmodel=handles.largemodel;
+        vmtitle=handles.modeltitle;
+        %%
+        [nlayers,~]=size(crustalmodel);
+        disp(['Found crustal model with ' num2str(nlayers) '  layers'])        
+        
+        %% prepare plot
+        vmtitle=get(handles.mtitle,'String');
 
+        for i=1:nlayers
+            if  crustalmodel(i,1) < 999
+                vp(i+1)=crustalmodel(i,2); vs(i+1)=crustalmodel(i,3); depth(i+1)=-crustalmodel(i,1);
+            else
+                break
+            end
+        end
+        for i=1:length(depth)-1
+            vptmp(i)=vp(i+1);  vstmp(i)=vs(i+1); depthtmp(i)=depth(i+1);
+        end
 
-%%%prepare plot
-%figure(1)
+        a=0; j=1; k=1;
+        for i=1:(2*(length(depth)))-1
+            if a==0
+                dep3(i)=depth(k);     vp3(i)=vp(k);     vs3(i)=vs(k);     k=k+1;     a=1;    
+            else
+                dep3(i)=depthtmp(j);     vp3(i)=vp(j);     vs3(i)=vs(j);     j=j+1;     a=0;
+            end
+        end
+    
+        % % %%% add another layer for Moho....
+            vp3=[vp3 vp(length(vp )) ];    vs3=[vs3 vs(length(vs )) ];    dep3=[dep3 depth(length(depth))-10 ];
 
-vmtitle=get(handles.mtitle,'String');
+        % plot Moho 
+            mohoX=((vp(length(vp)-1)- vs(length(vs)-1))/2)+vs(length(vs)-1);  mohoY=depth(length(depth));
 
-for i=1:15
-    if  crustalmodel(i,1) < 999
-       vp(i+1)=crustalmodel(i,2);
-       vs(i+1)=crustalmodel(i,3);
-       depth(i+1)=-crustalmodel(i,1);
-    else
-        break
-    end
+        figure(2)
+
+        plot(vp3(3:length(vp3) ),-dep3(3:length(vp3) ),'-rs','LineWidth',2)
+        axis ij
+        hold on
+        %grid
+        plot(vs3(3:length(vs3) ),-dep3(3:length(vs3) ),'-bs','LineWidth',2)
+        %text(mohoX,-mohoY,'\leftarrow moho \rightarrow','FontSize',16,'VerticalAlignment','middle')
+        h = legend('Vp','Vs'); 
+        grid
+        xlabel('Velocity (km/sec)')
+        ylabel('Depth (km)')
+        title(['Plot of Vp, Vs  ' vmtitle])
+        
+        
+    
+    %%
+    case 'on'   % <= 15 layers
+        disp('Model number of layers is <= 15')
+        % THIS IS DEPTH
+        crustalmodel(1,1)=str2double(get(handles.depth1,'String'));crustalmodel(2,1)=str2double(get(handles.depth2,'String'));crustalmodel(3,1)=str2double(get(handles.depth3,'String'));
+        crustalmodel(4,1)=str2double(get(handles.depth4,'String'));crustalmodel(5,1)=str2double(get(handles.depth5,'String'));crustalmodel(6,1)=str2double(get(handles.depth6,'String'));
+        crustalmodel(7,1)=str2double(get(handles.depth7,'String'));crustalmodel(8,1)=str2double(get(handles.depth8,'String'));crustalmodel(9,1)=str2double(get(handles.depth9,'String'));
+        crustalmodel(10,1)=str2double(get(handles.depth10,'String'));crustalmodel(11,1)=str2double(get(handles.depth11,'String'));crustalmodel(12,1)=str2double(get(handles.depth12,'String'));
+        crustalmodel(13,1)=str2double(get(handles.depth13,'String'));crustalmodel(14,1)=str2double(get(handles.depth14,'String'));crustalmodel(15,1)=str2double(get(handles.depth15,'String'));
+        % THIS IS Vp
+        crustalmodel(1,2)=str2double(get(handles.vp1,'String'));crustalmodel(2,2)=str2double(get(handles.vp2,'String'));crustalmodel(3,2)=str2double(get(handles.vp3,'String'));
+        crustalmodel(4,2)=str2double(get(handles.vp4,'String'));crustalmodel(5,2)=str2double(get(handles.vp5,'String'));crustalmodel(6,2)=str2double(get(handles.vp6,'String'));
+        crustalmodel(7,2)=str2double(get(handles.vp7,'String'));crustalmodel(8,2)=str2double(get(handles.vp8,'String'));crustalmodel(9,2)=str2double(get(handles.vp9,'String'));
+        crustalmodel(10,2)=str2double(get(handles.vp10,'String'));crustalmodel(11,2)=str2double(get(handles.vp11,'String'));crustalmodel(12,2)=str2double(get(handles.vp12,'String'));
+        crustalmodel(13,2)=str2double(get(handles.vp13,'String'));crustalmodel(14,2)=str2double(get(handles.vp14,'String'));crustalmodel(15,2)=str2double(get(handles.vp15,'String'));
+        % THIS IS Vs
+        crustalmodel(1,3)=str2double(get(handles.vs1,'String'));crustalmodel(2,3)=str2double(get(handles.vs2,'String'));crustalmodel(3,3)=str2double(get(handles.vs3,'String'));
+        crustalmodel(4,3)=str2double(get(handles.vs4,'String'));crustalmodel(5,3)=str2double(get(handles.vs5,'String'));crustalmodel(6,3)=str2double(get(handles.vs6,'String'));
+        crustalmodel(7,3)=str2double(get(handles.vs7,'String'));crustalmodel(8,3)=str2double(get(handles.vs8,'String'));crustalmodel(9,3)=str2double(get(handles.vs9,'String'));
+        crustalmodel(10,3)=str2double(get(handles.vs10,'String'));crustalmodel(11,3)=str2double(get(handles.vs11,'String'));crustalmodel(12,3)=str2double(get(handles.vs12,'String'));
+        crustalmodel(13,3)=str2double(get(handles.vs13,'String'));crustalmodel(14,3)=str2double(get(handles.vs14,'String'));crustalmodel(15,3)=str2double(get(handles.vs15,'String'));
+        %% prepare plot
+        vmtitle=get(handles.mtitle,'String');
+
+        for i=1:15
+            if  crustalmodel(i,1) < 999
+                vp(i+1)=crustalmodel(i,2); vs(i+1)=crustalmodel(i,3); depth(i+1)=-crustalmodel(i,1);
+            else
+                break
+            end
+        end
+        for i=1:length(depth)-1
+            vptmp(i)=vp(i+1);  vstmp(i)=vs(i+1); depthtmp(i)=depth(i+1);
+        end
+
+        a=0; j=1; k=1;
+        for i=1:(2*(length(depth)))-1
+            if a==0
+                dep3(i)=depth(k);     vp3(i)=vp(k);     vs3(i)=vs(k);     k=k+1;     a=1;    
+            else
+                dep3(i)=depthtmp(j);     vp3(i)=vp(j);     vs3(i)=vs(j);     j=j+1;     a=0;
+            end
+        end
+    
+        % % %%% add another layer for Moho....
+            vp3=[vp3 vp(length(vp )) ];    vs3=[vs3 vs(length(vs )) ];    dep3=[dep3 depth(length(depth))-10 ];
+
+        % plot Moho 
+            mohoX=((vp(length(vp)-1)- vs(length(vs)-1))/2)+vs(length(vs)-1);  mohoY=depth(length(depth));
+
+        figure(2)
+
+        plot(vp3(3:length(vp3) ),-dep3(3:length(vp3) ),'-rs','LineWidth',2)
+        axis ij
+        hold on
+        %grid
+        plot(vs3(3:length(vs3) ),-dep3(3:length(vs3) ),'-bs','LineWidth',2)
+        %text(mohoX,-mohoY,'\leftarrow moho \rightarrow','FontSize',16,'VerticalAlignment','middle')
+        h = legend('Vp','Vs'); 
+        grid
+        xlabel('Velocity (km/sec)')
+        ylabel('Depth (km)')
+        title(['Plot of Vp, Vs  ' vmtitle])
+    
 end
-% whos vp depth vs
 
- for i=1:length(depth)-1
-     vptmp(i)=vp(i+1);
-     vstmp(i)=vs(i+1);
-     depthtmp(i)=depth(i+1);
- end
-
- a=0;
- j=1;
- k=1;
- for i=1:(2*(length(depth)))-1
- if a==0
-     dep3(i)=depth(k);
-     vp3(i)=vp(k);
-     vs3(i)=vs(k);
-     k=k+1;
-     a=1;    
- else
-     dep3(i)=depthtmp(j);
-     vp3(i)=vp(j);
-     vs3(i)=vs(j);
-     j=j+1;
-     a=0;
- end
- 
-end
-     
-%  depthtmp
-%  depth
-%  vptmp
-%  vstmp
-%  vp
-%  vs
-%   dep3
-%   vp3
-%  vs3
- 
-% % %%% add another layer for Moho....
-    vp3=[vp3 vp(length(vp )) ];
-    vs3=[vs3 vs(length(vs )) ];
-    dep3=[dep3 depth(length(depth))-10 ];
-
-%%%plot Moho 
-mohoX=((vp(length(vp)-1)- vs(length(vs)-1))/2)+vs(length(vs)-1);
-mohoY=depth(length(depth));
-
-figure(2)
-
-plot(vp3(3:length(vp3) ),-dep3(3:length(vp3) ),'-rs','LineWidth',2)
-axis ij
-hold on
-%grid
-plot(vs3(3:length(vs3) ),-dep3(3:length(vs3) ),'-bs','LineWidth',2)
-
-%text(mohoX,-mohoY,'\leftarrow moho \rightarrow','FontSize',16,'VerticalAlignment','middle')
-
-h = legend('Vp','Vs',1); 
-grid
-xlabel('Velocity (km/sec)')
-ylabel('Depth (km)')
-title(['Plot of Vp, Vs  ' vmtitle])
 
 
 
@@ -2799,3 +2935,11 @@ function Cancel_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 delete(handles.crustmodnew)
+
+
+
+function enableoff(off)
+set(off,'Enable','off')
+
+function enableon(on)
+set(on,'Enable','on')

@@ -1,11 +1,11 @@
 function plotstruncert(elipsa_max,strike1,strike2)
 
-f=figure('Color',[0.8 0.8 0.8]);
+f=figure; %('Color',[0.8 0.8 0.8]);
 %subplot(2,2,1) 
 % tt=elipsa_max(:,5);
 % tt=tt(1:2:length(tt));
 % hist(tt,36);
-
+%%
 hist(elipsa_max(:,5),36);
 n=hist(elipsa_max(:,5),36);
 hold on
@@ -19,28 +19,28 @@ line(x,y,'Color','r','LineWidth',4,'ButtonDownFcn', @startDragFcn1);
 h1strike=line(x,y,'Color','r','LineWidth',3,'LineStyle','--','ButtonDownFcn', @startDragFcn1);
 set(h1strike,'UserData', 0)
 
-h1text=text(strike1+5,max(n)+(max(n)*0.1),'\pm0\circ','FontSize',12);
-
+h1text=text(strike1,max(n)+(max(n)*0.02),[num2str(strike1,'%3.0f') '\pm0\circ'],'FontSize',12,'HorizontalAlignment','center');
+%%
 x=[strike2 strike2];
 y=[0 max(n)];
 line(x,y,'Color','r','LineWidth',4,'ButtonDownFcn', @startDragFcn2);
 h2strike=line(x,y,'Color','r','LineWidth',4,'LineStyle','--','ButtonDownFcn', @startDragFcn2);
 set(h2strike,'UserData', 0)
 
-h2text=text(strike2+5,max(n)+(max(n)*0.1),'\pm0\circ','FontSize',12);
+h2text=text(strike2,max(n)+(max(n)*0.02),[num2str(strike2,'%3.0f') '\pm0\circ'],'FontSize',12,'HorizontalAlignment','center');
 
 title('Strike','FontSize',18)
 h=axis;
 
 axis([h(1) 360 h(3) h(4)+(h(4)*0.2)]) 
 
-h = findobj(gca,'Type','patch');
-set(h,'FaceColor',[0.5 0.5 0.5],'EdgeColor','w')
+% h = findobj(gca,'Type','patch');
+% set(h,'FaceColor',[0.5 0.5 0.5],'EdgeColor','w')
 
 
 aH=get(gcf,'CurrentAxes'); %('Xlim', [0 1], 'Ylim',[0 1]);
 set(f,'WindowButtonUpFcn',{@stopDragFcn,strike1,strike2,max(n)});
-
+%%
 
 function startDragFcn1(varargin)
      set(f,'WindowButtonMotionFcn', @draggingFcn1)

@@ -5,23 +5,31 @@ f=figure;
 hist(elipsa_max(:,7),36);
 n=hist(elipsa_max(:,7),36);
 hold on
+
+%%
 x=[rake1 rake1];
 y=[0 max(n)];
+
+ax=gca;
+set(ax,'Linewidth',2,'FontSize',12)
+
 line(x,y,'Color','r','LineWidth',4,'ButtonDownFcn', @startDragFcn1);
 h1strike=line(x,y,'Color','r','LineWidth',3,'LineStyle','--','ButtonDownFcn', @startDragFcn1);
 set(h1strike,'UserData', 0)
 
-h1text=text(rake1+5,max(n),'\pm0\circ','FontSize',12);
+h1text=text(rake1,max(n)+(max(n)*0.02),[num2str(rake1,'%4.0f') '\pm0\circ'],'FontSize',12, 'HorizontalAlignment','center');
 
+%%
 x=[rake2 rake2];
 y=[0 max(n)];
 line(x,y,'Color','r','LineWidth',4,'ButtonDownFcn', @startDragFcn2);
 h2strike=line(x,y,'Color','r','LineWidth',4,'LineStyle','--','ButtonDownFcn', @startDragFcn2);
 set(h2strike,'UserData', 0)
 
-h2text=text(rake2+5,max(n),'\pm0\circ','FontSize',12);
+h2text=text(rake2,max(n)+(max(n)*0.02),[num2str(rake2,'%4.0f') '\pm0\circ'],'FontSize',12, 'HorizontalAlignment','center');
 
-title('Rake')
+
+title('Rake','FontSize',18)
 h=axis;
 
 axis([-180 180 h(3) h(4)])
@@ -29,6 +37,8 @@ axis([-180 180 h(3) h(4)])
 aH=get(gcf,'CurrentAxes'); %('Xlim', [0 1], 'Ylim',[0 1]);
 set(f,'WindowButtonUpFcn',{@stopDragFcn,rake1,rake2,max(n)});
 
+
+%%
 
 function startDragFcn1(varargin)
      set(f,'WindowButtonMotionFcn', @draggingFcn1)

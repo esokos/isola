@@ -1,4 +1,4 @@
-function [XX,I] = rdmseed(varargin)
+function varargout = rdmseed(varargin)
 %RDMSEED Read miniSEED format file.
 %	X = RDMSEED(F) reads file F and returns a M-by-1 structure X containing
 %	M blocks ("data records") of a miniSEED file with headers, blockettes, 
@@ -16,7 +16,7 @@ function [XX,I] = rdmseed(varargin)
 %		- WORDORDER: 1 = big-endian (default), 0 = little-endian;
 %		- RECORDLENGTH: must be a power of 2, at least 256 (default is 4096).
 %	If the file contains Blockette 1000 (which is mandatory in the SEED 
-%	convention...), these 3 arguments are ignored.
+%	convention...), these 3 arguments are ignored except with 'force' option.
 %
 %	X = RDMSEED without input argument opens user interface to select the 
 %	file from disk.
@@ -42,10 +42,22 @@ function [XX,I] = rdmseed(varargin)
 %
 %	RDMSEED(...) without output arguments plots the imported signal by 
 %	concatenating all the data records, in one single plot if single channel
-%	is detected, or subplots for multi-channels file. Gaps are shown with
-%	red stars, overlaps with green circles.
+%	is detected, or subplots for multiplexed file (limited to 10 channels).
+%	Gaps are shown with red stars, overlaps with green circles.
+%
+%	[...] = RDMSEED(F,...,'be') forces big-endian reading (overwrites the
+%	automatic detection of endianness coding, which fails in some cases).
+%
+%	[...] = RDMSEED(F,...,'notc') disables time correction.
+%
+%	[...] = RDMSEED(F,...,'nullhead') ignores null header (some files may
+%	start with a series of null bytes).
 %
 %	[...] = RDMSEED(F,...,'plot') forces the plot with output arguments.
+%
+%	[...] = RDMSEED(F,...,'v') uses verbose mode (displays additional 
+%	information and warnings when necessary). Use 'vv' for extras, 'vvv'
+%	for debuging.
 %
 %	Some instructions for usage of the returned structure:
 %	
@@ -54,38 +66,46 @@ function [XX,I] = rdmseed(varargin)
 %		t = cat(1,X.t);
 %		d = cat(1,X.d);
 %
-%	- to get the list of channels in a multi-channel file:
+%	- to get the list of channels in a multiplexed file:
 %		[X,I] = rdmseed(f);
-%		cat(1,I.ChannelFullName)
+%		char(I.ChannelFullName)
 %
-%	- to extract the station component i from a multi-channel file:
+%	- to extract the station component n from a multiplexed file:
 %		[X,I] = rdmseed(f);
-%		k = I(i).XBlockIndex;
+%		k = I(n).XBlockIndex;
 %		plot(cat(1,X(k).t),cat(1,X(k).d))
 %		datetick('x')
-%		title(I(i).ChannelFullName)
+%		title(I(n).ChannelFullName)
 %
 %	Known encoding formats are the following FDSN codes:
 %		 0: ASCII
 %		 1: 16-bit integer
-%		 2: 24-bit integer (untested)
+%		 2: 24-bit integer
 %		 3: 32-bit integer
-%		 4: IEEE float
-%		 5: IEEE double (untested)
+%		 4: IEEE float32
+%		 5: IEEE float64
 %		10: Steim-1
 %		11: Steim-2
 %		12: GEOSCOPE 24-bit (untested)
 %		13: GEOSCOPE 16/3-bit gain ranged
-%		14: GEOSCOPE 16/4-bit gain ranged (untested)
+%		14: GEOSCOPE 16/4-bit gain ranged
 %		19: Steim-3 (alpha and untested)
+%
+%	See also MKMSEED to export data in miniSEED format.
+%
 %
 %	Author: François Beauducel <beauducel@ipgp.fr>
 %		Institut de Physique du Globe de Paris
 %	Created: 2010-09-17
-%	Updated: 2011-07-21
+%	Updated: 2018-08-09
 %
-%	Aknowledgments:
-%		Ljupco Jordanovski, Jean-Marie Saurel, Mohamed Boubacar.
+%	Acknowledgments:
+%		Ljupco Jordanovski, Jean-Marie Saurel, Mohamed Boubacar, Jonathan Berger,
+%		Shahid Ullah, Wayne Crawford, Constanza Pardo, Sylvie Barbier,
+%		Robert Chase, Arnaud Lemarchand, Alexandre Nercessian.
+%
+%		Special thanks to Martin Mityska who also inspired me with his ingenious
+%		ReadMSEEDFast.m function.
 %
 %	References:
 %		IRIS (2010), SEED Reference Manual: SEED Format Version 2.4, May 2010,
@@ -94,13 +114,58 @@ function [XX,I] = rdmseed(varargin)
 %		Steim J.M. (1994), 'Steim' Compression, Quanterra Inc.
 
 %	History:
+%
+%		[2018-08-09]
+%			- MAJOR CODE UPDATE: now processes the binary data in memory 
+%			  after a global file reading.
+%			- removes all global variables.
+%		[2017-11-21]
+%			- adds option 'nullhead' to bypass null bytes header.
+%		[2015-01-05]
+%			- fixes a bug when a data block has 0 sample declared in header
+%			  but some data in the record (STEIM-1/2 coding).
+%		[2014-06-29]
+%			- 24-bit uncompressed format tested (bug correction), thanks to
+%			  Arnaud Lemarchand.
+%		[2014-05-31]
+%			- applies the time correction to StartTime and X.t (if needed).
+%			- new option 'notc' to disable time correction.
+%			- Geoscope 16/4 format passed real data archive tests.
+%			- fixes a problem when plotting multiplexed channels (thanks to 
+%			  Robert Chase).
+%		[2014-03-14]
+%			- Improved endianness automatic detection (see comments).
+%			- Accepts mixed little/big endian encoding in a single file.
+%			- minor fixes.
+%		[2013-10-25]
+%			- Due to obsolete syntax of bitcmp(0,N) in R2013b, replaces all
+%			  by: 2^N-1 (which is much faster...)
+%		[2013-02-15]
+%			- Tests also DayOfYear in header to determine automatically 
+%			  little-endian coding of the file.
+%			- Adds option 'be' to force big-endian reading (overwrites
+%			  automatic detection).
+%		[2012-12-21]
+%			- Adds a verbose mode
+%		[2012-04-21]
+%			- Correct bug with Steim + little-endian coding
+%			  (thanks to Shahid Ullah)
+%		[2012-03-21]
+%			- Adds IDs for warning messages
+%		[2011-11-10]
+%			- Correct bug with multiple channel name length (thanks to
+%			  Jonathan Berger)
+%		[2011-10-27]
+%			- Add LocationIdentifier to X.ChannelFullName
+%		[2011-10-24]
+%			- Validation of IEEE double encoding (with PQL)
+%			- Import/plot data even with file integrity problem (like PQL)
 %		[2011-07-21]
-%			- Validation of ASCII encoding format
+%			- Validation of ASCII encoding format (logs)
 %			- Blockettes are now stored in substructures below a single
 %			  field X.BLOCKETTES
 %			- Add import of blockettes 500 and 2000
-%			- Accept multi-channel files with ASCII blocks (logs) and 
-%			  various data coding
+%			- Accept multi-channel files with various data coding
 %		[2010-10-16]
 %			- Alpha-version of Steim-3 decoding...
 %			- Extend output parameters with channel detection
@@ -111,7 +176,6 @@ function [XX,I] = rdmseed(varargin)
 %			- Additional output argument with gap and overlap analysis
 %			- Create a plot when no output argument are specified
 %			- Optimize script coding (30 times faster STEIM decoding!)
-%
 %		[2010-09-28]
 %			- Correction of a problem with STEIM-1 nibble 3 decoding (one 
 %			  32-bit difference)
@@ -119,7 +183,7 @@ function [XX,I] = rdmseed(varargin)
 %			  input arguments (like Seismic Handler output files).
 %			- Uses warning() function instead of fprintf().
 %
-%	Copyright (c) 2010, François Beauducel, covered by BSD License.
+%	Copyright (c) 2018, François Beauducel, covered by BSD License.
 %	All rights reserved.
 %
 %	Redistribution and use in source and binary forms, with or without 
@@ -144,13 +208,20 @@ function [XX,I] = rdmseed(varargin)
 %	ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
 %	POSSIBILITY OF SUCH DAMAGE.
 
-error(nargchk(0,5,nargin))
+if nargin > 6
+	error('Too many input arguments.')
+end
 
 % default input arguments
-makeplot = 0;
-ef = 10;
-wo = 1;
-rl = 2^12;
+makeplot = 0;	% make plot flag
+verbose = 0;	% verbose flag/level 
+forcebe = 0;	% force big-endian
+ef = 10;		% encoding format default
+wo = 1;			% word order default
+rl = 2^12;		% record length default
+force = 0;		% force input argument over blockette 1000 (UNDOCUMENTED)
+notc = 0;		% force no time correction (over ActivityFlags)
+nullhead = 0;	% allow null bytes before header
 
 if nargin < 1
 	[filename,pathname] = uigetfile('*','Please select a miniSEED file...');
@@ -159,31 +230,40 @@ else
 	f = varargin{1};
 end
 
-if ~ischar(f) | ~exist(f,'file')
+if ~ischar(f) || ~exist(f,'file')
 	error('File %s does not exist.',f);
 end
 
 if nargin > 1
-	makeplot = strcmp(varargin(end),'plot');
+	verbose = any(strcmpi(varargin,'v')) + 2*any(strcmpi(varargin,'vv')) ...
+	          + 3*any(strcmpi(varargin,'vvv'));
+	makeplot = any(strcmpi(varargin,'plot'));
+	forcebe = any(strcmpi(varargin,'be'));
+	notc = any(strcmpi(varargin,'notc'));
+	force = any(strcmpi(varargin,'force'));
+	nullhead = any(strcmpi(varargin,'nullhead'));
 end
+nargs = (makeplot>0) + (verbose>0) + (forcebe>0) + (notc>0) + (force>0) ...
+	 + (nullhead>0);
 
-if nargin > (1 + makeplot)
+
+if nargin > (1 + nargs)
 	ef = varargin{2};
-	if ~isnumeric(ef) | ~any(ef==[0:5,10:19,30:33])
+	if ~isnumeric(ef) || ~any(ef==[0:5,10:19,30:33])
 		error('Argument ENCODINGFORMAT must be a valid FDSN code value.');
 	end
 end
 
-if nargin > (2 + makeplot)
+if nargin > (2 + nargs)
 	wo = varargin{3};
-	if ~isnumeric(wo) | (wo ~= 0 & wo ~= 1)
+	if ~isnumeric(wo) || (wo ~= 0 && wo ~= 1)
 		error('Argument WORDORDER must be 0 or 1.');
 	end
 end
 
-if nargin > (3 + makeplot)
+if nargin > (3 + nargs)
 	rl = varargin{4};
-	if ~isnumeric(rl) | rl < 256 | rem(log(rl)/log(2),1) ~= 0
+	if ~isnumeric(rl) || rl < 256 || rem(log(rl)/log(2),1) ~= 0
 		error('Argument RECORDLENGTH must be a power of 2 and greater or equal to 256.');
 	end
 end
@@ -192,63 +272,74 @@ if nargout == 0
 	makeplot = 1;
 end
 
-% maximum number of channels for plotting y-labels
-max_channel_label = 6;
+% sensible limits for multiplexed files
+max_channels = 20;	% absolute max number of channels to plot
+max_channel_label = 6;	% max. number of channels for y-labels
 
-LittleEndian = 0;
-
+% file is opened in Big-Endian encoding (this is encouraged by SEED)
 fid = fopen(f,'rb','ieee-be');
-header = fread(fid,20,'*char');
+le = 0;
+offset = 0;
 
 % --- tests if the header is mini-SEED
 % the 7th character must be one of the "data header/quality indicator", usually 'D'
-if isempty(findstr(header(7),'DRMQ'))
-	if ~isempty(findstr(header(7),'VAST'))
-		s = ' (seems to be a SEED Volume)';
+header = fread(fid,20,'*char');
+if ~ismember(header(7),'DRMQ')
+	if ismember(header(7),'VAST')
+		error('File seems to be a SEED Volume. Cannot read it.');
 	else
-		s = '';
+		if header(1)==0
+			if nullhead
+				if verbose
+					fprintf('Null header option: bypassing...');
+				end
+				c = 0;
+				fseek(fid,0,'bof');
+				while c==0
+					c = fread(fid,1,'*char');
+					offset = offset + 1;
+				end
+				if verbose
+					fprintf(' %d null bytes.\n',offset);
+				end
+				header = fread(fid,6,'*char');
+				if ~ismember(header(6),'DRMQ')
+					error('File is not in mini-SEED format. Cannot read it.');
+				else
+					offset = offset - 1;
+				end
+			else
+				error('File starts with null bytes... if you believe it is still a miniseed file, try the ''nullhead'' option.');
+			end
+		else
+			error('File is not in mini-SEED format. Cannot read it.');
+		end
 	end
-	error('File is not in mini-SEED format%s. Cannot read it.',s);
-end
-
-% --- tests little-endian or big-endian
-% if the 2-byte year is greater than 2056, file is probably little-endian
-% (Note: idea taken from Ljupco Jordanovski scripts. Thanks!)
-Year = fread(fid,1,'uint16');
-if Year < 2056
-	fseek(fid,0,'bof');
-else
-	LittleEndian = 1;
-	fclose(fid);
-	fid = fopen(f,'rb','ieee-le');
 end
 
 i = 1;
-FileOffset = 0;
 
-while ~feof(fid)
-	X(i) = read_data_record(fid,FileOffset,LittleEndian,ef,wo,rl);
-	FileOffset = ftell(fid);
+% --- main loop that reads data records until the end of the file
+while offset >= 0
+	[X(i),offset] = read_data_record(f,fid,offset,le,ef,wo,rl,forcebe,verbose,notc,force);
 	i = i + 1;
-	fread(fid,1,'char');	% this is to force EOF=1 on last record.
 end
 
 fclose(fid);
 
 if nargout > 0
-	XX = X;
+	varargout{1} = X;
 end
 
 % --- analyses data
-if nargout > 1 | makeplot
+if makeplot || nargout > 1
 
 	% test if the file is multiplexed or a single channel
-	un = unique(cellstr(cat(1,X.ChannelFullName)));
+	un = unique(cellstr(char(X.ChannelFullName)));
 	nc = numel(un);
-	
 	for i = 1:nc
-		k = find(strcmp(cellstr(cat(1,X.ChannelFullName)),un{i}));
-		I(i).ChannelFullName = un{i};
+		k = find(strcmp(cellstr(char(X.ChannelFullName)),un{i}));
+		I(i).ChannelFullName = X(k(1)).ChannelFullName;
 		I(i).XBlockIndex = k;
 		I(i).ClockDrift = ([diff(cat(1,X(k).RecordStartTimeMATLAB));NaN]*86400 - cat(1,X(k).NumberSamples)./cat(1,X(k).SampleRate))./cat(1,X(k).NumberSamples);
 		I(i).OverlapBlockIndex = k(find(I(i).ClockDrift.*cat(1,X(k).NumberSamples).*cat(1,X(k).SampleRate) < -.5) + 1);
@@ -257,7 +348,9 @@ if nargout > 1 | makeplot
 		I(i).GapTime = cat(1,X(I(i).GapBlockIndex).RecordStartTimeMATLAB);
 	end
 end
-
+if nargout > 1
+	varargout{2} = I;
+end
 
 % --- plots the data
 if makeplot
@@ -266,12 +359,20 @@ if makeplot
 	
 	xlim = [min(cat(1,X.t)),max(cat(1,X.t))];
 
+	% test if all data records have the same length
+	rl = unique(cat(1,X.DataRecordSize));
+	if numel(rl) == 1
+		rl_text = sprintf('%d bytes',rl);
+	else
+		rl_text = sprintf('%d-%d bytes',min(rl),max(rl));
+	end
+	
 	% test if all data records have the same sampling rate
 	sr = unique(cat(1,X.SampleRate));
 	if numel(sr) == 1
-		sr_text = sprintf('%g Hz samp.',sr);
+		sr_text = sprintf('%g Hz',sr);
 	else
-		sr_text = sprintf('%d different samp. rates',numel(sr));
+		sr_text = sprintf('%d # samp. rates',numel(sr));
 	end
 	
 	% test if all data records have the same encoding format
@@ -297,10 +398,15 @@ if makeplot
 		grid on
 		xlabel(sprintf('Time\n(%s to %s)',datestr(xlim(1)),datestr(xlim(2))))
 		ylabel('Counts')
-		title(sprintf('mini-SEED file "%s"\n%s (%d records - %g data - %s - %s)', ...
-			f,un{1},length(X),numel(cat(1,X.d)),sr_text,ef_text),'Interpreter','none')
+		title(sprintf('mini-SEED file "%s"\n%s (%d rec. @ %s - %g samp. @ %s - %s)', ...
+			f,un{1},length(X),rl_text,numel(cat(1,X.d)),sr_text,ef_text),'Interpreter','none')
 	else
 		% plot is done only for real data channels...
+		if nc > max_channels
+			warning('Plot has been limited to %d channels (over %d). See help to manage multiplexed file.', ...
+				max_channels,nc);
+			nc = max_channels;
+		end
 		for i = 1:nc
 			subplot(nc*2,1,i*2 + (-1:0))
 			k = I(i).XBlockIndex;
@@ -308,10 +414,18 @@ if makeplot
 				plot(cat(1,X(k).t),cat(1,X(k).d))
 				hold on
 				for ii = 1:length(I(i).GapBlockIndex)
-					plot(I(i).GapTime(ii),X(I(i).GapBlockIndex(ii)).d(1),'*r')
+					if ~isempty(X(I(i).GapBlockIndex(ii)).d)
+						plot(I(i).GapTime(ii),X(I(i).GapBlockIndex(ii)).d,'r')
+					else
+						plot(repmat(I(i).GapTime(ii),1,2),ylim,'r')
+					end
 				end
 				for ii = 1:length(I(i).OverlapBlockIndex)
-					plot(I(i).OverlapTime(ii),X(I(i).OverlapBlockIndex(ii)).d(1),'og')
+					if ~isempty(X(I(i).OverlapBlockIndex(ii)).d)
+						plot(I(i).OverlapTime(ii),X(I(i).OverlapBlockIndex(ii)).d,'g')
+					else
+						plot(repmat(I(i).OverlapTime(ii),1,2),ylim,'g')
+					end
 				end
 				hold off
 			end
@@ -325,8 +439,8 @@ if makeplot
 			set(gca,'XTickLabel',[])
 			grid on
 			if i == 1
-				title(sprintf('mini-SEED file "%s"\n%d channels (%d records - %g data - %s - %s)', ...
-					f,length(un),length(X),numel(cat(1,X(k).d)),sr_text,ef_text),'Interpreter','none')
+				title(sprintf('mini-SEED file "%s"\n%d channels (%d rec. @ %s - %g data - %s - %s)', ...
+					f,length(un),length(X),rl_text,numel(cat(1,X(k).d)),sr_text,ef_text),'Interpreter','none')
 			end
 			if i == nc
 				datetick('x','keeplimits')
@@ -335,43 +449,60 @@ if makeplot
 		end
 		v = version;
 		if str2double(v(1))>=7
-			linkaxes(findobj('type','axes'),'x')
+			linkaxes(findobj(gcf,'type','axes'),'x')
 		end
 	end
 end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function D = read_data_record(fid,offset,le,ef,wo,rl)
-% read_data_record(FID,OFFSET,LE,EF,WO,RL) reads the data record starting
-%	at byte OFFSET (from begining of the open file FID), using parameters
-%	LE (=1 for litte-endian file encoding), and default parameters if no
-%	Blockette 1000 will be found: EF = encoding format, WO = word order, 
-%	and RL = record length.
-%	Returns a structure D.
+function [D,offset] = read_data_record(f,fid,offset,le,ef,wo,rl,forcebe,verbose,notc,force)
+% read_data_record uses global variables f, fid, offset, le, ef, wo, rl, 
+%	and verbose. It reads a data record and returns a structure D.
+
 
 fseek(fid,offset,'bof');
 
 % --- read fixed section of Data Header (48 bytes)
-D.SequenceNumber		= fread(fid,6,'*char')';
-D.DataQualityIndicator	= fread(fid,1,'*char');
-D.ReservedByte			= fread(fid,1,'*char');
+D.SequenceNumber        = fread(fid,6,'*char')';
+D.DataQualityIndicator  = fread(fid,1,'*char');
+D.ReservedByte          = fread(fid,1,'*char');
 D.StationIdentifierCode = fread(fid,5,'*char')';
-D.LocationIdentifier	= fread(fid,2,'*char')';
-D.ChannelIdentifier		= fread(fid,3,'*char')';
-D.NetworkCode			= fread(fid,2,'*char')';
-D.ChannelFullName = sprintf('%s:%s:%s',D.NetworkCode,D.StationIdentifierCode,D.ChannelIdentifier);
+D.LocationIdentifier    = fread(fid,2,'*char')';
+D.ChannelIdentifier	    = fread(fid,3,'*char')';
+D.NetworkCode           = fread(fid,2,'*char')';
+D.ChannelFullName = sprintf('%s:%s:%s:%s',deblank(D.NetworkCode), ...
+	deblank(D.StationIdentifierCode),deblank(D.LocationIdentifier), ...
+	deblank(D.ChannelIdentifier));
 
 % Start Time decoding
-D.RecordStartTime = readbtime(fid);
+[D.RecordStartTime,swapflag] = readbtime(fid,forcebe);
 D.RecordStartTimeISO = sprintf('%4d-%03d %02d:%02d:%07.4f',D.RecordStartTime);
-D.RecordStartTimeMATLAB = datenum([D.RecordStartTime(1),0,D.RecordStartTime(2:5)]);
 
-D.NumberSamples			= fread(fid,1,'uint16');
+if swapflag
+	if le
+		machinefmt = 'ieee-be';
+		le = 0;
+	else
+		machinefmt = 'ieee-le';
+		le = 1;
+	end
+	position = ftell(fid);
+	fclose(fid);
+	fid = fopen(f,'rb',machinefmt);
+	fseek(fid,position,'bof');
+	if verbose > 0
+		warning('RDMSEED:DataIntegrity', ...
+			'Sequence # %s: need to switch file encoding to %s...\n', ...
+			D.SequenceNumber,machinefmt);
+	end
+end
+
+D.NumberSamples	        = fread(fid,1,'uint16');
 
 % Sample Rate decoding
-SampleRateFactor		= fread(fid,1,'int16=>double');
-SampleRateMultiplier	= fread(fid,1,'int16=>double');
+SampleRateFactor        = fread(fid,1,'int16');
+SampleRateMultiplier    = fread(fid,1,'int16');
 if SampleRateFactor > 0
 	if SampleRateMultiplier >= 0
 		D.SampleRate = SampleRateFactor*SampleRateMultiplier;
@@ -386,13 +517,13 @@ else
 	end
 end
 
-D.ActivityFlags			= fread(fid,1,'uint8');
-D.IOFlags				= fread(fid,1,'uint8');
-D.DataQualityFlags		= fread(fid,1,'uint8');
+D.ActivityFlags          = fread(fid,1,'uint8');
+D.IOFlags                = fread(fid,1,'uint8');
+D.DataQualityFlags       = fread(fid,1,'uint8');
 D.NumberBlockettesFollow = fread(fid,1,'uint8');
-D.TimeCorrection		= fread(fid,1,'float32');
-D.OffsetBeginData		= fread(fid,1,'uint16');
-D.OffsetFirstBlockette	= fread(fid,1,'uint16');
+D.TimeCorrection         = fread(fid,1,'int32');	% Time correction in 0.0001 s
+D.OffsetBeginData        = fread(fid,1,'uint16');
+D.OffsetFirstBlockette   = fread(fid,1,'uint16');
 
 % --- read the blockettes
 OffsetNextBlockette = D.OffsetFirstBlockette;
@@ -409,7 +540,7 @@ for i = 1:D.NumberBlockettesFollow
 		case 1000
 			% BLOCKETTE 1000 = Data Only SEED (8 bytes)
 			OffsetNextBlockette = fread(fid,1,'uint16');
-            D.BLOCKETTES.B1000.EncodingFormat = fread(fid,1,'uint8');
+			D.BLOCKETTES.B1000.EncodingFormat = fread(fid,1,'uint8');
 			D.BLOCKETTES.B1000.WordOrder = fread(fid,1,'uint8');
 			D.BLOCKETTES.B1000.DataRecordLength = fread(fid,1,'uint8');
 			D.BLOCKETTES.B1000.Reserved = fread(fid,1,'uint8');
@@ -433,7 +564,7 @@ for i = 1:D.NumberBlockettesFollow
 			% BLOCKETTE 500 = Timing (200 bytes)
 			OffsetNextBlockette = fread(fid,1,'uint16');
 			D.BLOCKETTES.B500.VCOCorrection = fread(fid,1,'float32');
-			D.BLOCKETTES.B500.TimeOfException = readbtime(fid);
+			D.BLOCKETTES.B500.TimeOfException = readbtime(fid,forcebe);
 			D.BLOCKETTES.B500.MicroSec = fread(fid,1,'int8');
 			D.BLOCKETTES.B500.ReceptionQuality = fread(fid,1,'uint8');
 			D.BLOCKETTES.B500.ExceptionCount = fread(fid,1,'uint16');
@@ -459,14 +590,19 @@ for i = 1:D.NumberBlockettesFollow
 		
 		otherwise
 			OffsetNextBlockette = fread(fid,1,'uint16');
-			warning('Unknown Blockette number %d (%s)!\n',BlocketteType,D.ChannelFullName);
+
+			if verbose > 0
+				warning('RDMSEED:UnknownBlockette', ...
+					'Unknown Blockette number %d (%s)!\n', ...
+					BlocketteType,D.ChannelFullName);
+			end
 	end
 end
 
 % --- read the data stream
 fseek(fid,offset + D.OffsetBeginData,'bof');
 
-if isfield(D.BLOCKETTES,'B1000')
+if ~force && isfield(D.BLOCKETTES,'B1000')
 	EncodingFormat = D.BLOCKETTES.B1000.EncodingFormat;
 	WordOrder = D.BLOCKETTES.B1000.WordOrder;
 	D.DataRecordSize = 2^D.BLOCKETTES.B1000.DataRecordLength;
@@ -485,13 +621,13 @@ switch EncodingFormat
 	
 	case 0
 		% --- decoding format: ASCII text
-		D.EncodingFormatName = 'ASCII';
+		D.EncodingFormatName = {'ASCII'};
 		D.d = fread(fid,D.DataRecordSize - D.OffsetBeginData,'*char')';
 
 	case 1
 		% --- decoding format: 16-bit integers
-		D.EncodingFormatName = 'INT16';
-		dd = fread(fid,(D.DataRecordSize - D.OffsetBeginData)/2,'*int16');
+		D.EncodingFormatName = {'INT16'};
+		dd = fread(fid,ceil((D.DataRecordSize - D.OffsetBeginData)/2),'*int16');
 		if xor(~WordOrder,le)
 			dd = swapbytes(dd);
 		end
@@ -499,8 +635,8 @@ switch EncodingFormat
 		
 	case 2
 		% --- decoding format: 24-bit integers
-		D.EncodingFormatName = 'INT24';
-		dd = fread(fid,(D.DataRecordSize - D.OffsetBeginData)/3,'bit24=>int32');
+		D.EncodingFormatName = {'INT24'};
+		dd = fread(fid,ceil((D.DataRecordSize - D.OffsetBeginData)/3),'bit24=>int32');
 		if xor(~WordOrder,le)
 			dd = swapbytes(dd);
 		end
@@ -508,8 +644,8 @@ switch EncodingFormat
 		
 	case 3
 		% --- decoding format: 32-bit integers
-		D.EncodingFormatName = 'INT32';
-		dd = fread(fid,(D.DataRecordSize - D.OffsetBeginData)/4,'*int32');
+		D.EncodingFormatName = {'INT32'};
+		dd = fread(fid,ceil((D.DataRecordSize - D.OffsetBeginData)/4),'*int32');
 		if xor(~WordOrder,le)
 			dd = swapbytes(dd);
 		end
@@ -517,8 +653,8 @@ switch EncodingFormat
 		
 	case 4
 		% --- decoding format: IEEE floating point
-		D.EncodingFormatName = 'FLOAT32';
-		dd = fread(fid,(D.DataRecordSize - D.OffsetBeginData)/4,'*float');
+		D.EncodingFormatName = {'FLOAT32'};
+		dd = fread(fid,ceil((D.DataRecordSize - D.OffsetBeginData)/4),'*float');
 		if xor(~WordOrder,le)
 			dd = swapbytes(dd);
 		end
@@ -526,8 +662,8 @@ switch EncodingFormat
 		
 	case 5
 		% --- decoding format: IEEE double precision floating point
-		D.EncodingFormatName = 'FLOAT64';
-		dd = fread(fid,(D.DataRecordSize - D.OffsetBeginData)/8,'*double');
+		D.EncodingFormatName = {'FLOAT64'};
+		dd = fread(fid,ceil((D.DataRecordSize - D.OffsetBeginData)/8),'*double');
 		if xor(~WordOrder,le)
 			dd = swapbytes(dd);
 		end
@@ -564,10 +700,10 @@ switch EncodingFormat
 			% first bit = 1 means second differences
 			SecondDiff = bitshift(frame32(1,:),-31);
 			% checks for "squeezed flag"... and replaces frame32(1,:)
-			squeezed = bitand(bitshift(frame32(1,:),-24),bitcmp(0,2^7));
+			squeezed = bitand(bitshift(frame32(1,:),-24),127);
 			k = find(bitget(squeezed,7));
 			if ~isempty(k)
-				moredata24 = bitand(frame32(1,k),bitcmp(0,2^24));
+				moredata24 = bitand(frame32(1,k),16777215);
 				k = find(squeezed == 80);	% upper nibble 8-bit = 0x50
 				if ~isempty(k)
 					frame32(1,k) = hex2dec('15555555');
@@ -584,7 +720,7 @@ switch EncodingFormat
 		end
 
 		% nibbles is an array of the same size as frame32...
-		nibbles = bitand(bitshift(repmat(frame32(1,:),16,1),repmat(-30:2:0,size(frame32,2),1)'),bitcmp(0,2));
+		nibbles = bitand(bitshift(repmat(frame32(1,:),16,1),repmat(-30:2:0,size(frame32,2),1)'),3);
 		x0 = bitsign(frame32(2,1),32);	% forward integration constant
 		xn = bitsign(frame32(3,1),32);	% reverse integration constant
 		
@@ -593,15 +729,15 @@ switch EncodingFormat
 		case 1
 			% STEIM-1: 3 cases following the nibbles
 			ddd = NaN*ones(4,numel(frame32));	% initiates array with NaN
-			k = find(nibbles == 1);				% nibble = 1 : four 8-bit differences
+			k = find(nibbles == 1);			% nibble = 1 : four 8-bit differences
 			if ~isempty(k)
 				ddd(1:4,k) = bitsplit(frame32(k),32,8);
 			end
-			k = find(nibbles == 2);				% nibble = 2 : two 16-bit differences
+			k = find(nibbles == 2);			% nibble = 2 : two 16-bit differences
 			if ~isempty(k)
 				ddd(1:2,k) = bitsplit(frame32(k),32,16);
 			end
-			k = find(nibbles == 3);				% nibble = 3 : one 32-bit difference
+			k = find(nibbles == 3);			% nibble = 3 : one 32-bit difference
 			if ~isempty(k)
 				ddd(1,k) = bitsign(frame32(k),32);
 			end
@@ -609,11 +745,11 @@ switch EncodingFormat
 		case 2	
 			% STEIM-2: 7 cases following the nibbles and dnib
 			ddd = NaN*ones(7,numel(frame32));	% initiates array with NaN
-			k = find(nibbles == 1);				% nibble = 1 : four 8-bit differences
+			k = find(nibbles == 1);			% nibble = 1 : four 8-bit differences
 			if ~isempty(k)
 				ddd(1:4,k) = bitsplit(frame32(k),32,8);
 			end
-			k = find(nibbles == 2);				% nibble = 2 : must look in dnib
+			k = find(nibbles == 2);			% nibble = 2 : must look in dnib
 			if ~isempty(k)
 				dnib = bitshift(frame32(k),-30);
 				kk = k(dnib == 1);		% dnib = 1 : one 30-bit difference
@@ -646,7 +782,7 @@ switch EncodingFormat
 				end
 			end
 			
-		case 3	% *** STEIM-3 DECODING IS BETA AND UNTESTED ***
+		case 3	% *** STEIM-3 DECODING IS ALPHA AND UNTESTED ***
 			% STEIM-3: 7 cases following the nibbles
 			ddd = NaN*ones(9,numel(frame32));	% initiates array with NaN
 			k = find(nibbles == 0);				% nibble = 0 : two 16-bit differences
@@ -660,8 +796,8 @@ switch EncodingFormat
 			k = find(nibbles == 2);				% nibble = 2 : must look even dnib
 			if ~isempty(k)
 				dnib2 = bitshift(frame32(k(2:2:end)),-30);
-				w60 = bitand(frame32(k(2:2:end)),bitcmp(0,2^30)) ...
-					+ bitshift(bitand(frame32(k(1:2:end)),bitcmp(0,2^30)),30);	% concatenates two 30-bit words
+				w60 = bitand(frame32(k(2:2:end)),1073741823) ...
+					+ bitshift(bitand(frame32(k(1:2:end)),1073741823),30);	% concatenates two 30-bit words
 				kk = find(dnib2 == 0);		% dnib = 0: five 12-bit differences (60 bits)
 				if ~isempty(kk)
 					ddd(1:5,k(2*kk)) = bitsplit(w60,60,12);
@@ -689,110 +825,139 @@ switch EncodingFormat
 			end
 		end
 		
-		dd = ddd(~isnan(ddd));		% dd is non-NaN values of ddd
+		% Little-endian coding: needs to swap bytes
+		if ~WordOrder
+			ddd = flipud(ddd);
+		end
+		dd = ddd(~isnan(ddd));		% reduces initial array ddd: dd is non-NaN values of ddd
 		
+		% controls the number of samples
+		if numel(dd) ~= D.NumberSamples
+			if verbose > 1
+				warning('RDMSEED:DataIntegrity','Problem in %s sequence # %s [%d-%03d %02d:%02d:%07.4f]: number of samples in header (%d) does not equal data (%d).\n', ...
+					D.EncodingFormatName{:},D.SequenceNumber,D.RecordStartTimeISO,D.NumberSamples,numel(dd));
+			end
+			if numel(dd) < D.NumberSamples
+				D.NumberSamples = numel(dd);
+			end
+		end
+
 		% rebuilds the data vector by integrating the differences
 		D.d = cumsum([x0;dd(2:D.NumberSamples)]);
 		
 		% controls data integrity...
 		if D.d(end) ~= xn
-			warning('Problem in %s sequence number %s [%s] : reverse integration not respected.\n',char(D.EncodingFormatName),D.SequenceNumber,D.RecordStartTimeISO);
+			warning('RDMSEED:DataIntegrity','Problem in %s sequence # %s [%s]: data integrity check failed, last_data=%d, Xn=%d.\n', ...
+				D.EncodingFormatName{:},D.SequenceNumber,D.RecordStartTimeISO,D.d(end),xn);
 		end
-		if numel(dd) ~= D.NumberSamples
-			fprintf('Problem in %s sequence number %s [%s] : found extra data.\n',char(D.EncodingFormatName),D.SequenceNumber,D.RecordStartTimeISO);
+
+		if D.NumberSamples == 0
+			D.d = nan(0,1);
+		end
+		
+		% for debug purpose...
+		if verbose > 2
+			D.dd = dd;
+			D.nibbles = nibbles;
+			D.x0 = x0;
+			D.xn = xn;
 		end
 
 	case 12
 		% --- decoding format: GEOSCOPE multiplexed 24-bit integer
-		D.EncodingFormatName = 'GEOSCOPE24';
+		D.EncodingFormatName = {'GEOSCOPE24'};
 		dd = fread(fid,(D.DataRecordSize - D.OffsetBeginData)/3,'bit24=>double');
 		if xor(~WordOrder,le)
 			dd = swapbytes(dd);
 		end
 		D.d = dd(1:D.NumberSamples);
 		
-	case 13
-		% --- decoding format: GEOSCOPE multiplexed 16/3-bit gain ranged
-		%	bit 15 = unused
-		%	bits 14-12 = 3-bit gain exponent (positive)
+	case {13,14}
+		% --- decoding format: GEOSCOPE multiplexed 16/3 and 16/4 bit gain ranged
+		%	(13): 16/3-bit (bit 15 is unused)
+		%	(14): 16/4-bit
+		%	bits 15-12 = 3 or 4-bit gain exponent (positive) 
 		%	bits 11-0 = 12-bit mantissa (positive)
 		%	=> data = (mantissa - 2048) / 2^gain
-		D.EncodingFormatName = 'GEOSCOPE16-3';
+		geoscope = 7 + 8*(EncodingFormat==14); % mask for gain exponent
+		D.EncodingFormatName = {sprintf('GEOSCOPE16-%d',EncodingFormat-10)};
 		dd = fread(fid,(D.DataRecordSize - D.OffsetBeginData)/2,'*uint16');
 		if xor(~WordOrder,le)
 			dd = swapbytes(dd);
 		end
-		dd = (double(bitand(dd,bitcmp(0,12)))-2^11)./2.^double(bitand(bitshift(dd,-12),bitcmp(0,3)));
-		D.d = dd(1:D.NumberSamples);
-		
-	case 14
-		% --- decoding format: GEOSCOPE multiplexed 16/4-bit gain ranged
-		%	bits 15-12 = 4-bit gain exponent (positive)
-		%	bits 11-0 = 12-bit mantissa (positive)
-		%	=> data = (mantissa - 2048) / 2^gain
-		D.EncodingFormatName = 'GEOSCOPE16-4';
-		dd = fread(fid,(D.DataRecordSize - D.OffsetBeginData)/2,'*uint16');
-		if xor(~WordOrder,le)
-			dd = swapbytes(dd);
-		end
-		dd = (double(bitand(dd,bitcmp(0,12)))-2^11)./2.^double(bitand(bitshift(dd,-12),bitcmp(0,4)));
+		dd = (double(bitand(dd,2^12-1))-2^11)./2.^double(bitand(bitshift(dd,-12),geoscope));
 		D.d = dd(1:D.NumberSamples);
 		
 	case 15
 		% --- decoding format: US National Network compression
-		D.EncodingFormatName = 'USNN';
+		D.EncodingFormatName = {'USNN'};
 		uncoded = 1;
 		
 	case 16
 		% --- decoding format: CDSN 16-bit gain ranged
-		D.EncodingFormatName = 'CDSN';
+		D.EncodingFormatName = {'CDSN'};
 		uncoded = 1;
 		
 	case 17
 		% --- decoding format: Graefenberg 16-bit gain ranged
-		D.EncodingFormatName = 'GRAEFENBERG';
+		D.EncodingFormatName = {'GRAEFENBERG'};
 		uncoded = 1;
 		
 	case 18
 		% --- decoding format: IPG - Strasbourg 16-bit gain ranged
-		D.EncodingFormatName = 'IPGS';
+		D.EncodingFormatName = {'IPGS'};
 		uncoded = 1;
 		
 	case 30
 		% --- decoding format: SRO format
-		D.EncodingFormatName = 'SRO';
+		D.EncodingFormatName = {'SRO'};
 		uncoded = 1;
 		
 	case 31
 		% --- decoding format: HGLP format
-		D.EncodingFormatName = 'HGLP';
+		D.EncodingFormatName = {'HGLP'};
 		uncoded = 1;
 		
 	case 32
 		% --- decoding format: DWWSSN gain ranged format
-		D.EncodingFormatName = 'DWWSSN';
+		D.EncodingFormatName = {'DWWSSN'};
 		uncoded = 1;
 		
 	case 33
 		% --- decoding format: RSTN 16-bit gain ranged
-		D.EncodingFormatName = 'RSTN';
+		D.EncodingFormatName = {'RSTN'};
 		uncoded = 1;
 		
 	otherwise
-		D.EncodingFormatName = sprintf('** Unknown encoding format %d **',EncodingFormat);
+		D.EncodingFormatName = {sprintf('** Unknown (%d) **',EncodingFormat)};
 		uncoded = 1;
 		
 end
 
 if uncoded
-	error('Sorry, the format "%s" is not yet implemented.',D.EncodingFormatName);
+	error('Sorry, the encoding format "%s" is not yet implemented.',D.EncodingFormatName);
 end
 
-% makes the time vector
-if EncodingFormat == 0
-	D.t = D.RecordStartTimeMATLAB;
-else
-	D.t = D.RecordStartTimeMATLAB + (0:(D.NumberSamples-1))'/(D.SampleRate*86400);
+% Applies time correction (if needed)
+D.RecordStartTimeMATLAB = datenum(double([D.RecordStartTime(1),0,D.RecordStartTime(2:5)])) ...
+	+ (~notc & bitand(D.ActivityFlags,2) == 0)*D.TimeCorrection/1e4/86400;
+tv = datevec(D.RecordStartTimeMATLAB);
+doy = datenum(tv(1:3)) - datenum(tv(1),1,0);
+D.RecordStartTime = [tv(1),doy,tv(4:5),round(tv(6)*1e4)/1e4];
+D.RecordStartTimeISO = sprintf('%4d-%03d %02d:%02d:%07.4f',D.RecordStartTime);
+
+D.t = D.RecordStartTimeMATLAB;
+
+% makes the time vector and applies time correction (if needed)
+if EncodingFormat > 0
+	D.t = D.t + (0:(D.NumberSamples-1))'/(D.SampleRate*86400);
+end
+
+
+offset = ftell(fid);
+fread(fid,1,'char');	% this is to force EOF=1 on last record.
+if feof(fid)
+	offset = -1;
 end
 
 
@@ -800,27 +965,51 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function c = splitfield(s,d)
 % splitfield(S) splits string S of D-character separated field names
-r = s;
-j = 1;
-while (~isempty(r) & ischar(r))
-	[t,r] = strtok(r,d);
-	c{j} = t;
-	j = j + 1;
-end
+
+C = textscan(s,'%s','Delimiter',d);
+c = C{1};
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function d = readbtime(fid)
-% readbtime(FID) reads BTIME structure from current file and returns
+function [d,swapflag] = readbtime(fid,forcebe)
+% readbtime reads BTIME structure from current opened file and returns
 %	D = [YEAR,DAY,HOUR,MINUTE,SECONDS]
-Year					= fread(fid,1,'uint16');
-DayOfYear				= fread(fid,1,'uint16');
-Hours					= fread(fid,1,'uint8');
-Minutes					= fread(fid,1,'uint8');
-Seconds					= fread(fid,1,'uint8=>double');
-unused					= fread(fid,1,'uint8');
-Seconds0001				= fread(fid,1,'uint16=>double');
-d = [Year,DayOfYear,Hours,Minutes,Seconds + Seconds0001/1e4];
+
+Year		= fread(fid,1,'*uint16');
+DayOfYear	= fread(fid,1,'*uint16');
+Hours		= fread(fid,1,'uint8');
+Minutes		= fread(fid,1,'uint8');
+Seconds		= fread(fid,1,'uint8');
+fseek(fid,1,0);	% skip 1 byte (unused)
+Seconds0001	= fread(fid,1,'*uint16');
+
+% Automatic detection of little/big-endian encoding
+% -- by F. Beauducel, March 2014 --
+%
+% If the 2-byte day is >= 512, the file is not opened in the correct
+% endianness. If the day is 1 or 256, there is a possible byte-swap and we
+% need to check also the year; but we need to consider what is a valid year:
+% - years from 1801 to 2047 are OK (swapbytes >= 2312)
+% - years from 2048 to 2055 are OK (swapbytes <= 1800)
+% - year 2056 is ambiguous (swapbytes = 2056)
+% - years from 2057 to 2311 are OK (swapbytes >= 2312)
+% - year 1799 is ambiguous (swapbytes = 1799)
+% - year 1800 is suspicious (swapbytes = 2055)
+%
+% Thus, the only cases for which we are 'sure' there is a byte-swap, are:
+% - day >= 512
+% - (day == 1 or day == 256) and (year < 1799 or year > 2311)
+%
+% Note: in IRIS libmseed, the test is only year>2050 or year<1920.
+if ~forcebe && (DayOfYear >= 512 || (ismember(DayOfYear,[1,256]) && (Year > 2311 || Year < 1799)))
+	swapflag = 1;
+	Year = swapbytes(Year);
+	DayOfYear = swapbytes(DayOfYear);
+	Seconds0001 = swapbytes(Seconds0001);
+else
+	swapflag = 0;
+end
+d = [double(Year),double(DayOfYear),Hours,Minutes,Seconds + double(Seconds0001)/1e4];
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -832,15 +1021,15 @@ function d = bitsplit(x,b,n)
 
 sign = repmat((b:-n:n)',1,size(x,1));
 x = repmat(x',b/n,1);
-d = double(bitand(bitshift(x,flipud(sign-b)),bitcmp(0,n))) ...
+d = double(bitand(bitshift(x,flipud(sign-b)),2^n-1)) ...
 	- double(bitget(x,sign))*2^n;
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function d = bitsign(x,n)
-% bitsign(X,N) returns signed N-bit value from unsigned N-bit number X.
+% bitsign(X,N) returns signed double value from unsigned N-bit number X.
 % This is equivalent to bitsplit(X,N,N), but the formula is simplified so
 % it is much more efficient
 
-d = double(bitand(x,bitcmp(0,n))) - double(bitget(x,n)).*2^n;
+d = double(bitand(x,2^n-1)) - double(bitget(x,n)).*2^n;

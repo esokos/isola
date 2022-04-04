@@ -23,7 +23,7 @@ function varargout = comp_uncert(varargin)
 
 % Edit the above text to modify the response to help comp_uncert
 
-% Last Modified by GUIDE v2.5 12-Sep-2013 21:55:07
+% Last Modified by GUIDE v2.5 26-Jan-2017 19:52:29
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -60,6 +60,7 @@ disp('This is comp_uncert.m')
 disp('Added G computation. 05/06/2012 ')
 disp('Changed layout, speed up nodal line plotting. 02/09/2013')
 
+disp('Parameters are fixed based on inversion. 19/02/2017 '  )
 
 %%
 %check if UNCERTAINTY exists..!
@@ -160,14 +161,6 @@ end
 %    fclose(fid);
 %           
 % end
-%%  check if we have all needed elemse* files in invert
-if ispc
-       elemfiles=dir('.\invert\elemse*.dat');
-       noelemse=length(elemfiles);
-else
-       elemfiles=dir('./invert/elemse*.dat');
-       noelemse=length(elemfiles);
-end
 
 %% read no of stations
           fid = fopen('stations.isl','r');
@@ -220,23 +213,82 @@ end
 disp('  ');
 disp(['Number of trial source positions in \invert\inpinv.dat is ' linetmp6]);
 disp('  ');
-disp(['Found ' num2str(noelemse) ' elementary seismogram files.'])
-disp('  ');
+%disp(['Found ' num2str(noelemse) ' elementary seismogram files.'])
+%disp('  ');
 disp(['Frequency Range in \invert\inpinv.dat is ' linetmp14]);
 disp('  ');
 
-
-if str2double(linetmp6) ~= noelemse
-    errordlg(['You don''t have ' linetmp6 ' elementary seismogram files in invert folder. Define trial sources or prepare green function correctly.'],'File error')
-else
+%% update source type based on inpinv 
+stype=str2num(linetmp2);
+if stype == 1
+    % full MT
+    set(handles.full,'Value',1);
+    set(handles.dev,'Value',0);
+    set(handles.full,'Enable','off');
+    set(handles.dev,'Enable','off');
+elseif stype == 2
+    %dev
+    set(handles.dev,'Value',1);
+    set(handles.full,'Value',0);
+    set(handles.full,'Enable','off');
+    set(handles.dev,'Enable','off');
+elseif stype == 3
+    % dc con
+    set(handles.dev,'Value',1);
+    set(handles.full,'Value',0);
+    set(handles.full,'Enable','off');
+    set(handles.dev,'Enable','off');    
+elseif stype == 4
+    % fixed
+    set(handles.dev,'Value',1);
+    set(handles.full,'Value',0);
+    set(handles.full,'Enable','off');
+    set(handles.dev,'Enable','off');    
 end
 
+%%  check if we have all needed elemse* files in invert
+if ispc
+       elfiles=dir('.\invert\elemse*.dat');
+       ii=regexp({elfiles.name},'elemse..\.dat');
+       elemfiles={elfiles(~cellfun('isempty',ii)).name};
+       noelemse=length(elemfiles);
+else
+       elemfiles=dir('./invert/elemse*.dat');
+       ii=regexp({elfiles.name},'elemse..\.dat');
+       elemfiles={elfiles(~cellfun('isempty',ii)).name};
+       noelemse=length(elemfiles);
+end
+
+%%
+  for i=1:str2double(linetmp6)
+   if ispc
+      if i < 10
+        elfile=['.\invert\elemse0' num2str(i) '.dat'];
+      else
+        elfile=['.\invert\elemse'  num2str(i) '.dat'];
+      end  
+   else
+      if i < 10
+        elfile=['./invert/elemse0' num2str(i) '.dat'];
+      else
+        elfile=['./invert/elemse'  num2str(i) '.dat'];
+      end  
+   end
+          A= exist(elfile,'file');
+       if A~= 0
+          disp(['Found ' elfile]) 
+       else
+          errordlg(['You don''t have ' elfile ' elementary seismogram files in invert folder. Define trial sources or prepare green function correctly.'],'File error')
+       end
+       
+  end
+       
 % update the f1 f2 f3 f4 text boxes
 freqrange = sscanf(linetmp14,'%f %f %f %f');   
 
 set(handles.f1,'String',freqrange(1));
-set(handles.f2,'String',freqrange(2));
-set(handles.f3,'String',freqrange(3));
+%set(handles.f2,'String',freqrange(2));
+%set(handles.f3,'String',freqrange(3));
 set(handles.f4,'String',freqrange(4));
 
 %% here we read allstat.dat
@@ -313,8 +365,25 @@ end
 src=num2str([1:str2double(linetmp6)]');
 set(handles.nosourcepopup,'String',src);
 % set selected source as the one in inv2
-% set(handles.sourceno,'String',num2str(srcpos2(1,1)));        
+ set(handles.nosourcepopup,'String',num2str(srcpos2(1,1)));        
 
+%% write in srcno file the source number
+% prepare the srcno.dat needed for iso11b
+
+if ispc 
+    fid = fopen('.\uncertainty\srcno.dat','w');
+       fprintf(fid,'%s\r\n',num2str(srcpos2(1,1),'%02d'));
+    fclose(fid);
+else
+    fid = fopen('./uncertainty/srcno.dat','w');
+       fprintf(fid,'%s\n',  num2str(srcpos2(1,1),'%02d'));
+    fclose(fid);
+end
+ 
+disp(['Selected source no ' num2str(srcpos2(1,1),'%02d')])
+%% 
+ 
+ 
 set(handles.strike,'String',num2str(str1(1,1)));        
 set(handles.dip,'String',num2str(dip1(1,1)));        
 set(handles.rake,'String',num2str(rake1(1,1)));        
@@ -400,6 +469,8 @@ notrialsources=str2double(handles.linetmp6);
 allstat_info=handles.allstat_info;
 
 
+%helpdlg('Please wait this will take some time.')
+
 %% run
 %  first copy files we need
 if ispc 
@@ -419,17 +490,17 @@ else
 end
 %% Check that we have the correct number of elemse files in uncertainty
 % folder
-
-if ispc
-       elemfilesunc=dir('.\uncertainty\elemse*.dat');
-else
-       elemfilesunc=dir('./uncertainty/elemse*.dat');
-end
-
-if notrialsources~=length(elemfilesunc)
-      errordlg(['You have specified ' num2str(notrialsources) ' trial sources and there are ' num2str(length(elemfilesunc)) '  elemse*.dat files in invert folder. Repeat the calculation.'])
-else
-end
+% 
+% if ispc
+%        elemfilesunc=dir('.\uncertainty\elemse*.dat');
+% else
+%        elemfilesunc=dir('./uncertainty/elemse*.dat');
+% end
+% 
+% if notrialsources~=length(elemfilesunc)
+%       errordlg(['You have specified ' num2str(notrialsources) ' trial sources and there are ' num2str(length(elemfilesunc)) '  elemse*.dat files in invert folder. Repeat the calculation.'])
+% else
+% end
 
 %% copy allstat.dat
 if ispc 
@@ -491,6 +562,17 @@ if (get(handles.pdata,'Value') == get(handles.pdata,'Max'))
 
     %% update inpinv.dat with data variance in GUI
     % and Freq range
+    % we need to update the type of source also DEV or FULL..!! 26/10/2016
+    %
+    % decide what user wants
+      full=get(handles.full,'Value');
+      if full == 1 
+          stype=1; %full
+      else
+          stype=2; % dev
+      end
+    
+    %
      copyfile('inpinv.dat','inpinv.bak');
     
        linetmp1=handles.linetmp1;
@@ -510,14 +592,14 @@ if (get(handles.pdata,'Value') == get(handles.pdata,'Max'))
        linetmp15=handles.linetmp15;
     % read fi f2 f3 f4
        f1=get(handles.f1,'String');
-       f2=get(handles.f2,'String');
-       f3=get(handles.f3,'String');
+%        f2=get(handles.f2,'String');
+%        f3=get(handles.f3,'String');
        f4=get(handles.f4,'String');
    
     if ispc 
       fid = fopen('inpinv.dat','w');
           fprintf(fid,'%s\r\n',linetmp1);
-          fprintf(fid,'%s\r\n',linetmp2);
+          fprintf(fid,'%u\r\n',stype);  % 26/10/2016
           fprintf(fid,'%s\r\n',linetmp3);
           fprintf(fid,'%s\r\n',linetmp4);
           fprintf(fid,'%s\r\n',linetmp5);
@@ -529,14 +611,14 @@ if (get(handles.pdata,'Value') == get(handles.pdata,'Max'))
           fprintf(fid,'%s\r\n',linetmp11);
           fprintf(fid,'%s\r\n',linetmp12);
           fprintf(fid,'%s\r\n',linetmp13);
-          fprintf(fid,'%s %s %s %s\r\n', f1, f2, f3, f4);
+          fprintf(fid,'%s %s %s %s\r\n', f1, f1, f4, f4);
           fprintf(fid,'%s\r\n',linetmp15);
           fprintf(fid,'%e\r\n',dvariance);
       fclose(fid);
     else
       fid = fopen('inpinv.dat','w');
           fprintf(fid,'%s\n',linetmp1);
-          fprintf(fid,'%s\n',linetmp2);
+          fprintf(fid,'%u\n',stype);  % 26/10/2016
           fprintf(fid,'%s\n',linetmp3);
           fprintf(fid,'%s\n',linetmp4);
           fprintf(fid,'%s\n',linetmp5);
@@ -548,29 +630,42 @@ if (get(handles.pdata,'Value') == get(handles.pdata,'Max'))
           fprintf(fid,'%s\n',linetmp11);
           fprintf(fid,'%s\n',linetmp12);
           fprintf(fid,'%s\n',linetmp13);
-          fprintf(fid,'%s %s %s %s\n', f1, f2, f3, f4);
+          fprintf(fid,'%s %s %s %s\n', f1, f1, f4, f4);
           fprintf(fid,'%s\n',linetmp15);
           fprintf(fid,'%e\n',dvariance);
       fclose(fid);
     end
 %%  here we must update the allstat.dat frq range also..!!
-     copyfile('allstat.dat','allstat.bak');
-     stnnames=allstat_info{1,1}; usest=cell2mat(allstat_info(1,2)); usens=cell2mat(allstat_info(1,3));useew=cell2mat(allstat_info(1,4));useve=cell2mat(allstat_info(1,5));
-
-  if ispc   
-    fid = fopen('allstat.dat','w');
-     for i=1:nstations
-      fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\r\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f2, f3, f4);
-     end
-    fclose(fid);
-  else
-    fid = fopen('allstat.dat','w');
-     for i=1:nstations
-      fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f2, f3, f4);
-     end
-    fclose(fid);
-  end
- 
+% qstring = 'Use allstat.dat from invert folder? Hint: If not then frequency range of this window is used for all stations.';
+% choice = questdlg(qstring,'allstat use',...
+%     'Yes','No','No');
+% 
+% if strcmp(choice,'No')
+% 
+%      copyfile('allstat.dat','allstat.bak');
+%      stnnames=allstat_info{1,1}; usest=cell2mat(allstat_info(1,2)); usens=cell2mat(allstat_info(1,3));useew=cell2mat(allstat_info(1,4));useve=cell2mat(allstat_info(1,5));
+% 
+%   if ispc   
+%     fid = fopen('allstat.dat','w');
+%      for i=1:nstations
+%       fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\r\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f1, f4, f4);
+%      end
+%     fclose(fid);
+%   else
+%     fid = fopen('allstat.dat','w');
+%      for i=1:nstations
+%       fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f1, f4, f4);
+%      end
+%     fclose(fid);
+%   end
+%  
+% else
+%     
+%     disp('Use allstat.dat from invert')
+%    
+% end
+  
+  
 %% prepare the acka_stara.dat file
           strike = str2double(get(handles.strike,'String'));
           dip = str2double(get(handles.dip,'String'));
@@ -611,19 +706,21 @@ if (get(handles.pdata,'Value') == get(handles.pdata,'Max'))
      % check that srcno.dat has the same source as in nosourcepopup
      srcnumber = get(handles.nosourcepopup,'Value');
 
-     if nsource~=srcnumber
-         errordlg(['Source number in srcno.dat file (' num2str(nsource) ') not the same as in drop down list ('  num2str(srcnumber) '). Select a source again.'],'Error in Source Selection.')
-         cd ..
-         return
-     else
-     end
+%      if nsource~=srcnumber
+%          errordlg(['Source number in srcno.dat file (' num2str(nsource) ') not the same as in drop down list ('  num2str(srcnumber) '). Select a source again.'],'Error in Source Selection.')
+%          cd ..
+%          return
+%      else
+%      end
 
 %% Give some info..!
 disp('  ')
 disp('  ')
 disp('Parameters')
 disp(['Source No :   ' num2str(nsource)])
-disp(['Frequency Range :   ' num2str(f1) '-' num2str(f2) '-' num2str(f3) '-' num2str(f4) ])
+%disp(['Frequency Range :   ' num2str(f1) '-' num2str(f2) '-' num2str(f3) '-' num2str(f4) ])
+
+disp(['Frequency Range :   ' num2str(f1) '-' num2str(f4) ])
 
 disp('Strike     Dip    Rake')
 disp(['  ' get(handles.strike,'String') '       '   get(handles.dip,'String') '     '  get(handles.rake,'String')])
@@ -636,20 +733,20 @@ if ispc
    % run iso11b again with correct data variance...!!!
    fprintf(fid,'%s\r\n','rem input:  all elemse*.dat files, inpinv.dat and allstat.dat; no waveforms *.raw.dat are needed');
    fprintf(fid,'%s\r\n','rem CAUTION!!! Inpinv.dat must request FULL MT');
-   fprintf(fid,'%s\r\n','iso12c.exe');
+   fprintf(fid,'%s\r\n','iso.exe');
    fprintf(fid,'%s\r\n','rem output:  vect.dat, sing.dat');
    fprintf(fid,'%s\r\n','   ');
    fprintf(fid,'%s\r\n','rem input: vect.dat, sing.dat');
    fprintf(fid,'%s\r\n',' sigma5or6.exe');
    fprintf(fid,'%s\r\n','rem output: sigma.dat,sigma_short.dat');
    fprintf(fid,'%s\r\n','   ');
-   fprintf(fid,'%s\r\n','rem input: sigma.dat and acka_stara.dat !!!!!!!!!!!!!!!!!!');
-   fprintf(fid,'%s\r\n','  pokus5all_kag.exe');
-   fprintf(fid,'%s\r\n','rem output: elipsa.dat, sit.dat; elipsa includes Kagan''s angle');
-   fprintf(fid,'%s\r\n','   ');
-   fprintf(fid,'%s\r\n','rem input: elipsa.dat');
-   fprintf(fid,'%s\r\n','  analyze_kag.exe');
-   fprintf(fid,'%s\r\n','rem output: elipsa_max.dat (vicinity of the ellipsoid surface),statistics.dat ');
+ %  fprintf(fid,'%s\r\n','rem input: sigma.dat and acka_stara.dat !!!!!!!!!!!!!!!!!!');
+ %  fprintf(fid,'%s\r\n','  pokus5all_kag.exe');
+ %  fprintf(fid,'%s\r\n','rem output: elipsa.dat, sit.dat; elipsa includes Kagan''s angle');
+ %  fprintf(fid,'%s\r\n','   ');
+ %  fprintf(fid,'%s\r\n','rem input: elipsa.dat');
+ %  fprintf(fid,'%s\r\n','  analyze_kag.exe');
+ %  fprintf(fid,'%s\r\n','rem output: elipsa_max.dat (vicinity of the ellipsoid surface),statistics.dat ');
   fclose(fid);
 
    system('runvectors.bat &');
@@ -664,20 +761,20 @@ else
    fprintf(fid,'%s\n','             ');
    fprintf(fid,'%s\n','rem input:  all elemse*.dat files, inpinv.dat and allstat.dat; no waveforms *.raw.dat are needed');
    fprintf(fid,'%s\n','rem CAUTION!!! Inpinv.dat must request FULL MT');
-   fprintf(fid,'%s\n','iso12c.exe');
+   fprintf(fid,'%s\n','iso.exe');
    fprintf(fid,'%s\n','rem output:  vect.dat, sing.dat');
    fprintf(fid,'%s\n','   ');
    fprintf(fid,'%s\n','rem input: vect.dat, sing.dat');
    fprintf(fid,'%s\n',' sigma5or6.exe');
    fprintf(fid,'%s\n','rem output: sigma.dat,sigma_short.dat');
    fprintf(fid,'%s\n','   ');
-   fprintf(fid,'%s\n','rem input: sigma.dat and acka_stara.dat !!!!!!!!!!!!!!!!!!');
-   fprintf(fid,'%s\n','  pokus5all_kag.exe');
-   fprintf(fid,'%s\n','rem output: elipsa.dat, sit.dat; elipsa includes Kagan''s angle');
-   fprintf(fid,'%s\n','   ');
-   fprintf(fid,'%s\n','rem input: elipsa.dat');
-   fprintf(fid,'%s\n','  analyze_kag.exe');
-   fprintf(fid,'%s\n','rem output: elipsa_max.dat (vicinity of the ellipsoid surface),statistics.dat ');
+ %  fprintf(fid,'%s\n','rem input: sigma.dat and acka_stara.dat !!!!!!!!!!!!!!!!!!');
+ %  fprintf(fid,'%s\n','  pokus5all_kag.exe');
+ %  fprintf(fid,'%s\n','rem output: elipsa.dat, sit.dat; elipsa includes Kagan''s angle');
+ %  fprintf(fid,'%s\n','   ');
+ %  fprintf(fid,'%s\n','rem input: elipsa.dat');
+ %  fprintf(fid,'%s\n','  analyze_kag.exe');
+ %  fprintf(fid,'%s\n','rem output: elipsa_max.dat (vicinity of the ellipsoid surface),statistics.dat ');
   fclose(fid);
     
     disp('Linux ')
@@ -737,6 +834,16 @@ cd uncertainty
 %% update values in inpinv and allstat..!!
     %% update inpinv.dat with data variance in GUI
     % and Freq range
+    % we need to update the type of source also DEV or FULL..!! 26/10/2016
+    %
+    % decide what user wants
+      full=get(handles.full,'Value');
+      if full == 1 
+          stype=1; %full
+      else
+          stype=2; % dev
+      end
+        
      copyfile('inpinv.dat','inpinv.bak');
     
        linetmp1=handles.linetmp1;
@@ -756,14 +863,14 @@ cd uncertainty
        linetmp15=handles.linetmp15;
     % read fi f2 f3 f4
        f1=get(handles.f1,'String');
-       f2=get(handles.f2,'String');
-       f3=get(handles.f3,'String');
+%        f2=get(handles.f2,'String');
+%        f3=get(handles.f3,'String');
        f4=get(handles.f4,'String');
    
     if ispc 
       fid = fopen('inpinv.dat','w');
           fprintf(fid,'%s\r\n',linetmp1);
-          fprintf(fid,'%s\r\n',linetmp2);
+          fprintf(fid,'%u\r\n',stype);  % 26/10/2016
           fprintf(fid,'%s\r\n',linetmp3);
           fprintf(fid,'%s\r\n',linetmp4);
           fprintf(fid,'%s\r\n',linetmp5);
@@ -775,14 +882,14 @@ cd uncertainty
           fprintf(fid,'%s\r\n',linetmp11);
           fprintf(fid,'%s\r\n',linetmp12);
           fprintf(fid,'%s\r\n',linetmp13);
-          fprintf(fid,'%s %s %s %s\r\n', f1, f2, f3, f4);
+          fprintf(fid,'%s %s %s %s\r\n', f1, f1, f4, f4);
           fprintf(fid,'%s\r\n',linetmp15);
           fprintf(fid,'%e\r\n',1.e15);  % put something 
       fclose(fid);
     else
       fid = fopen('inpinv.dat','w');
           fprintf(fid,'%s\n',linetmp1);
-          fprintf(fid,'%s\n',linetmp2);
+          fprintf(fid,'%u\n',stype);  % 26/10/2016
           fprintf(fid,'%s\n',linetmp3);
           fprintf(fid,'%s\n',linetmp4);
           fprintf(fid,'%s\n',linetmp5);
@@ -794,39 +901,52 @@ cd uncertainty
           fprintf(fid,'%s\n',linetmp11);
           fprintf(fid,'%s\n',linetmp12);
           fprintf(fid,'%s\n',linetmp13);
-          fprintf(fid,'%s %s %s %s\n', f1, f2, f3, f4);
+          fprintf(fid,'%s %s %s %s\n', f1, f1, f4, f4);
           fprintf(fid,'%s\n',linetmp15);
           fprintf(fid,'%e\n',1.e15);  % put something 
       fclose(fid);
     end
 %%  here we must update the allstat.dat frq range also..!!
-     copyfile('allstat.dat','allstat.bak');
-     stnnames=allstat_info{1,1}; usest=cell2mat(allstat_info(1,2)); usens=cell2mat(allstat_info(1,3));useew=cell2mat(allstat_info(1,4));useve=cell2mat(allstat_info(1,5));
-
-  if ispc   
-    fid = fopen('allstat.dat','w');
-     for i=1:nstations
-      fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\r\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f2, f3, f4);
-     end
-    fclose(fid);
-  else
-    fid = fopen('allstat.dat','w');
-     for i=1:nstations
-      fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f2, f3, f4);
-     end
-    fclose(fid);
-  end
-    
-    
+% 
+% qstring = 'Use allstat.dat from invert folder? Hint: If not then frequency range of this window is used for all stations.';
+% choice = questdlg(qstring,'allstat use',...
+%     'Yes','No','No');
+% 
+% if strcmp(choice,'No')
+% 
+%     copyfile('allstat.dat','allstat.bak');
+%      stnnames=allstat_info{1,1}; usest=cell2mat(allstat_info(1,2)); usens=cell2mat(allstat_info(1,3));useew=cell2mat(allstat_info(1,4));useve=cell2mat(allstat_info(1,5));
+% 
+%   if ispc   
+%     fid = fopen('allstat.dat','w');
+%      for i=1:nstations
+%       fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\r\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f1, f4, f4);
+%      end
+%     fclose(fid);
+%   else
+%     fid = fopen('allstat.dat','w');
+%      for i=1:nstations
+%       fprintf(fid,'%s   %u  %u  %u  %u  %s %s %s %s\n',char(stnnames(i)), usest(i), usens(i), useew(i), useve(i), f1, f1, f4, f4);
+%      end
+%     fclose(fid);
+%   end
+%   
+%   
+% else
+%         
+%     disp('Use allstat.dat from invert folder')
+%    
+% end
+%     
 %% first find G
 %  run iso12 
 
       disp('Calculating G ..... Running ')
          
            if ispc
-             system('iso12c.exe  ') % return     
+             system('iso.exe  ') % return     
            else
-             system(' gnome-terminal -e "bash -c iso12c.exe;bash" ')
+             system(' gnome-terminal -e "bash -c iso.exe;bash" ')
            end
            
                   hpr = waitbar(0,'Please wait...');
@@ -839,7 +959,7 @@ cd uncertainty
                         waitbar(0.5)
                       end   
                  close(hpr) 
-                         disp('iso12c 1st run finished')
+                         disp('iso 1st run finished')
                          
              delete('temp001.txt');
 
@@ -847,7 +967,7 @@ cd uncertainty
              
              h=dir('testunc.dat');
 % 
-               if isempty(h); 
+               if isempty(h)
                   errordlg('testunc.dat file doesn''t exist. Check if output of this file is enabled. ','File Error');
                   return    
                else
@@ -870,6 +990,13 @@ pwd
 
 % update inpinv.dat with CALCULATED data variance 
 % and Freq range
+    % decide what user wants
+      full=get(handles.full,'Value');
+      if full == 1 
+          stype=1; %full
+      else
+          stype=2; % dev
+      end
      copyfile('inpinv.dat','inpinv.bak');
     
        linetmp1=handles.linetmp1;
@@ -889,14 +1016,14 @@ pwd
        linetmp15=handles.linetmp15;
     % read fi f2 f3 f4
        f1=get(handles.f1,'String');
-       f2=get(handles.f2,'String');
-       f3=get(handles.f3,'String');
+%        f2=get(handles.f2,'String');
+%        f3=get(handles.f3,'String');
        f4=get(handles.f4,'String');
    
     if ispc 
       fid = fopen('inpinv.dat','w');
           fprintf(fid,'%s\r\n',linetmp1);
-          fprintf(fid,'%s\r\n',linetmp2);
+          fprintf(fid,'%u\r\n',stype);  % 26/10/2016
           fprintf(fid,'%s\r\n',linetmp3);
           fprintf(fid,'%s\r\n',linetmp4);
           fprintf(fid,'%s\r\n',linetmp5);
@@ -908,14 +1035,14 @@ pwd
           fprintf(fid,'%s\r\n',linetmp11);
           fprintf(fid,'%s\r\n',linetmp12);
           fprintf(fid,'%s\r\n',linetmp13);
-          fprintf(fid,'%s %s %s %s\r\n', f1, f2, f3, f4);
+          fprintf(fid,'%s %s %s %s\r\n', f1, f1, f4, f4);
           fprintf(fid,'%s\r\n',linetmp15);
           fprintf(fid,'%e\r\n',dvariance);
       fclose(fid);
     else
       fid = fopen('inpinv.dat','w');
           fprintf(fid,'%s\n',linetmp1);
-          fprintf(fid,'%s\n',linetmp2);
+          fprintf(fid,'%u\n',stype);  % 26/10/2016
           fprintf(fid,'%s\n',linetmp3);
           fprintf(fid,'%s\n',linetmp4);
           fprintf(fid,'%s\n',linetmp5);
@@ -927,7 +1054,7 @@ pwd
           fprintf(fid,'%s\n',linetmp11);
           fprintf(fid,'%s\n',linetmp12);
           fprintf(fid,'%s\n',linetmp13);
-          fprintf(fid,'%s %s %s %s\n', f1, f2, f3, f4);
+          fprintf(fid,'%s %s %s %s\n', f1, f1, f4, f4);
           fprintf(fid,'%s\n',linetmp15);
           fprintf(fid,'%e\n',dvariance);
       fclose(fid);
@@ -995,7 +1122,7 @@ disp([num2str(C) '          '  num2str(Gvalue) '      ' num2str(Mo,'%6.3e') '   
 % % run iso11b again with correct data variance...!!!
 % fprintf(fid,'%s\r\n','rem input:  all elemse*.dat files, inpinv.dat and allstat.dat; no waveforms *.raw.dat are needed');
 % fprintf(fid,'%s\r\n','rem CAUTION!!! Inpinv.dat must request FULL MT');
-% fprintf(fid,'%s\r\n','iso12c.exe');
+% fprintf(fid,'%s\r\n','iso.exe');
 % fprintf(fid,'%s\r\n','rem output:  vect.dat, sing.dat');
 % 
 % fprintf(fid,'%s\r\n','   ');
@@ -1029,20 +1156,20 @@ if ispc
    % run iso11b again with correct data variance...!!!
    fprintf(fid,'%s\r\n','rem input:  all elemse*.dat files, inpinv.dat and allstat.dat; no waveforms *.raw.dat are needed');
    fprintf(fid,'%s\r\n','rem CAUTION!!! Inpinv.dat must request FULL MT');
-   fprintf(fid,'%s\r\n','iso12c.exe');
+   fprintf(fid,'%s\r\n','iso.exe');
    fprintf(fid,'%s\r\n','rem output:  vect.dat, sing.dat');
    fprintf(fid,'%s\r\n','   ');
    fprintf(fid,'%s\r\n','rem input: vect.dat, sing.dat');
    fprintf(fid,'%s\r\n',' sigma5or6.exe');
    fprintf(fid,'%s\r\n','rem output: sigma.dat,sigma_short.dat');
    fprintf(fid,'%s\r\n','   ');
-   fprintf(fid,'%s\r\n','rem input: sigma.dat and acka_stara.dat !!!!!!!!!!!!!!!!!!');
-   fprintf(fid,'%s\r\n','  pokus5all_kag.exe');
-   fprintf(fid,'%s\r\n','rem output: elipsa.dat, sit.dat; elipsa includes Kagan''s angle');
-   fprintf(fid,'%s\r\n','   ');
-   fprintf(fid,'%s\r\n','rem input: elipsa.dat');
-   fprintf(fid,'%s\r\n','  analyze_kag.exe');
-   fprintf(fid,'%s\r\n','rem output: elipsa_max.dat (vicinity of the ellipsoid surface),statistics.dat ');
+%   fprintf(fid,'%s\r\n','rem input: sigma.dat and acka_stara.dat !!!!!!!!!!!!!!!!!!');
+%   fprintf(fid,'%s\r\n','  pokus5all_kag.exe');
+%   fprintf(fid,'%s\r\n','rem output: elipsa.dat, sit.dat; elipsa includes Kagan''s angle');
+%   fprintf(fid,'%s\r\n','   ');
+%   fprintf(fid,'%s\r\n','rem input: elipsa.dat');
+%   fprintf(fid,'%s\r\n','  analyze_kag.exe');
+%   fprintf(fid,'%s\r\n','rem output: elipsa_max.dat (vicinity of the ellipsoid surface),statistics.dat ');
   fclose(fid);
 
    system('runvectors.bat &');
@@ -1057,20 +1184,20 @@ else
    fprintf(fid,'%s\n','             ');
    fprintf(fid,'%s\n','rem input:  all elemse*.dat files, inpinv.dat and allstat.dat; no waveforms *.raw.dat are needed');
    fprintf(fid,'%s\n','rem CAUTION!!! Inpinv.dat must request FULL MT');
-   fprintf(fid,'%s\n','iso12c.exe');
+   fprintf(fid,'%s\n','iso.exe');
    fprintf(fid,'%s\n','rem output:  vect.dat, sing.dat');
    fprintf(fid,'%s\n','   ');
    fprintf(fid,'%s\n','rem input: vect.dat, sing.dat');
    fprintf(fid,'%s\n',' sigma5or6.exe');
    fprintf(fid,'%s\n','rem output: sigma.dat,sigma_short.dat');
    fprintf(fid,'%s\n','   ');
-   fprintf(fid,'%s\n','rem input: sigma.dat and acka_stara.dat !!!!!!!!!!!!!!!!!!');
-   fprintf(fid,'%s\n','  pokus5all_kag.exe');
-   fprintf(fid,'%s\n','rem output: elipsa.dat, sit.dat; elipsa includes Kagan''s angle');
-   fprintf(fid,'%s\n','   ');
-   fprintf(fid,'%s\n','rem input: elipsa.dat');
-   fprintf(fid,'%s\n','  analyze_kag.exe');
-   fprintf(fid,'%s\n','rem output: elipsa_max.dat (vicinity of the ellipsoid surface),statistics.dat ');
+%   fprintf(fid,'%s\n','rem input: sigma.dat and acka_stara.dat !!!!!!!!!!!!!!!!!!');
+%   fprintf(fid,'%s\n','  pokus5all_kag.exe');
+%   fprintf(fid,'%s\n','rem output: elipsa.dat, sit.dat; elipsa includes Kagan''s angle');
+%   fprintf(fid,'%s\n','   ');
+%   fprintf(fid,'%s\n','rem input: elipsa.dat');
+%   fprintf(fid,'%s\n','  analyze_kag.exe');
+%   fprintf(fid,'%s\n','rem output: elipsa_max.dat (vicinity of the ellipsoid surface),statistics.dat ');
   fclose(fid);
     
     disp('Linux ')
@@ -1201,12 +1328,6 @@ set(handles.dvariance,'String',num2str(datavariance, '%3.1e'));
 
 
 
-
-
-
-
-
-
 % --- Executes during object creation, after setting all properties.
 function moment_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to moment (see GCBO)
@@ -1252,7 +1373,7 @@ function [a1,a2,a3,a4,a5,a6]=sdr2as(strike,dip,rake,xmoment)
     end
  
  	xx1 =-(sd*cl*s2p + s2d*sl*sp*sp)*xmoment;     % Mxx
- 	xx2 = (sd*cl*c2p + s2d*sl*s2p/2.0)*xmoment;    % Mxy
+ 	xx2 = (sd*cl*c2p + s2d*sl*s2p/2.0)*xmoment;   % Mxy
  	xx3 =-(cd*cl*cp  + c2d*sl*sp)*xmoment;        % Mxz
  	xx4 = (sd*cl*s2p - s2d*sl*cp*cp)*xmoment;     % Myy
  	xx5 =-(cd*cl*sp  - c2d*sl*cp)*xmoment;        % Myz
@@ -1277,30 +1398,436 @@ function plot_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 %% read strike dip rake
-
 strike1 = str2double(get(handles.strike,'String'));
 dip1 = str2double(get(handles.dip,'String'));
 rake1 = str2double(get(handles.rake,'String'));
 
+xmoment = str2double(get(handles.moment,'String'));
+
 %%% call pl2pl to find second plane
 [strike2,dip2,rake2] = pl2pl(strike1,dip1,rake1);
 
+%% OLD CODE
+% cd uncertainty
+% elipsa_max=load('elipsa_max.dat');
+% mm=mean(elipsa_max(:,11));
+% stdata=std(elipsa_max(:,11));
+% med=median(elipsa_max(:,11));
+% plotstruncert(elipsa_max,strike1,strike2);
+% plotdipuncert(elipsa_max,dip1,dip2);
+% plotrakeuncert(elipsa_max,rake1,rake2);
+%% find out if we have full or dev case
+      full=get(handles.full,'Value');
+      if full == 1 
+          stype=1; %full
+      else
+          stype=2; % dev
+      end
+%% NEW CODE 
+% read sigma.dat
+if ispc
+    fid = fopen('.\uncertainty\sigma.dat');
+    if stype == 1
+     C = textscan(fid, '%f %f %f %f %f %f',6,'HeaderLines',13);
+    else
+     C = textscan(fid, '%f %f %f %f %f %f',6,'HeaderLines',13);   
+    end
+    fclose(fid);
+else
+    fid = fopen('./uncertainty/sigma.dat');
+    if stype == 1
+     C = textscan(fid, '%f %f %f %f %f %f',6,'HeaderLines',13);
+    else
+     C = textscan(fid, '%f %f %f %f %f %f',6,'HeaderLines',13);  
+    end
+    fclose(fid);
+end
+%% read how many samples we want
+nsamples=get(handles.nsamples,'String');
+
+disp(['Using ' nsamples ' models in mvnrnd']);
+
 %%
+
+% new code based on mvnrnd function for multivariate statistics     
+     if stype==1 % full MT
+         % read a1-a6 from inv1.dat !
+          nsources=str2num(handles.linetmp6);
+          disp('  ')
+          disp('Reading a''s from inv1.dat in invert folder')
+          pwd
+          cd .\invert
+          [~,~,alphas,sigma_alphas,inv1_mom,~,~,~,~,~,~,~]=readinv1_with_as(nsources,1)
+          pwd
+          cd ..
+          if alphas(6)==0
+              errordlg('inpinv.dat file in invert folder doesn''t indicate a full mt run','!! Error !!')
+              return
+          else
+          end
+      A=[alphas(1)*1e-20 alphas(2)*1e-20 alphas(3)*1e-20 alphas(4)*1e-20 alphas(5)*1e-20 alphas(6)*1e-20];
+      sigma=cell2mat(C);
+      rng('default');
+      r = mvnrnd(A,sigma,str2num(nsamples));
+     else  % deviatoric
+      [a1,a2,a3,a4,a5,a6]=sdr2as(strike1,dip1,rake1,xmoment*1e-20);  % scaling of moment..! scaling is used by Jiri in fortran
+      A=[a1 a2 a3 a4 a5 0];
+      sigma=cell2mat(C)
+      rng('default');
+      r = mvnrnd(A,sigma,str2num(nsamples));
+     % r=[r zeros(str2num(nsamples),1)];
+     end
+
+%% test
+% fid = fopen('sdr_r2.dat','w');
+% for i=1:100
+%    fprintf(fid,'%e %e %e %e %e %e\r\n',r(i,:));
+% end
+% fclose(fid);
+%%
+% convert to strike dip rake
+  for i=1:str2num(nsamples)
+      %[str1(i),dp1(i),rk1(i),str2(i),dp2(i),rk2(i),adc_1(i),adc_2(i),avol_1(i),avol_2(i)] = silsubnew(r(i,:));
+      [str1(i),dp1(i),rk1(i),str2(i),dp2(i),rk2(i),adc_1(i),adc_2(i),avol_1(i),avol_2(i),aclvd_1(i),aclvd_2(i),amt(i) ] = silsubnew2(r(i,:));
+  end
+  
+%% output s/d/r for VR calculation
+
+pwd
+
+fid = fopen('sdr.dat','w');
+ for i=1:str2num(nsamples)
+   fprintf(fid,'%6.1f %6.1f %6.1f\r\n',str1(i),dp1(i),rk1(i));
+ end  
+fclose(fid);
+
+%%
+% fid = fopen('sdr_r_M2.dat','w');
+%  for i=1:100
+%    fprintf(fid,'%8.1f %8.1f %8.1f %8.1f %8.1f %8.1f %8.1f %8.1f\r\n',str1(i),dp1(i),rk1(i),str2(i),dp2(i),rk2(i),adc_1(i),adc_2(i));
+%  end  
+% fclose(fid);
+  
+A=[str1' dp1'  rk1'];B=[str2' dp2'  rk2'];
+elipsa_max=make_el_max(A,B);
+
+% plot histograms for strike dip rake
+plotstruncert(elipsa_max,strike1,strike2); plotdipuncert(elipsa_max,dip1,dip2); plotrakeuncert(elipsa_max,rake1,rake2);
+%% PLOTTING
+isobins=[-100   -80   -60   -40   -20     0    20    40    60    80   100];
+dcbins=[0    10    20    30    40    50    60    70    80    90   100];
+
+figure;  %DC_1
+%hist(elipsa_max(:,4),10);
+hist(adc_2,dcbins);
+title('DC%','FontSize',18)
+ax=gca;
+set(ax,'Linewidth',2,'FontSize',12)
+xlim([0,100]);
+hdchist=findobj(gca,'Type','patch');
+set(hdchist,'EdgeColor','w','LineWidth',2)
+%plotalluncert(elipsa_max,strike1,strike2,dip1,dip2,rake1,rake2);
+%%
+     if stype==1
+          figure;  %avol_2
+          hist(avol_2,isobins);
+          title('VOL%','FontSize',18)
+          ax=gca;
+          set(ax,'Linewidth',2,'FontSize',12)
+          xlim([-100,100]);
+          hvolhist=findobj(gca,'Type','patch');
+          set(hvolhist,'EdgeColor','w','LineWidth',2)
+          %% numerical output 
+            cd uncertainty
+              fid = fopen('vol_1.dat','w');
+                   fprintf(fid,'%e\r\n',avol_2);
+              fclose(fid);
+            cd ..
+     else %% add ISO even for DEV case..!
+          figure;  %avol_2
+          hist(avol_2,isobins);
+          title('VOL%','FontSize',18)
+          ax=gca;
+          set(ax,'Linewidth',2,'FontSize',12)
+          xlim([-100,100]);
+          hvolhist=findobj(gca,'Type','patch');
+          set(hvolhist,'EdgeColor','w','LineWidth',2)
+          %% numerical output 
+            cd uncertainty
+              fid = fopen('vol_1.dat','w');
+                   fprintf(fid,'%e\r\n',avol_2);
+              fclose(fid);
+            cd ..
+     end
+%%   Plot CLVD
+     if stype==1
+          figure;  % 
+          hist(aclvd_2,isobins);
+          title('CLVD%','FontSize',18)
+          ax=gca;
+          set(ax,'Linewidth',2,'FontSize',12)
+          xlim([-100,100]);
+          hvolhist=findobj(gca,'Type','patch');
+          set(hvolhist,'EdgeColor','w','LineWidth',2)
+          %% numerical output 
+            cd uncertainty
+              fid = fopen('clvd_1.dat','w');
+                   fprintf(fid,'%e\r\n',aclvd_2);
+              fclose(fid);
+            cd ..
+     else %% add ISO even for DEV case..!
+          figure;  %avol_2
+          hist(aclvd_2,isobins);
+          title('CLVD%','FontSize',18)
+          ax=gca;
+          set(ax,'Linewidth',2,'FontSize',12)
+          xlim([-100,100]);
+          hvolhist=findobj(gca,'Type','patch');
+          set(hvolhist,'EdgeColor','w','LineWidth',2)
+          %% numerical output 
+            cd uncertainty
+              fid = fopen('clvd_1.dat','w');
+                   fprintf(fid,'%e\r\n',aclvd_2);
+              fclose(fid);
+            cd ..
+     end
+     
+%% plot sigma.dat
+% read first 
+% fid = fopen('.\uncertainty\sigma.dat');
+% C = textscan(fid, '%f %f %f %f %f %f',6,'HeaderLines',13);
+% fclose(fid);
+% normalise to 1 based on diagonal elements
+%C1=cell2mat(C)/max(max(cell2mat(C)));
+
+%%
+% Plot in subplot
+C1=cell2mat(C)/max(diag(cell2mat(C)));
+figure;
+subplot 221
+
+imagesc(C1);colorbar
+title('Covariance matrix','FontSize',14)
+ax=gca;
+set(ax,'Linewidth',2,'FontSize',12)
+
+%%
+% Pearson correlation coefficient
+if ispc
+    fid = fopen('.\uncertainty\sigma.dat');
+    if stype==1
+     C = textscan(fid, '%f %f %f %f %f %f',6,'HeaderLines',21);
+    else
+     C = textscan(fid, '%f %f %f %f %f %f',6,'HeaderLines',21);
+    end
+    fclose(fid);
+else
+    fid = fopen('./uncertainty/sigma.dat');
+    if stype==1
+     C = textscan(fid, '%f %f %f %f %f %f',6,'HeaderLines',21);
+    else
+     C = textscan(fid, '%f %f %f %f %f ',6,'HeaderLines',21);
+    end
+    fclose(fid);
+end
+
+% fid = fopen('.\uncertainty\sigma.dat');
+% C = textscan(fid, '%f %f %f %f %f %f',6,'HeaderLines',21);
+% fclose(fid);
+
+%figure;
+subplot 222
+imagesc(cell2mat(C));colorbar
+title('Pearson correlation coefficient','FontSize',14)
+ax=gca;
+set(ax,'Linewidth',2,'FontSize',12)
+
+%% Compute Kagan Angle
 cd uncertainty
 
-load elipsa_max.dat
+%whos
+% prepare the corrselect.dat file
+alld=[str1' dp1' rk1' str2' dp2' rk2']';
 
-mm=mean(elipsa_max(:,11));
-stdata=std(elipsa_max(:,11));
-med=median(elipsa_max(:,11));
+fid=fopen('corrselect.dat','w');
+ fprintf(fid,'%f %f %f\r\n',strike1,dip1,rake1);
+ fprintf(fid,'%f %f %f %f %f %f\r\n',alld);
+fclose(fid);
 
-plotstruncert(elipsa_max,strike1,strike2);
-plotdipuncert(elipsa_max,dip1,dip2);
-plotrakeuncert(elipsa_max,rake1,rake2);
+% call fortran code
+   [status, result] = system('corr_kag');
+     if status~=0
+         disp(' ')         
+         disp('*********************************************************')
+         disp(['Problem running corr_kag.exe. System report is.   '  result])
+         disp('*********************************************************')
+         disp(' ')         
+     end
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   FMVAR part 
+if status ==0 
+    pause(2)
+    % read the output    
+    kag=load('kagselect.dat');
+else
+    disp('Error....')
+end
+%%
+mm=mean(kag);
+stdata=std(kag);
+med=median(kag);
 
-%plotalluncert(elipsa_max,strike1,strike2,dip1,dip2,rake1,rake2);
+% figure;
+ subplot 223
+ hist(kag,20);
+ title([ 'Kagan Angle, Mean= ' num2str(fix(mm)) '  Sd=  ' num2str(fix(stdata)) '  Median= ' num2str(fix(med))],'FontSize',14)
+ ax=gca;
+ set(ax,'Linewidth',2,'FontSize',12)
+
+%% OLD CODE
+% elipsa_max=load('elipsa_max.dat');
+% 
+% plotstruncert(elipsa_max,strike1,strike2);
+% plotdipuncert(elipsa_max,dip1,dip2);
+% plotrakeuncert(elipsa_max,rake1,rake2);
+% 
+% mm=mean(elipsa_max(:,11));
+% stdata=std(elipsa_max(:,11));
+% med=median(elipsa_max(:,11));
+% 
+% figure;hist(elipsa_max(:,11),10);
+% title([ 'Kagan Angle, Mean= ' num2str(fix(mm)) '  Sd=  ' num2str(fix(stdata)) '  Median= ' num2str(fix(med))],'FontSize',14)
+% ax=gca;
+% set(ax,'Linewidth',2,'FontSize',12)
+% 
+% figure;
+% hist(elipsa_max(:,4),10);
+% title('DC%','FontSize',18)
+% ax=gca;
+% set(ax,'Linewidth',2,'FontSize',12)
+%%
+
 cd ..
 
+
+%% NODAL LINE PLOT
+% New code
+if ispc
+   h=dir('.\uncertainty\corrselect.dat');
+else
+   h=dir('./uncertainty/corrselect.dat');
+end
+if isempty(h); 
+         errordlg('corrselect.dat file doesn''t exist in uncertainty folder. Run the calculation and plot first. ','File Error');
+     return
+else
+    disp('Found corrselect.dat')
+end
+%
+if ispc
+      fid = fopen('.\uncertainty\corrselect.dat','r');
+        C = textscan(fid, '%f %f %f %f %f %f','HeaderLines',1);
+      fclose(fid);
+else
+      fid = fopen('./uncertainty/corrselect.dat','r');
+        C = textscan(fid, '%f %f %f %f %f %f','HeaderLines',1);
+      fclose(fid);
+end
+%% PLOT
+str1=C{1};dip1=C{2};
+str2=C{4};dip2=C{5};
+%
+%% plot nodal lines
+%figure
+subplot 224
+
+Stereonet(0,90*pi/180,1000*pi/180,1);
+v=axis;
+xlim([v(1),v(2)]); ylim([v(3),v(4)]);  % static limits
+hold
+
+tic
+ for i=1:length(str1)
+     path = GreatCircle(deg2rad(str1(i)),deg2rad(dip1(i)),1);
+     plot(path(:,1),path(:,2),'r-')
+     path = GreatCircle(deg2rad(str2(i)),deg2rad(dip2(i)),1);
+     plot(path(:,1),path(:,2),'r-')
+ end
+toc
+
+title('Nodal lines','FontSize',14)
+
+%%
+% choice = questdlg('Continue with plot in GMT ? (This could take a few minutes)', ...
+%  'GMT plotting of nodal lines', ...
+%  'Yes','No','No');
+% 
+% % Handle response
+% switch choice
+%     case 'Yes'
+%      disp('Plotting nodal lines using GMT. Using uncertainty folder.')
+%         
+%      cd uncertainty
+%      
+%         figure
+%         if ispc
+%             fid = fopen('pluncnod.bat','w');
+%             fprintf(fid,'%s\r\n','del unmod.png');
+%             fprintf(fid,'%s\r\n','gawk "{print 10,10,10,$5,$6,$7,6}" elipsa_max.dat > unnod.dat');
+%             fprintf(fid,'%s\r\n','psmeca -R0/20/0/20 -JX15c unnod.dat   -Sa10c -T0 -K > unmod.ps');
+%             fprintf(fid,'%s\r\n','echo 1 1 12 0 1 1 test | pstext -R -J -O >> unmod.ps');
+%             fprintf(fid,'%s\r\n','ps2raster unmod.ps -P -Tg');
+%             fprintf(fid,'%s\r\n','del unnod.dat');
+%             fclose(fid);
+%         % run batch file...
+%             [s,r]=system('pluncnod.bat');
+%             if s==0
+%                 A=imread('unmod.png','png');
+%                 image(A);
+%                 disp('Postscript version is in uncertainty folder.')
+%             else
+%                 disp('error')
+%                 disp(r)
+%             end
+%         else
+%             fid = fopen('pluncnod.bat','w');
+%             fprintf(fid,'%s\n','rm unmod.png');
+%             fprintf(fid,'%s\n','awk ''{print 10,10,10,$5,$6,$7,6}'' elipsa_max.dat > unnod.dat');
+%             fprintf(fid,'%s\n','psmeca -R0/20/0/20 -JX15c unnod.dat   -Sa10c -T0 -K > unmod.ps');
+%             fprintf(fid,'%s\n','echo 1 1 12 0 1 1 test | pstext -R -J -O >> unmod.ps');
+%             fprintf(fid,'%s\n','ps2raster unmod.ps -P -Tg');
+%             fprintf(fid,'%s\n','rm unnod.dat');
+%             fclose(fid);
+%     % run batch file...
+%             !chmod +x  pluncnod.bat
+%             [s,r]=system('./pluncnod.bat'); 
+%             if s==0
+%                 A=imread('unmod.png','png');
+%                 image(A);
+%                 disp('Postscript version is in uncertainty folder.')
+%             else
+%                 disp('error')
+%                 disp(r)
+%             end
+%         end
+%         
+%     cd ..   % return to main folder
+% 
+% % return to main folder before plotting.... this should solve problems with folders if user tries to plot waveforms before closing ps file...
+%     if ispc
+%         system('gsview32 .\uncertainty\unmod.ps');
+%     else
+%         system('gv ./uncertainty/unmod.ps');
+%     end
+%     
+%     
+%     case 'No'
+%         disp('Done')
+% end
+%%
+
+
+%%
 % 
 % figure
 % %
@@ -1389,7 +1916,7 @@ cd ..
 % %       plot(xp,yp,'mo','MarkerFaceColor','m');
 %  
 %  end
-%%
+% %
 % 
 % Polar plot
 % figure
@@ -1441,11 +1968,7 @@ cd ..
 % % set(gca,'View',[-90 90],'YDir','reverse');
 % 
 % % 
-figure
-% kagan
-% subplot(1,2,1)
- hist(elipsa_max(:,11),10);
- title([ 'Kagan Angle, Mean= ' num2str(mm) '  Sd=  ' num2str(stdata) '  Median= ' num2str(med)])
+
 % 
 % %subplot(1,2,2)
 % % for i=1:length(elipsa_max(:,5))
@@ -1490,8 +2013,6 @@ figure
 % 
 % system('gsview32 .\invert\unmod.ps');
 % % % 
-
-
 
 
 function sourceno_Callback(hObject, eventdata, handles)
@@ -1639,6 +2160,13 @@ else
 end
 
 disp(['Selected source no ' srcnumber])
+
+
+%% update the strike/dip/rake values for this source number..!!
+
+
+
+
 
 
 % --- Executes during object creation, after setting all properties.
@@ -2151,10 +2679,6 @@ function [bx,by,bz]=vecpro(px,py,pz,tx,ty,tz)
       by=pz*tx-px*tz;
       bz=px*ty-py*tx;
       
-      
-      
-
-
 % --- Executes on button press in plnodal.
 function plnodal_Callback(hObject, eventdata, handles)
 % hObject    handle to plnodal (see GCBO)
@@ -2244,9 +2768,51 @@ tic
 %      plot(xp,yp,'mo','MarkerFaceColor','m');
  
  end
-
+toc
+%% New code
+if ispc
+   h=dir('.\uncertainty\corrselect.dat');
+else
+   h=dir('./uncertainty/corrselect.dat');
+end
+if isempty(h); 
+         errordlg('corrselect.dat file doesn''t exist in uncertainty folder. Run the calculation and plot first. ','File Error');
+     return
+else
+    disp('Found corrselect.dat')
+end
+%
+if ispc
+      fid = fopen('.\uncertainty\corrselect.dat','r');
+        C = textscan(fid, '%f %f %f %f %f %f','HeaderLines',1);
+      fclose(fid);
+else
+      fid = fopen('./uncertainty/corrselect.dat','r');
+        C = textscan(fid, '%f %f %f %f %f %f','HeaderLines',1);
+      fclose(fid);
+end
+%% PLOT
+str1=C{1};
+dip1=C{2};
+str2=C{4};
+dip2=C{5};
+%
+%% plot nodal lines
+figure
+Stereonet(0,90*pi/180,1000*pi/180,1);
+v=axis;
+xlim([v(1),v(2)]); ylim([v(3),v(4)]);  % static limits
+hold
+tic
+ for i=1:length(str1)
+     path = GreatCircle(deg2rad(str1(i)),deg2rad(dip1(i)),1);
+     plot(path(:,1),path(:,2),'r-')
+     path = GreatCircle(deg2rad(str2(i)),deg2rad(dip2(i)),1);
+     plot(path(:,1),path(:,2),'r-')
+ end
 toc
 
+%%
 choice = questdlg('Continue with plot in GMT ? (This could take a few minutes)', ...
  'GMT plotting of nodal lines', ...
  'Yes','No','No');
@@ -2361,6 +2927,37 @@ if (get(handles.pdata,'Value') == get(handles.pdata,'Max'))
     set(handles.uipanel3,'Visible','on')
     set(handles.uipanel1,'Visible','on')
     
+%% read data variance from inv4.dat
+% check for inv4
+if ispc 
+       fh2=exist('.\invert\inv4.dat','file');
+        if (fh2~=2);
+                 errordlg('Invert folder doesn''t contain inv4.dat. Please run inversion. ','File Error');
+                 delete(handles.create_synth)
+        else
+          fid = fopen('.\invert\inv4.dat','r');
+            linetmp0=fgetl(fid);         %01 line
+            A=sscanf(linetmp0,'%e %e  %e  %e  %e');
+          fclose(fid);
+            datavar=A(4);
+        end
+else
+       fh2=exist('./invert/inv4.dat','file');
+        if (fh2~=2);
+                 errordlg('Invert folder doesn''t contain inv4.dat. Please run inversion. ','File Error');
+                 delete(handles.create_synth)
+        else
+          fid = fopen('./invert/inv4.dat','r');
+            linetmp0=fgetl(fid);         %01 line
+            A=sscanf(linetmp0,'%e %e  %e  %e  %e');
+          fclose(fid);
+            datavar=A(4);
+        end
+end
+
+% update userdatavariance with datavar
+set(handles.userdatavariance,'String',datavar);  
+
 else
 	% Radio button is not selected-take appropriate action
     set(handles.edata,'Value',1)  
@@ -2472,6 +3069,64 @@ function f4_Callback(hObject, eventdata, handles)
 % --- Executes during object creation, after setting all properties.
 function f4_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to f4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in full.
+function full_Callback(hObject, eventdata, handles)
+% hObject    handle to full (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of full
+
+val = get( hObject, 'Value' );
+
+if val==1
+	disp( 'Full MT selected' )
+    set(handles.dev,'Value',0)
+else
+end
+
+
+
+% --- Executes on button press in dev.
+function dev_Callback(hObject, eventdata, handles)
+% hObject    handle to dev (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of dev
+
+val = get( hObject, 'Value' );
+
+if val==1
+	disp( 'Deviatoric MT selected' )
+    set(handles.full,'Value',0)
+else
+end
+
+
+
+function nsamples_Callback(hObject, eventdata, handles)
+% hObject    handle to nsamples (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of nsamples as text
+%        str2double(get(hObject,'String')) returns contents of nsamples as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function nsamples_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to nsamples (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 

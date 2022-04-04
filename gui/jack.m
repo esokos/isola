@@ -56,8 +56,102 @@ function jack_OpeningFcn(hObject, eventdata, handles, varargin)
 handles.output = hObject;
 
 
-disp('This is Jack 29/08/2013. Not for Linux yet')
+disp('This is Jack 29/08/2015.')
 
+
+
+%%
+
+h=dir('tsources.isl');
+
+if isempty(h); 
+    errordlg('tsources.isl file doesn''t exist. Run Source create. ','File Error');
+  return    
+else
+    fid = fopen('tsources.isl','r');
+    tsource=fscanf(fid,'%s',1)
+    
+     if strcmp(tsource,'line')
+        disp('Inversion was done for a line of sources.')
+        nsources=fscanf(fid,'%i',1);
+        distep=fscanf(fid,'%f',1);
+        sdepth=fscanf(fid,'%f',1);
+        invtype=fscanf(fid,'%c');
+          
+        conplane=2;   %%% Line
+        % dummy sdepth
+        sdepth=-333;
+        % Update handles structure
+        guidata(hObject, handles);
+        
+     elseif strcmp(tsource,'depth')
+        disp('Inversion was done for a line of sources under epicenter.')
+        nsources=fscanf(fid,'%i',1);
+        distep=fscanf(fid,'%f',1);
+        sdepth=fscanf(fid,'%f',1);
+        invtype=fscanf(fid,'%c');
+        
+         conplane=0;   %%%depth
+
+         handles.sdepth=sdepth;
+         % Update handles structure
+         guidata(hObject, handles);
+    
+     elseif strcmp(tsource,'plane')
+        disp('Inversion was done for a plane of sources.')
+        nsources=fscanf(fid,'%i',1);
+%         distep=fscanf(fid,'%f',1);
+           noSourcesstrike=fscanf(fid,'%i',1)
+           strikestep=fscanf(fid,'%f',1)
+           noSourcesdip=fscanf(fid,'%i',1)
+           dipstep=fscanf(fid,'%f',1)
+%           nsources=noSourcesstrike*noSourcesdip;
+          
+           invtype='   Multiple Source line or plane ';%(Trial Sources on a plane or line)';
+      
+           conplane=1;
+           
+           %% dummy sdepth
+           sdepth=-333;
+            distep=-333;
+            
+           %%%%%%%%%%%%%%%%%write to handles
+           handles.noSourcesstrike=noSourcesstrike;
+           handles.strikestep=strikestep;
+           handles.noSourcesdip=noSourcesdip;
+           handles.dipstep=dipstep;
+           % Update handles structure
+           guidata(hObject, handles);
+           
+     elseif strcmp(tsource,'point')
+       disp('Inversion was done for one source.')
+       nsources=fscanf(fid,'%i',1);
+       distep=fscanf(fid,'%f',1);
+       sdepth=fscanf(fid,'%f',1);
+       invtype=fscanf(fid,'%c');
+        
+
+        conplane=3;
+        % Update handles structure
+        guidata(hObject, handles);
+       
+     end
+     
+          fclose(fid);
+          
+end
+
+%% learn which is the reference mechanism from inv1.dat
+
+cd invert
+
+[~,~,~,~,~,~,~,inv1_sdr1,inv1_sdr2,~]=readinv1(nsources,1);
+
+set(handles.str,'String',num2str(inv1_sdr1(1)))
+set(handles.dip,'String',num2str(inv1_sdr1(2)))
+set(handles.rake,'String',num2str(inv1_sdr1(3)))
+
+cd ..
 
 % Update handles structure
 guidata(hObject, handles);
@@ -113,6 +207,7 @@ rakeref=str2num(get(handles.rake,'String'));
 % run the plotting code
 result=plotjackres_stations(strref,dipref,rakeref);
 
+disp('Numeric results available in .\invert\jackresults\allinv2.dat file')
 
 % --- Executes on button press in plcompres.
 function plcompres_Callback(hObject, eventdata, handles)
@@ -126,6 +221,8 @@ rakeref=str2num(get(handles.rake,'String'));
 
 % run the plotting code
 result=plotjackrescomp_all(strref,dipref,rakeref);
+
+disp('Numeric results available in .\invert\jackresults\allinv2.dat file')
 
 function str_Callback(hObject, eventdata, handles)
 % hObject    handle to str (see GCBO)

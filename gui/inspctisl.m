@@ -72,7 +72,7 @@ function varargout = inspctisl_OutputFcn(hObject, eventdata, handles)
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
-disp('This is inspctisl 18/05/05');
+disp('This is inspctisl 07/10/2019');
 
 % --- Executes on button press in loadfile.
 function loadfile_Callback(hObject, eventdata, handles)
@@ -81,15 +81,18 @@ function loadfile_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 messtext=...
-   ['Please select a datafile.                      '
-    'This file should be a text file with           '
-    'four columns separated by spaces.              '
-    'Each column should contain one data channel and'
-    'the succession should be time, NS, EW and Z    '];
+   ['Please load an uncorrected (*unc.dat) file       '
+    'from the DATA folder. These files are good       '
+    'for inspection for "mice" or noise before signal.'
+    'Because data are free of any filter.             '];
 
 uiwait(msgbox(messtext,'Message','warn','modal'));
 
-[file1,path1] = uigetfile([ '*.dat'],' Earthquake Datafile',400,400);
+if ispc
+    [file1,path1] = uigetfile('.\data\*unc.dat','Select an uncorrected data file');
+else
+    [file1,path1] = uigetfile('./data/*unc.dat','Select an uncorrected data file');
+end
 
    lopa = [path1 file1];
    name = file1
@@ -134,9 +137,16 @@ handles.file=file1;
 guidata(hObject,handles)
 
 %%%%%%%%%%%%%%Update labels of components on graph based on file name
-set(handles.verlabel,'string',[file1(1:3) 'z'])
-set(handles.ewlabel,'string',[file1(1:3) 'e'])
-set(handles.nslabel,'string',[file1(1:3) 'n'])
+% set(handles.verlabel,'string',[file1(1:3) 'z'])
+% set(handles.ewlabel,'string',[file1(1:3) 'e'])
+% set(handles.nslabel,'string',[file1(1:3) 'n'])
+
+%% decide if file is *raw , *.unc or something else...
+fnd_unc=strfind(file1,'unc');
+
+set(handles.verlabel,'string',[file1(1:fnd_unc-1) ' Z'])
+set(handles.ewlabel,'string', [file1(1:fnd_unc-1) ' E'])
+set(handles.nslabel,'string', [file1(1:fnd_unc-1) ' N'])
 
 %%%%%%%%%%%%%%%%%%PLOT RAW  DATA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %plot CORRECTED data
@@ -145,6 +155,7 @@ plot(time_sec,ew,'k')
 set(handles.ewaxis,'XMinorTick','on')
 grid on
 % title('EW')
+ylabel('Counts')
 
 axes(handles.nsaxis)
 plot(time_sec,ns,'k')
@@ -159,7 +170,7 @@ set(handles.veraxis,'XMinorTick','on')
 grid on
 % title('Ver')
 xlabel('Time (sec)')
-
+ylabel('Counts')
 
 
 % --- Executes on button press in integrate.
@@ -201,7 +212,7 @@ plot(time_sec,nsdis,'k')
 set(handles.nsaxis,'XMinorTick','on')
 grid on
 % title('NS')
-ylabel('Counts')
+% ylabel('Counts')
 
 axes(handles.veraxis)
 plot(time_sec,verdis,'k')

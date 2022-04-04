@@ -21,16 +21,34 @@ h=dir('.\invert\allstat.dat');
      return
   else
   end
-  
+
+
+
+%%
 cd invert
-  
+%% read how many subevents we have   
+
+    [id,tstep,nsources,tshifts,nsub,freq,var] = readinpinv('inpinv.dat');
+
+    q1=['Inversion was run with ' num2str(nsub) ' subevents. Select which one you want to use ?' 'Results will be saved as allinv2.dat in .\invert\jackresults\ folder'];
+    
+    if nsub~=1
+       prompt = {q1}; dlg_title = 'Input subevent number for analysis.'; num_lines = 1; defaultans = {'2'};
+       answer = inputdlg(prompt,dlg_title,num_lines,defaultans);
+       disp(['Selected subevent is ' num2str(cell2mat(answer))])
+       selsub=str2double(cell2mat(answer));
+    else
+       selsub= 0;
+    end
+
 % open allstat new version only 
            [S,d1,d2,d3,d4,of1,of2,of3,of4] = textread('allstat.dat','%s %f %f %f %f %f %f %f %f',-1);
 %   
   cd jackresults  %% we need to check about this..!!
-  
-fid1 = fopen('allinv2.dat','w');
 
+%%  
+fid1 = fopen('allinv2.dat','w');
+fid2 = fopen('allinv2b.dat','w');
 % prepare filenames and open files
 % read inv2 files 
 for i=1:nstations
@@ -40,21 +58,32 @@ for i=1:nstations
        alstname=['inv2_no_' S{i} '.dat'];
      
        fid = fopen(alstname,'r');
-%          [srcpos2(i),srctime2(i),mo(i),str1(i),dip1(i),rake1(i),str2(i),dip2(i),rake2(i),aziP(i),plungeP(i),aziT(i),plungeT(i),aziB(i),plungeB(i),dc(i),varred(i)] = textread(alstname,'%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f');
-           linetmp=fgetl(fid);  
+           for ii=1:selsub-1  % skip lines to reach the selected subevent
+              tmp=fgetl(fid); 
+           end
+           linetmp=fgetl(fid);
            fprintf(fid1,'%s %s\r\n',linetmp,alstname(6:end));
+           fprintf(fid2,'%s\r\n',linetmp);
        fclose(fid);
+  
   else
            
-  disp(['Skipped station ' S{i}])
-  nstations=nstations-1;       
+     disp(['Skipped station ' S{i}])
+     nstations=nstations-1;       
   end
   
 end
 
 fclose(fid1);
-
-
+fclose(fid2);
+   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
+   
 %%  read all inv2 files and put in one then read and plot this
 % read the file 
 %    
@@ -125,42 +154,50 @@ figure
 %% Plot solutions
 subplot(2,4,1)
  hist([str1;str2],36)
- title('Strike')
- xlabel('Degrees')
+% title('Strike')
+ xlabel('Strike (\circ)')
  ylabel('Count')
  xlim([0 360]) 
  
 subplot(2,4,2)
  hist([dip1;dip2],18)
- title('Dip')
- xlabel('Degrees')
+% title('Dip')
+ xlabel('Dip (\circ)')
  ylabel('Count')
  xlim([0 90]) 
  
 subplot(2,4,3)
  hist([rake1;rake2],36)
- title('Rake')
- xlabel('Degrees')
+% title('Rake')
+ xlabel('Rake (\circ)') 
  ylabel('Count')
  xlim([-180 180]) 
  
+% Source position 
 subplot(2,4,4)
- hist(srcpos2)
- title('Source Position')
+ hist(srcpos2,linspace(0,nsources))
+ % title('Source Position')
  xlabel('Source Position')
  ylabel('Count')
+ v=axis;axis([0 nsources v(3) v(4)])
  
+% source time 
+T1=tshifts(1)*tstep;
+T2=tshifts(3)*tstep;
+
 subplot(2,4,5)
- hist(srctime2)
- title('Source Time')
- xlabel('Time (Sec)')
+ hist(srctime2,linspace(T1,T2))
+% title('Source Time')
+ xlabel('Source Time (s)')
  ylabel('Count')
-
+v=axis;axis([T1 T2 v(3) v(4)])
+ 
 subplot(2,4,6)
- hist(dc)
- title('DC%')
+ hist(dc,linspace(0,100))
+% title('DC%')
+ xlabel('DC%')
  ylabel('Count')
-
+v=axis;axis([0 100 v(3) v(4)])
 
 subplot(2,4,7)
  Stereonet(0,90*pi/180,1000*pi/180,1);
@@ -170,24 +207,28 @@ subplot(2,4,7)
  plot(path(:,1),path(:,2),'k-')
      %Plot P axis (black, filled circle)
       [xp,yp] = StCoordLine(deg2rad(aziP(i)),deg2rad(plungeP(i)),1);
-      text(xp,yp,'P','FontSize',8,'HorizontalAlignment','center','BackgroundColor','red')
+      text(xp,yp,'P','FontSize',8,'HorizontalAlignment','center','BackgroundColor','red','Color','white')
 
      path = GreatCircle(deg2rad(str2(i)),deg2rad(dip2(i)),1);
  plot(path(:,1),path(:,2),'k-')
  
     %Plot T axis (black, filled circle)
       [xp,yp] = StCoordLine(deg2rad(aziT(i)),deg2rad(plungeT(i)),1);
-      text(xp,yp,'T','FontSize',8,'HorizontalAlignment','center','BackgroundColor','blue')
+      text(xp,yp,'T','FontSize',8,'HorizontalAlignment','center','BackgroundColor','blue','Color','white')
       
  end
  
-  title('Nodal Lines')
+ %title('Nodal Lines')
+ TitleH = title('Nodal lines');
+set(TitleH, 'Position', [0, -2], ...
+  'VerticalAlignment', 'bottom', ...
+  'HorizontalAlignment', 'center')
  
 subplot(2,4,8)
  hist(kag)  
- title('Kagan Angle')
+% title('Kagan Angle')
  ylabel('Count')
- xlabel('Kagan Angle')
+ xlabel('Kagan Angle (\circ)')
  
 
   cd .. % out of jackresults

@@ -237,7 +237,7 @@ doy=date2doy(istns)
 %%% ...........
 %%% prepare string for nstime
 [Y,M,D,H,MI,S] = datevec(istns);
-nn=[deblank(num2str(D)) '-' deblank(num2mon(M)) '-'  num2str(Y)  '  ('  deblank(num2str(doy)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S))];
+nn=[deblank(num2str(D)) '-' deblank(num2mon(M)) '-'  num2str(Y)  '  ('  deblank(num2str(doy)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S,'%5.2f'))];
 
 set(handles.nstime,'String',nn)
 set(handles.sfreq,'String',num2str(spsns))
@@ -409,7 +409,7 @@ if use_name == 1
      station_name = get(handles.nsname,'String');
 end  
 
-
+disp(['Using ' station_name ' as station name'])
 
 
 %%% read sampling rate
@@ -442,7 +442,7 @@ if strcmp(button,'Yes')
 %%% save files   
 try
 cd data
-[newfile, newdir] = uiputfile([station_name(1:3) 'unc' '.dat'], 'Save station data as');
+[newfile, newdir] = uiputfile([station_name 'unc' '.dat'], 'Save station data as');
 fid = fopen([newdir newfile],'w');
  if  ispc
    fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%
@@ -467,7 +467,7 @@ end
 elseif strcmp(button,'No')
    disp('Canceled folder operation')
 
-[newfile, newdir] = uiputfile([station_name(1:3) 'unc' '.dat'], 'Save station data as');
+[newfile, newdir] = uiputfile([station_name 'unc' '.dat'], 'Save station data as');
 fid = fopen([newdir newfile],'w');
  if ispc
   fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%
@@ -487,7 +487,7 @@ else
 disp('DATA folder exists. Files will be saved there.')
 try
 cd data
-[newfile, newdir] = uiputfile([station_name(1:3) 'unc' '.dat'], 'Save station data as');
+[newfile, newdir] = uiputfile([station_name 'unc' '.dat'], 'Save station data as');
 fid = fopen([newdir newfile],'w');
  if ispc
      fprintf(fid,'%e     %e     %e     %e\r\n',alld);   %%%%%
@@ -509,15 +509,15 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% new ... prepare a file with file start time
 pwd
-stime_filename=[station_name(1:3) 'stime' '.isl']
+stime_filename=[station_name 'stime' '.isl']
 start_time=strrep(strrep(strrep(strrep(get(handles.nstime,'String'),':',' '),'-',' '),')',' '),'(',' ')
 %%%%
 disp(['Saving file start time info in file   ' stime_filename])
 fid = fopen(stime_filename,'w');
  if ispc
-   fprintf(fid,'%s %s\r\n',station_name(1:3),start_time)
+   fprintf(fid,'%s %s\r\n',station_name,start_time)
  else
-   fprintf(fid,'%s %s\n',station_name(1:3),start_time)
+   fprintf(fid,'%s %s\n',station_name,start_time)
  end
 fclose(fid);
 

@@ -1,9 +1,9 @@
     function [x,y] = pltsym(ain, az)
     
 rad=pi/180;
-cx=10;
-cy=10;
-rmax=5;         %circle radius   
+cx=0;
+cy=0;
+rmax=1;         %circle radius   
 
       azr = az*rad;
       ainr = ain*rad;

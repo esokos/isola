@@ -21,7 +21,8 @@ function bb(fm, centerX, centerY, diam, ta, color)
 %	color - color to use for quadrants of tension; can be a string, e.g. 'r'
 %		'b' or three component color vector, [R G B].
 %
-
+%  modified 26/11/2020 to solve problem with plotting 
+%  
 
 [ne,n] = size(fm);
 if n == 6
@@ -48,13 +49,14 @@ if ne > 1
 	centerY = centerY(i);
 end
 
-mech = zeros(ne,1);
-j = find(r1 > 180);
-r1(j) = r1(j) - 180;
-mech(j) = 1;
-j = find(r1 < 0);
-r1(j) = r1(j) + 180;
-mech(j) = 1;
+% mech = zeros(ne,1);
+% j = find(r1 > 180);
+% r1(j) = r1(j) - 180;
+% 
+% mech(j) = 1;
+% j = find(r1 < 0);
+% r1(j) = r1(j) + 180;
+ mech(1) = 1;
 
 % Get azimuth and dip of second plane
 [s2,d2,r2] = AuxPlane(s1,d1,r1);
@@ -139,9 +141,17 @@ if D > 0
    xx = x*D/90 + CX;
    yy = ampy*y*D/90 + CY;
    if ta == 0
+%%      modification
+    if r1 < 0
       fill(xx,yy,'w')
       fill(Y,X,color)
       line(xx,yy,'color','k','linewidth',0.2);
+    else
+      fill(xx,yy,color)
+      fill(Y,X,'w')
+      line(xx,yy,'color','k','linewidth',0.2);
+    end
+%%    
    else
       fillm(yy,xx,'w')
       fillm(X,Y,color)

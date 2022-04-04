@@ -166,6 +166,7 @@ set(handles.origsec,'String',num2str(orsec))
 %handles.samfreq=samfreq;
 %handles.dt=1/samfreq;
 handles.dtres=dtres;
+handles.tl=tl;
 
 % Update handles structure
 guidata(hObject, handles);
@@ -296,7 +297,9 @@ set(handles.filesec,'String',num2str(sfilesec))
 
 
 else
-    disp('Start time file doesn''t exist. Using default start time');
+    
+    errordlg(['Start time file ' stime_filename  '  doesn''t exist.'],'File Error');
+    uiwait;
 end
 
 
@@ -320,7 +323,7 @@ set(handles.sfreq,'String',num2str(sfreq));
 % set(handles.hcut1,'String',num2str((sfreq/2)-1));  
 
 %%% change high cut to 1% of sfreq %% use ceil instead of round 21/03/2012
-set(handles.hcut1,'String',num2str(sfreq/2-ceil(sfreq/100)));  
+%set(handles.hcut1,'String',num2str(sfreq/2-ceil(sfreq/100)));  
 
 %%%
 
@@ -399,8 +402,6 @@ handles.file=file1;
 handles.stname=stname;
 guidata(hObject,handles)
 
-
-
 % handles on
 on =[handles.makecor,handles.plcurve];
 enableon(on)
@@ -412,622 +413,189 @@ function makecor_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%INSTRUMENT CORRECTION AND FILTERING%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%       START        %%%%%%%%%%%%%%%%%%%%%%%%%%%
+% disable cut
+off =[handles.cut];
+enableoff(off)
 
 %READ DATA FROM HANDLES AND put in new variables....
 ewcounts=handles.ew;
 nscounts=handles.ns;
 vercounts=handles.ver;
-dt=handles.dt
+dt=handles.dt;
 file=handles.file;
 
-
+%%
 if (get(handles.skipinst,'Value') == get(handles.skipinst,'Max'))
 %skip instrument correction
 disp('Data are corrected already. Skip instrument correction part')
 
-%save instrument corrected - filtered data  to handles 
+%save instrument corrected data  to handles 
 handles.ewcor = ewcounts;
 handles.nscor = nscounts;
 handles.vercor=vercounts;
-newsamples=(1:1:max(size(ewcounts)));
+   newsamples=(1:1:max(size(ewcounts)));
 handles.newsamples=newsamples;
 guidata(hObject,handles)
 
-%%%enable allign
-
+%%enable allign
 on =[handles.orallign];
 enableon(on)
 
-
 else
-    
-np=length(ewcounts);
-sfreq=1/dt;
-
-%%%%%%%%%%%%%%%%%%%%
-switch length(file)
+%%
+   switch length(file)
     case 12 % station with 5 character name
-      stationpzfilens=[file(1:5)  'BHN.pz']
-      stationpzfileew=[file(1:5)  'BHE.pz']
-      stationpzfilever=[file(1:5) 'BHZ.pz']
+      stationpzfilens=[file(1:5)  'BHN.pz'];
+      stationpzfileew=[file(1:5)  'BHE.pz'];
+      stationpzfilever=[file(1:5) 'BHZ.pz'];
     case 11 % station with 4 character name
-      stationpzfilens=[file(1:4)  'BHN.pz']
-      stationpzfileew=[file(1:4)  'BHE.pz']
-      stationpzfilever=[file(1:4) 'BHZ.pz']
+      stationpzfilens=[file(1:4)  'BHN.pz'];
+      stationpzfileew=[file(1:4)  'BHE.pz'];
+      stationpzfilever=[file(1:4) 'BHZ.pz'];
     case 10
-      stationpzfilens=[file(1:3)  'BHN.pz']
-      stationpzfileew=[file(1:3)  'BHE.pz']
-      stationpzfilever=[file(1:3) 'BHZ.pz']
+      stationpzfilens=[file(1:3)  'BHN.pz'];
+      stationpzfileew=[file(1:3)  'BHE.pz'];
+      stationpzfilever=[file(1:3) 'BHZ.pz'];
     otherwise
         disp('Error in file read')
-end
+   end
 
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%INSTRUMENT CORRECTION AND FILTERING%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%       START        %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% %%%% start ...
+% Call readpz for 3 comp
+   [A0ns,constantns,  nzerns, zeroesns, npolns, polesns, nsclip, valid_datens, digisens_ns, seismsens_ns]  = readpzfile(stationpzfilens);
+   [A0ew,constantew,  nzerew, zeroesew, npolew, polesew, ewclip, valid_dateew, digisens_ew, seismsens_ew]  = readpzfile(stationpzfileew);
+   [A0ver,constantver,nzerver,zeroesver,npolver,polesver,verclip,valid_datever,digisens_ver,seismsens_ver] = readpzfile(stationpzfilever);
 
+%% Detrend
+   disp('Removing Trend')
+   nscounts  =  detrend(nscounts);
+   ewcounts  =  detrend(ewcounts);
+   vercounts =  detrend(vercounts);
+   disp('   ')
 
-try
-%    
-
-%%%%%%%%%%% read poles and zeroes
-%% go in pzfiles
-cd pzfiles
-
-pwd
-
-h1=dir(stationpzfilens);
-h2=dir(stationpzfileew);
-h3=dir(stationpzfilever);
-
-if isempty(h1)
-    errstring=[ stationpzfilens   '   file doesn''t exist. Please create and copy to pzfiles folder '];
-    errordlg(errstring,'File Error');
-    cd ..
-  return
-elseif isempty(h2) 
-    errstring=[ stationpzfileew   '   file doesn''t exist. Please create and copy to pzfiles folder '];
-    errordlg(errstring,'File Error');
-    cd ..
-  return
-elseif isempty(h3) 
-    errstring=[ stationpzfilever   '   file doesn''t exist. Please create and copy to pzfiles folder '];
-    errordlg(errstring,'File Error');
-    cd ..
-  return
-else
-    fid = fopen(stationpzfilens,'r');
-    aa=fgetl(fid);
-    A0ns=str2num(fgetl(fid));
-    aa=fgetl(fid);
-    constantns=str2num(fgetl(fid));
-    
-      zer=fgetl(fid);
-            zer=zer(1:6);
-% 
-%         if zer~='zeroes' then
-%             disp 'error'
-%         elseif zer=='zeroes' 
-%             disp 'ok'
-%         end
-            nzerns=str2num(fgetl(fid));
-        for p=1:nzerns
-            zer=str2num(fgetl(fid));
-%             whos zer
-            zeroesns(p)=complex(zer(1,1),zer(1,2));
-%             whos zeroes
-        end
-        
-        if nzerns == 0
-            zeroesns=[];
-        end
-        
-%%% finished with zeroes
-%%% read poles
-            pol=fgetl(fid);
-                        pol=pol(1:5);
-
-%         if pol~='poles' then
-%             disp 'error'
-%         elseif pol=='poles' 
-%             disp 'ok'
-%         end
-            npolns=str2num(fgetl(fid));
-        for i=1:npolns
-            pol=str2num(fgetl(fid));
-            polesns(i)=complex(pol(1),pol(2));
-        end
-%%%% check if there is info to compute  clip level 
-          ffline=fgets(fid)
-          AA=ischar(ffline);
-          
-            switch AA
-            case 1
-                idx1 = strfind(ffline, 'Info:')
-                if idx1 == 1
-                        index1=strfind(ffline,'Digi sens');
-                        index2=strfind(ffline,'Seism sens');
-                        digisens_ns = sscanf(ffline(index1+9: index2-1),'%f')
-                        seismsens_ns = sscanf(ffline(index2+10: length(ffline)),'%f')
-                        nsclip=1;
-                        disp('Read Clip info for NS.')
-                 else
-                        disp('Check the last line in pz file. It doesn''t seem correct. Clip info not read.')
-                        nsclip=0;
-                 end
-
-            case 0
-                nsclip=0;
-                disp('Clip info not found for NS')
-            otherwise
-                nsclip=0;
-                disp('Error')
-            end
-                
-fclose(fid);
-%%%%%
-%%%%%%%%%%%end with NS        
-    fid = fopen(stationpzfileew,'r');
-    aa=fgetl(fid);
-    A0ew=str2num(fgetl(fid));
-    aa=fgetl(fid);
-    constantew=str2num(fgetl(fid));
-    
-      zer=fgetl(fid);
-            zer=zer(1:6);
-
-%         if zer~='zeroes' then
-%             disp 'error'
-%         elseif zer=='zeroes' 
-%             disp 'ok'
-%         end
-            nzerew=str2num(fgetl(fid));
-        for p=1:nzerew
-            zer=str2num(fgetl(fid));
-%             whos zer
-            zeroesew(p)=complex(zer(1,1),zer(1,2));
-%             whos zeroes
-        end
-        
-        if nzerew == 0
-            zeroesew=[];
-        end
-%%% finished with zeroes
-%%% read poles
-            pol=fgetl(fid);
-                        pol=pol(1:5);
-
-%         if pol~='poles' then
-%             disp 'error'
-%         elseif pol=='poles' 
-%             disp 'ok'
-%         end
-            npolew=str2num(fgetl(fid));
-        for i=1:npolew
-            pol=str2num(fgetl(fid));
-            polesew(i)=complex(pol(1),pol(2));
-        end
-
-%%%% check if there is info to compute  clip level 
-          ffline=fgets(fid)
-          AA=ischar(ffline);
-          
-            switch AA
-            case 1
-                idx1 = strfind(ffline, 'Info:')
-                if idx1 == 1
-                        index1=strfind(ffline,'Digi sens');
-                        index2=strfind(ffline,'Seism sens');
-                        digisens_ew = sscanf(ffline(index1+9: index2-1),'%f')
-                        seismsens_ew = sscanf(ffline(index2+10: length(ffline)),'%f')
-                        ewclip=1;
-                        disp('Read Clip info for EW.')
-                 else
-                        disp('Check the last line in pz file. It doesn''t seem correct. Clip info not read.')
-                        ewclip=0;
-                 end
-
-            case 0
-                ewclip=0;
-                disp('Clip info not found for EW')
-            otherwise
-                ewclip=0;
-                disp('Error')
-            end
-
-            fclose(fid);
-%%%%%%%%%%%%finished with EW
-    fid = fopen(stationpzfilever,'r');
-    aa=fgetl(fid);
-    A0ver=str2num(fgetl(fid));
-    aa=fgetl(fid);
-    constantver=str2num(fgetl(fid));
-    
-      zer=fgetl(fid);
-            zer=zer(1:6);
-
-%         if zer~='zeroes' then
-%             disp 'error'
-%         elseif zer=='zeroes' 
-%             disp 'ok'
-%         end
-            nzerver=str2num(fgetl(fid));
-        for p=1:nzerver
-            zer=str2num(fgetl(fid));
-%             whos zer
-            zeroesver(p)=complex(zer(1,1),zer(1,2));
-%             whos zeroes
-        end
-        
-        if nzerver == 0
-            zeroesver=[];
-        end
-        
-        
-%%% finished with zeroes
-%%% read poles
-            pol=fgetl(fid);
-                        pol=pol(1:5);
-
-%         if pol~='poles' then
-%             disp 'error'
-%         elseif pol=='poles' 
-%             disp 'ok'
-%         end
-            npolver=str2num(fgetl(fid));
-        for i=1:npolver
-            pol=str2num(fgetl(fid));
-            polesver(i)=complex(pol(1),pol(2));
-        end
-
-%%%% check if there is info to compute  clip level 
-          ffline=fgets(fid)
-          AA=ischar(ffline);
-          
-            switch AA
-            case 1
-                idx1 = strfind(ffline, 'Info:')
-                if idx1 == 1
-                        index1=strfind(ffline,'Digi sens');
-                        index2=strfind(ffline,'Seism sens');
-                        digisens_ver = sscanf(ffline(index1+9: index2-1),'%f')
-                        seismsens_ver = sscanf(ffline(index2+10: length(ffline)),'%f')
-                        verclip=1;
-                        disp('Read Clip info for Ver.')
-                 else
-                        disp('Check the last line in pz file. It doesn''t seem correct. Clip info not read.')
-                        verclip=0;
-                 end
-
-            case 0
-                verclip=0;
-                disp('Clip info not found for Ver')
-            otherwise
-                verclip=0;
-                disp('Error')
-            end
-
-fclose(fid);
-%%%end of ver
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% End pole and zero input....
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-end
-%%% go back to isola
-cd ..
-%%%%%%%%%%%%
-catch
-    cd ..
-end
-
-
-%%% check about type of trend correction
-if (get(handles.dcrem,'Value') == get(handles.dcrem,'Max'))
-% then checkbox is checked-take approriate action
-ewcounts  =  detrend(ewcounts,'constant');
-nscounts  =  detrend(nscounts,'constant');
-vercounts =  detrend(vercounts,'constant');
-disp('Removing Mean')
-
-else
-
-    % checkbox is not checked
-end
-
-if (get(handles.trendoff,'Value') == get(handles.trendoff,'Max'))
-% then checkbox is checked-take approriate action
-ewcounts  =  detrend(ewcounts);
-nscounts  =  detrend(nscounts);
-vercounts =  detrend(vercounts);
-disp('Removing Trend')
-
-else
-
-    % checkbox is not checked
-end
-
-if (get(handles.jiri100,'Value') == get(handles.jiri100,'Max'))
-
-%%%%%find baseline 
-asumew=0;
-asumns=0;
-asumver=0;
-
-for i=1:4000
-    asumew=asumew+ewcounts(i);
-    asumns=asumns+nscounts(i);
-    asumver=asumver+vercounts(i);
-end
-
-baselineew  =asumew/4000
-baselinens  =asumns/4000
-baselinever =asumver/4000
-
-ewcounts  =  (ewcounts-baselineew);%.*constant;
-nscounts  =  (nscounts-baselinens);%.*constant;
-vercounts =  (vercounts-baselinever);%.*constant;
-disp('Removing baseline')
-
-else
-
-    % checkbox is not checked
-end
-
-%%add taper
-taperv = str2double(get(handles.taper,'String'));
-
-% taper data
-
-ewcounts=taperd(ewcounts,taperv/100);
-nscounts=taperd(nscounts,taperv/100);
-vercounts=taperd(vercounts,taperv/100);
-
-% convert to m/sec
-ewms  =  ewcounts.*constantew;
-nsms  =  nscounts.*constantns;
-verms =  vercounts.*constantver;
-
-
-
-%%%%%%%%%%%%%%
-n=length(ewms);
-NFFT=2^nextpow2(n);
-NumUniquePts=ceil((NFFT+1)/2);
-nt=NFFT;
-nt2=nt/2;
-ntm=nt2+1;
-ntt=nt+2;
-df=1/(dt*NFFT);
-%
-ewc = complex(ewms);
-nsc = complex(nsms);
-verc= complex(verms);
-% 
-s1=fft(ewc,NFFT);  % Fourier Transform
-s2=fft(nsc,NFFT);  % Fourier Transform
-s3=fft(verc,NFFT); % Fourier Transform
-
-fft_dataew=s1(1:NumUniquePts);
-fft_datans=s2(1:NumUniquePts);
-fft_dataver=s3(1:NumUniquePts);
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cu=complex(0.,1.);
-% 
-fft_dataewcor=ones(1,NumUniquePts)';
-fft_datanscor=ones(1,NumUniquePts)';
-fft_datavercor=ones(1,NumUniquePts)';
-freq=ones(1,NumUniquePts)';
-
-%%%% division skip DC and Nyquist   %%%% NS
-for i=2:NumUniquePts-1,
-
-freq(i)=(i-1)*df;
-cso=2*pi*cu*freq(i);
-
-       cnumer=complex(1,0); %complex(1.,0.)
-          for izer=1:nzerns
-              cnumer=(cso-zeroesns(izer))*cnumer;
-          end
-        cdenom=complex(1,0);% complex(1.,0.)
-          for ipol=1:npolns
-              cdenom=(cso-polesns(ipol))*cdenom;
-          end
-
-           if cdenom == 0 ;
-               disp('error')
-               break          
-           end
-            
-        ctrafns=A0ns*cnumer/cdenom;
-      
-%fft_dataewcor(i)=fft_dataew(i)/ctraf;
-fft_datanscor(i)=fft_datans(i)/ctrafns;
-%fft_datavercor(i)=fft_dataver(i)/ctraf;
-
-end
-
-%%%% division skip DC and Nyquist   %%%% EW
-for i=2:NumUniquePts-1,
-
-freq(i)=(i-1)*df;
-cso=2*pi*cu*freq(i);
-
-       cnumer=complex(1,0); %complex(1.,0.)
-          for izer=1:nzerew
-              cnumer=(cso-zeroesew(izer))*cnumer;
-          end
-        cdenom=complex(1,0);% complex(1.,0.)
-          for ipol=1:npolew
-              cdenom=(cso-polesew(ipol))*cdenom;
-          end
-
-           if cdenom == 0 ;
-               disp('error')
-               break          
-           end
-            
-        ctrafew=A0ew*cnumer/cdenom;
-      
-fft_dataewcor(i)=fft_dataew(i)/ctrafew;
-%fft_datanscor(i)=fft_datans(i)/ctraf;
-%fft_datavercor(i)=fft_dataver(i)/ctraf;
-
-end
-
-%%%% division skip DC and Nyquist   %%%% VER
-for i=2:NumUniquePts-1,
-
-freq(i)=(i-1)*df;
-cso=2*pi*cu*freq(i);
-
-       cnumer=complex(1,0); %complex(1.,0.)
-          for izer=1:nzerver
-              cnumer=(cso-zeroesver(izer))*cnumer;
-          end
-       cdenom=complex(1,0);% complex(1.,0.)
-          for ipol=1:npolver
-              cdenom=(cso-polesver(ipol))*cdenom;
-          end
-
-           if cdenom == 0 ;
-               disp('error')
-               break          
-           end
-            
-        ctrafver=A0ver*cnumer/cdenom;
-      
-%fft_dataewcor(i)=fft_dataew(i)/ctraf;
-%fft_datanscor(i)=fft_datans(i)/ctraf;
-fft_datavercor(i)=fft_dataver(i)/ctrafver;
-
-end
-
-
-%%%%% construct fft_dataewcor add DC and Nyquist
-fft_dataewcor  = [s1(1);fft_dataewcor(2:NumUniquePts-1);s1(NumUniquePts:NFFT)];
-fft_datanscor  = [s2(1);fft_datanscor(2:NumUniquePts-1);s2(NumUniquePts:NFFT)];
-fft_datavercor  =[s3(1);fft_datavercor(2:NumUniquePts-1);s3(NumUniquePts:NFFT)];
-
-%%%%%%%%%%%%%%%%%%inverse FFT 
-% 
-for i=2:NumUniquePts-1,
- j=ntt-i;
-fft_dataewcor(j) =conj(fft_dataewcor(i));
-fft_datanscor(j) =conj(fft_datanscor(i));
-fft_datavercor(j) =conj(fft_datavercor(i));
-end
-
-ewcor4   =      flipud(fft(fft_dataewcor,NFFT));
-nscor4   =      flipud(fft(fft_datanscor,NFFT));
-vercor4   =     flipud(fft(fft_datavercor,NFFT));
-
-ewcor5=real(ewcor4)./nt;
-nscor5=real(nscor4)./nt;
-vercor5=real(vercor4)./nt;
-% 
-ewcor6 =ewcor5(1:np);
-nscor6 =nscor5(1:np);
-vercor6 =vercor5(1:np);
-
+%% Instrumental correction
+% call instcor for 3 comp
+   disp('Starting Instrumental correction')
+   np=length(nscounts);  % fix to NS comp
+   nscor6    = instcor( nscounts,constantns, A0ns, nzerns, zeroesns, npolns, polesns,dt,np);
+   ewcor6    = instcor( ewcounts,constantew, A0ew, nzerew, zeroesew, npolew, polesew,dt,np);
+   vercor6   = instcor(vercounts,constantver,A0ver,nzerver,zeroesver,npolver,polesver,dt,np);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %filtering
-lcut2 = str2double(get(handles.lcut2,'String'))
-hcut1 = str2double(get(handles.hcut1,'String'))
-
-nptsew=length(ewcor6);
-ewcor=bandpass(ewcor6,lcut2,hcut1,nptsew,dt);
-nptsns=length(nscor6);
-nscor=bandpass(nscor6,lcut2,hcut1,nptsns,dt);
-nptsver=length(vercor6);
-vercor=bandpass(vercor6,lcut2,hcut1,nptsver,dt);
-
-newsamples=(1:1:max(size(ewcor)));
+   disp('Finished Instrumental correction')
+   disp('   ')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %save instrument corrected - filtered data  to handles 
-handles.ewcor = ewcor;
-handles.nscor = nscor;
-handles.vercor=vercor;
-handles.newsamples=newsamples;
-guidata(hObject,handles)
+   handles.ewcor = ewcor6;
+   handles.nscor = nscor6;
+   handles.vercor=vercor6;
+   newsamples=(1:1:max(size(ewcor6)));
+   handles.newsamples=newsamples;
+   guidata(hObject,handles)
 
 %save clip info
-if (nsclip==1 & ewclip==1 & verclip==1)
-handles.digisens_ns = digisens_ns;
-handles.seismsens_ns = seismsens_ns;
-handles.digisens_ew = digisens_ew;
-handles.seismsens_ew = seismsens_ew;
-handles.digisens_ver = digisens_ver;
-handles.seismsens_ver = seismsens_ver;
-guidata(hObject,handles)
-else
+  if (nsclip==1 && ewclip==1 && verclip==1)
+    handles.digisens_ns = digisens_ns;
+    handles.seismsens_ns = seismsens_ns;
+    handles.digisens_ew = digisens_ew;
+    handles.seismsens_ew = seismsens_ew;
+    handles.digisens_ver = digisens_ver;
+    handles.seismsens_ver = seismsens_ver;
+    guidata(hObject,handles)
+  else
     disp('Clip info not found')
-end
-
+  end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%INSTRUMENT CORRECTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%         END        %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%read instrument corrected data
-ew=handles.ewcor;
-ns=handles.nscor;
-ver=handles.vercor;
-dt=handles.dt;
-tim=handles.newsamples;
+%% add OT line
+% read origin time
+    orighour = str2double(get(handles.orighour,'String'));
+    origmin = str2double(get(handles.origmin,'String'));
+    origsec = str2double(get(handles.origsec,'String'));
+    disp(['Origin Time '  get(handles.orighour,'String') ':' get(handles.origmin,'String') ':' get(handles.origsec,'String')])
 
-%prepare time axis in sec
-time_sec=((tim.*dt)-dt);
+% read the first sample time 
+    fhour = str2double(get(handles.filehour,'String'));
+    fmin = str2double(get(handles.filemin,'String'));
+    fsec = str2double(get(handles.filesec,'String'));
+    disp(['First sample time '  get(handles.filehour,'String') ':' get(handles.filemin,'String') ':' get(handles.filesec,'String')])
 
-% %plot CORRECTED data
-axes(handles.ewaxis)
+% check that data start time is not empty
+    if isempty(get(handles.filehour,'String')) || isempty(get(handles.filemin,'String')) || isempty(get(handles.filesec,'String')) 
+        errordlg('Data Start Time is not given.','Input Error');
+    return
+    else
+    end
+
+    origintime=((orighour*3600)+(origmin*60)+origsec);
+    firstsampletime=((fhour*3600)+(fmin*60)+fsec);
+    OTsec=origintime-firstsampletime;
+    min_ew=min(ewcor6); max_ew=max(ewcor6);
+% OT
+    lc1=[OTsec OTsec]; lc2=[min_ew max_ew];
+
+    TL=handles.tl;
+% TL
+    lcTL1=[OTsec+TL OTsec+TL]; lcTL2=[min_ew max_ew];
+
+%%
+% axes(handles.ewaxis)
 % plot(time_sec,ew,'r',tt,pclvalue,'g',tt,nclvalue,'g')
-plot(time_sec,ew,'r')
-set(handles.ewaxis,'XMinorTick','on')
-grid on
+
+%% Plotting
+%prepare time axis in sec
+    tim=(1:1:length(ewcor6));
+    time_sec=((tim.*dt)-dt);
+
+% plot CORRECTED data
+    axes(handles.ewaxis)
+    plot(time_sec,ewcor6,'r')
+    hold on
+    plot(lc1,lc2,'b','LineWidth',4) 
+% Plot TL 
+    plot(lcTL1,lcTL2,'b','LineWidth',4) 
+    hold off             
+    set(handles.ewaxis,'XMinorTick','on')
+    grid on
 % title('EW')
-
-axes(handles.nsaxis)
-plot(time_sec,ns,'r')
-set(handles.nsaxis,'XMinorTick','on')
-grid on
+    axes(handles.nsaxis)
+    plot(time_sec,nscor6,'r')
+    set(handles.nsaxis,'XMinorTick','on')
+    grid on
 % title('NS')
-
-axes(handles.veraxis)
-plot(time_sec,ver,'r')
-set(handles.veraxis,'XMinorTick','on')
-grid on
+    axes(handles.veraxis)
+    plot(time_sec,vercor6,'r')
+    set(handles.veraxis,'XMinorTick','on')
+    grid on
 % title('Ver')
-xlabel('Seconds')
-ylabel('m/sec')
+    xlabel('Seconds')
+    ylabel('m/sec')
 
 %%%%%
-set(handles.dstat,'String','Instrument Corrected data',...
+    set(handles.dstat,'String','Instrument Corrected data',...
                   'FontSize',14,...
                   'FontWeight','bold',...
                   'ForegroundColor','red')
-
+          
+%%
 %%%%% Enable clip...??
-if (nsclip==1 && ewclip ==1 && verclip==1)
-    on =[handles.cliplvl];
-    enableon(on)
-else
-end
-%%%%%
-              
+% if (nsclip==1 && ewclip ==1 && verclip==1)
+%     on =[handles.cliplvl];
+%     enableon(on)
+% else
+% end
 %%%enable allign
-
-on =[handles.orallign];
-enableon(on)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-end    %%% end of IF for instrument correction 
+ on =[handles.orallign];
+ enableon(on)
+end    %%% end of main IF for instrument correction 
 
 
 
@@ -1196,6 +764,7 @@ vercor=handles.vercor;
 newsamples=handles.newsamples;
 currentstation=handles.file;
 dt = handles.dt;
+tl = handles.tl;
 
 dtres=handles.dtres;
 
@@ -1286,28 +855,55 @@ if firstsampletime-origintime > 0   %%% this means that we have to add points be
            nsdetr=detrend(allns);
            verdetr=detrend(allver);
 
-           ewdis=cumtrapz(ewdetr)*dt;
-           nsdis=cumtrapz(nsdetr)*dt;
-           verdis=cumtrapz(verdetr)*dt;
+           prompt = {'Enter Taper Length in seconds. Tapering is applied at the begining and end of trace between the two blue lines.'};
+           dlg_title = 'Taper';
+           num_lines = 1;
+           def = {'20'};
+
+           st = inputdlg(prompt,dlg_title,num_lines,def);
+           t=str2double(char(st));
+           disp(['applying taper of '  num2str(t) ' s' ])
+           % taper data
+           taperv=(t/(length(allver)*dt));
+           
+           ewdetr=taperd(ewdetr,taperv);
+           nsdetr=taperd(nsdetr,taperv);
+           verdetr=taperd(verdetr,taperv);
+           
+           % save data  
+           handles.allver=verdetr;
+           handles.allew=ewdetr;
+           handles.allns=nsdetr;
+           handles.t=t;
+           guidata(hObject, handles);        
+           
+           t_plot=taper(length(ewdetr),taperv);
+%            
+%            ewdis=cumtrapz(ewdetr)*dt;
+%            nsdis=cumtrapz(nsdetr)*dt;
+%            verdis=cumtrapz(verdetr)*dt;
          
           %%%%%%%%% plotting 
           %%%%%prepare 'time' axis
-          tim=(1:1:length(verdis));
+          tim=(1:1:length(verdetr));
           %prepare real time axis
           time_sec=((tim.*dt)-dt);
           %%%%%%%%%%%          
           axes(handles.nsaxis)
-          plot(time_sec,nsdis,'r')
+          plot(time_sec,nsdetr,'r')
           set(handles.nsaxis,'XMinorTick','on')
           grid on
 
           axes(handles.ewaxis)
-          plot(time_sec,ewdis,'r')
+          plot(time_sec,ewdetr,'r')
           set(handles.ewaxis,'XMinorTick','on')
           grid on
+          hold on
+          plot(time_sec,t_plot*max(ewdetr),'g')
+          hold off
 
           axes(handles.veraxis)
-          plot(time_sec,verdis,'r')
+          plot(time_sec,verdetr,'r')
           set(handles.veraxis,'XMinorTick','on')
           grid on
           xlabel('Sec')
@@ -1316,10 +912,10 @@ if firstsampletime-origintime > 0   %%% this means that we have to add points be
 %           %%%%% do something else here ???? save data ?????
 %           whos allver allew allns
           
-          handles.allver=allver;
-          handles.allew=allew;
-          handles.allns=allns;
-          guidata(hObject, handles);
+%           handles.allver=allver;
+%           handles.allew=allew;
+%           handles.allns=allns;
+%           guidata(hObject, handles);
           %%%%%%%%%%%%%%%%%%
           
 elseif firstsampletime-origintime < 0 % this means that we have to cut points from data..
@@ -1342,99 +938,168 @@ elseif firstsampletime-origintime < 0 % this means that we have to cut points fr
 %           allew = vertcat(ewcor(cutsamples:length(ewcor),1), b) ;
 %           allns = vertcat(nscor(cutsamples:length(nscor),1), b) ;
 
-
-            allver= vercor(cutsamples:length(vercor),1);
+           
+%             disp(['Signal has length of ' num2str(length(vercor)*dt)])
+                
             allew = ewcor(cutsamples:length(ewcor),1) ;
             allns = nscor(cutsamples:length(nscor),1) ;
+            allver= vercor(cutsamples:length(vercor),1);
 
+            disp(['alligned signal has length of ' num2str(length(allver)*dt)])
 
-           % plot displacement
-           ewdetr=detrend(allew);
-           nsdetr=detrend(allns);
-           verdetr=detrend(allver);
+%       we have to cut at the end!
 
-           ewdis=cumtrapz(ewdetr)*dt;
-           nsdis=cumtrapz(nsdetr)*dt;
-           verdis=cumtrapz(verdetr)*dt;
+%             nsampleskeep=tl/dt
+% 
+%             allew = allew(1:nsampleskeep,1) ;
+%             allns = allns(1:nsampleskeep,1) ;
+%             allver = allver(1:nsampleskeep,1) ;
+% 
+%              whos allew allns allver
+%              
+            
+           disp('de-mean')
+           ewdetr=detrend(allew);%,'constant');
+           nsdetr=detrend(allns);%,'constant');
+           verdetr=detrend(allver);%,'constant');
+
+      %      t = input('Taper length in seconds: ');
+      
+          prompt = {'Enter Taper Length in seconds. Tapering is applied at the begining and end of trace between the two blue lines.'};
+          dlg_title = 'Taper';
+          num_lines = 1;
+           def = {'20'};
+
+           st = inputdlg(prompt,dlg_title,num_lines,def);
+           t=str2double(char(st));
+           disp(['applying taper of '  num2str(t) ' s' ])
+           % taper data
+           taperv=(t/(length(allver)*dt));
+           
+           ewdetr=taperd(ewdetr,taperv);
+           nsdetr=taperd(nsdetr,taperv);
+           verdetr=taperd(verdetr,taperv);
+           
+            % save data  
+          handles.allver=verdetr;
+          handles.allew=ewdetr;
+          handles.allns=nsdetr;
+          handles.t=t;
+          guidata(hObject, handles);         
+
+%% compute taper for plotting
+       %   tim=(1:1:length(verdetr));
+       %   time_sec=((tim.*dt)-dt);
+       %      figure
+             t_plot=taper(length(ewdetr),taperv);
+        %     plot(time_sec,t_plot*max(ewdetr))
+          
+%% Plotting           
+     %     nptsns=length(nsdetr)
+
+% ewdetr=bandpass2(ewdetr,0.4,1,nptsns,dt);
+% nsdetr=bandpass2(nsdetr,0.4,1,nptsns,dt);
+% verdetr=bandpass2(verdetr,0.4,1,nptsns,dt);
+% 
+%            ewdis=cumtrapz(ewdetr)*dt;
+%            nsdis=cumtrapz(nsdetr)*dt;
+%            verdis=cumtrapz(verdetr)*dt;
           
           %%%%%%%%% plotting 
           %%%%%prepare 'time' axis
-          tim=(1:1:length(verdis));
+          tim=(1:1:length(verdetr));
           %%%%%%%%%%%          
           %prepare real time axis
           time_sec=((tim.*dt)-dt);
           %%%%%%%%%%%%%%%%%%%%%%
           axes(handles.nsaxis)
-          plot(time_sec,nsdis,'r')
+          plot(time_sec,nsdetr,'r')
           set(handles.nsaxis,'XMinorTick','on')
           grid on
           
           axes(handles.ewaxis)
-          plot(time_sec,ewdis,'r')
+          plot(time_sec,ewdetr,'r')
           set(handles.ewaxis,'XMinorTick','on')
           grid on
-
+          hold on
+          plot(time_sec,t_plot*max(ewdetr),'g')
+          hold off
+          
           axes(handles.veraxis)
-          plot(time_sec,verdis,'r')
+          plot(time_sec,verdetr,'r')
           set(handles.veraxis,'XMinorTick','on')
           grid on
           xlabel('sec')
           ylabel('m/sec')
-          
-          %%%%% do something else here ???? save data ?????
-%         whos allver allew allns
-          
-          handles.allver=allver;
-          handles.allew=allew;
-          handles.allns=allns;
-          guidata(hObject, handles);
-          
+        
           %%%%%%%%%%%%%%%%%%
 else      %%%%%%%%%%  
           
           disp('Origin time and file start time match...no change..!!')
 
-           % plot displacement
-           ewdetr=detrend(ewcor);
-           nsdetr=detrend(nscor);
-           verdetr=detrend(vercor);
+          
+           disp('de-mean')
+           ewdetr=detrend(ewcor); 
+           nsdetr=detrend(nscor); 
+           verdetr=detrend(vercor); 
 
-           ewdis=cumtrapz(ewdetr)*dt;
-           nsdis=cumtrapz(nsdetr)*dt;
-           verdis=cumtrapz(verdetr)*dt;
+           prompt = {'Enter Taper Length in seconds. Tapering is applied at the begining and end of trace between the two blue lines.'};
+           dlg_title = 'Taper';
+           num_lines = 1;
+           def = {'20'};
 
+           st = inputdlg(prompt,dlg_title,num_lines,def);
+           t=str2double(char(st));
+           disp(['applying taper of '  num2str(t) ' s' ])
+           % taper data
+           taperv=(t/(length(vercor)*dt));
+
+           ewdetr=taperd(ewdetr,taperv);
+           nsdetr=taperd(nsdetr,taperv);
+           verdetr=taperd(verdetr,taperv);
+           
+           % save data  
+           handles.allver=verdetr;
+           handles.allew=ewdetr;
+           handles.allns=nsdetr;
+           handles.t=t;
+           guidata(hObject, handles);      
+          
+%% compute taper for plotting
+
+             t_plot=taper(length(ewdetr),taperv);
+          
+%% Plotting           
+
+          
           %%%%%%%%% plotting 
           %%%%%prepare 'time' axis
-          tim=(1:1:length(verdis));
-          %%%%%%%%%%          
+          tim=(1:1:length(verdetr));
+          %%%%%%%%%%%          
           %prepare real time axis
           time_sec=((tim.*dt)-dt);
           %%%%%%%%%%%%%%%%%%%%%%
-          %%%%%%%%%%%          
           axes(handles.nsaxis)
-          plot(time_sec,nsdis,'r')
+          plot(time_sec,nsdetr,'r')
           set(handles.nsaxis,'XMinorTick','on')
           grid on
           
           axes(handles.ewaxis)
-          plot(time_sec,ewdis,'r')
+          plot(time_sec,ewdetr,'r')
           set(handles.ewaxis,'XMinorTick','on')
           grid on
-
+          hold on
+          plot(time_sec,t_plot*max(ewdetr),'g')
+          hold off
+          
           axes(handles.veraxis)
-          plot(time_sec,verdis,'r')
+          plot(time_sec,verdetr,'r')
           set(handles.veraxis,'XMinorTick','on')
           grid on
-          xlabel('Sec')
-          ylabel('m')
-          
-          %%%%% do something else here ???? save data ?????
-%           whos allver allew allns
-            handles.allver=vercor;
-            handles.allew=ewcor;
-            handles.allns=nscor;
-            guidata(hObject, handles);
-          %%%%%%%%%%%%%%%%%%
+          xlabel('sec')
+          ylabel('m/sec')
+           
+           
 end          
 
 
@@ -1442,67 +1107,31 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%
-set(handles.dstat,'String','Origin Alligned Displacement data',...
+set(handles.dstat,'String','Origin Alligned Instrument corrected data',...
                   'FontSize',14,...
                   'FontWeight','bold',...
                   'ForegroundColor','red')
-%%%%%%%%
-% 
-on =[handles.savefinal];
-enableon(on)
-% 
-% 
-% --- Executes on button press in savefinal.
-function savefinal_Callback(hObject, eventdata, handles)
-% hObject    handle to savefinal (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-%%%%decimate first
-%%%%%
-%%%%%%%%%%THIS IS USED TO DECIMATE DATA.....
-%%%%%%%%READ DATA FROM HANDLES  !!!!!!!!!!!!!   DECIMATE DATA BEFORE SAVE !!!!!!!
-%allver_all=handles.allver_all;
-%allew_all=handles.allew_all;
-%allns_all=handles.allns_all;
-%%%%%%%%%%%%% change 10/04
-%% we read data that are alligned only for origin..........
+              
+%%  Resample and get 8192 points
+% we read data that are alligned only for origin..........
 
 allver_all=handles.allver;
 allew_all=handles.allew;
 allns_all=handles.allns;
 
-% dt=handles.dt;
-% dtres=handles.dtres;
-%%%%%%%%%%make X axis
-% tim=(1:1:length(allver_all));
-% %%%%%%%%%%          
-% %make real time axis in sec..or read from handles..??
-% time_sec=((tim.*dt)-dt);
-% %%%%%%%%%%%%%%%%%%%%%%
-% 
-% whos allver_all allew_all allns_all
-% 
-%%%%%%%%%read sampling rate    
-%%%%%%%%%handles...!!!!
+%% resample
+% read sampling rate    
 origfreq = str2double(get(handles.sfreq,'String'));  % this is the original sampling freq
 %%%READ FACTOR
 newfreq = str2double(get(handles.dfactor,'String'));  % this is the final sampling freq
-
 disp(' ')
-
 disp(['Original sampling freq ' num2str(origfreq) 'Hz'])
-
-disp(['Final sampling freq ' num2str(newfreq) 'Hz'])
-
 disp(' ')
-
+disp(['Final sampling freq ' num2str(newfreq) 'Hz'])
+disp(' ')
 [p,q] = rat(newfreq/origfreq,0.00001); 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%new length will be
-%l=ceil(length(allver_all)*p/q);
-%
 resallver_all=resample(allver_all,p,q);
 %resallver_all_2 = downsample(allver_all,dfactor);
 resallew_all=resample(allew_all,p,q);
@@ -1510,29 +1139,12 @@ resallew_all=resample(allew_all,p,q);
 resallns_all=resample(allns_all,p,q);
 %resallns_all_2 = downsample(allns_all,dfactor);
 
-% new code
-% resallver_all = idresamp(allver_all,dtres);
-% resallew_all = idresamp(allew_all,dtres);
-% resallns_all = idresamp(allns_all,dtres);
-
-% whos resallver_all  resallew_all   resallns_all 
-% 
-% disp('New Frequency is')
-% newfreq
-% 
-% disp('New dt is')
-%%%dt=1/newfreq       %NEW dt  %%%% changed 26/01/2010
-
 dt=1/newfreq;
 
 %%%%%%%%%now change sampling frequency in sfreq window in GUI
 set(handles.sfreq,'string',num2str(newfreq))
-
 set(handles.text15,'Visible','off')
 set(handles.dfactor,'Visible','off')
-
-
-
 
 %%%%%%%%%%make NEW X axis
 tim=(1:1:length(resallver_all));
@@ -1549,57 +1161,32 @@ handles.time_sec=time_sec;
 handles.dt=dt;
 guidata(hObject, handles);
 
-% %%%%%%%%%%%CHANGE END POINT  %%%%%%%%%%
-% endpoint=handles.endpoint/dfactor;
-% %%%%%store End of data ...
-% handles.endpoint=endpoint;
-% guidata(hObject, handles);
-
-
-%%%%%PLOT RESAMPLED DATA final stage....!!!
-% plot displacement
-           ewdetr=detrend(resallew_all);
-           nsdetr=detrend(resallns_all);
-           verdetr=detrend(resallver_all);
-
-           ewdis=cumtrapz(ewdetr)*dt;
-           nsdis=cumtrapz(nsdetr)*dt;
-           verdis=cumtrapz(verdetr)*dt;
-          %%%%%%%%% plotting 
-          %%%%%prepare 'time' axis
-          tim=(1:1:length(verdis));
-          %%%%%%%%%%%          
-          %prepare real time axis
-          time_sec=((tim.*dt)-dt);
-          %%%%%%%%%%%%%%%%%%%%%%          
-
-axes(handles.nsaxis)
-plot(time_sec,nsdis,'b')
-set(handles.nsaxis,'XMinorTick','on')
-grid on
-
-axes(handles.ewaxis)
-plot(time_sec,ewdis,'b')
-set(handles.ewaxis,'XMinorTick','on')
-grid on
-
-axes(handles.veraxis)
-plot(time_sec,verdis,'b')
-set(handles.veraxis,'XMinorTick','on')
-grid on
-xlabel('Time (sec)')
-ylabel('m')
-
-
+% % 
+% axes(handles.nsaxis)
+% plot(time_sec,resallns_all,'b')
+% set(handles.nsaxis,'XMinorTick','on')
+% grid on
+% 
+% axes(handles.ewaxis)
+% plot(time_sec,resallew_all,'b')
+% set(handles.ewaxis,'XMinorTick','on')
+% grid on
+% 
+% axes(handles.veraxis)
+% plot(time_sec,resallver_all,'b')
+% set(handles.veraxis,'XMinorTick','on')
+% grid on
+% xlabel('Time (sec)')
+% ylabel('m/sec')
+% 
 %%%%%
-set(handles.dstat,'String','Resampled data',...
-                  'FontSize',14,...
-                  'FontWeight','bold',...
-                  'ForegroundColor','blue')
-%%%%%%%%
+% set(handles.dstat,'String','Resampled data',...
+%                   'FontSize',14,...
+%                   'FontWeight','bold',...
+%                   'ForegroundColor','blue')
+%%
 
 %%%%%%%%READ DATA FROM HANDLES
-
 %%%%%%%%%%%% change 10/04
 %allver_all=handles.allver_all_res(1:8192);
 %allew_all=handles.allew_all_res(1:8192);
@@ -1608,51 +1195,116 @@ set(handles.dstat,'String','Resampled data',...
 allver_all=handles.allver_all_res;
 allew_all=handles.allew_all_res;
 allns_all=handles.allns_all_res;
-
 % whos allver_all allew_all allns_all
-
 %%%%%%%check if data are less than 8192  10/04 there was a small bug here
 %%%%%%%if number of points > 8192...!!!
 %%%% corrected  10/11/04
 
-missdata=8192-length(allver_all);
+missdata=8192-length(allver_all)
 
            bmiss = zeros(missdata,1);
           
-% whos bmiss
-% 
 if missdata > 0 
-
-%   for  i=1:missdata
-%     tmpdata(i)=0;
-%   end
-% 
-%   whos tmpdata
-  
   allver_all8192=vertcat(allver_all, bmiss);
   allew_all8192 =vertcat(allew_all, bmiss);
   allns_all8192 =vertcat(allns_all,  bmiss);
-  
-%   whos allver_all8192
-  
+  warndlg('Data < 8192 points zero padding was done. This could cause problems. ','!! Warning !!')
 else
-    
   allver_all8192=allver_all(1:8192);
   allew_all8192 =allew_all(1:8192);
   allns_all8192=allns_all(1:8192);
   
-%   allns_all8192(1:10)
-%   allew_all8192(1:10)
-%   allver_all8192(1:10)
-  
+  disp(['The first 8192 points will be saved or '   num2str(8192*dt)    '  seconds of data'])
+
 end
 
+%% detrend
+disp(' ')
+allew_all8192  =  detrend(allew_all8192);
+allns_all8192  =  detrend(allns_all8192);
+allver_all8192 =  detrend(allver_all8192);
+disp('Removing Trend')
 
-disp(['The first 8192 points will be saved or '   num2str(8192*dt)    '  seconds of data'])
+%% taper
+disp(' ')
+%  t = input('Taper length in seconds: ');
+try
+  t=handles.t;
+catch
+   disp('Problem finding default taper. Assigning a value of 20.');
+   t=20;
+end
+           disp(['applying taper of '  num2str(t) ' s' ])
+           % taper data
+           taperv=(t/(length(allver_all8192)*dt));
+           
+           allew_all8192=taperd(allew_all8192,taperv);
+           allns_all8192=taperd(allns_all8192,taperv);
+           allver_all8192=taperd(allver_all8192,taperv);
+disp(' ')
+% time
+tim=(1:1:length(allver_all8192));
+time_sec=((tim.*dt)-dt);
+%% SAVE TO HANDLES           
+handles.allew_all8192=allew_all8192;
+handles.allns_all8192=allns_all8192;
+handles.allver_all8192=allver_all8192;
+handles.tim=tim;
+handles.time_sec=time_sec;
+handles.dt=dt;
+guidata(hObject, handles);           
+%%
 
+%% Ploting
 
-% %%%%READ ENDPOINT
-% endpoint=fix(handles.endpoint);
+% taper
+        taperv=(t/(length(allver_all8192)*dt));
+        t_plot=taper(length(allver_all8192),taperv);
+
+axes(handles.nsaxis)
+plot(time_sec,allns_all8192,'b')
+set(handles.nsaxis,'XMinorTick','on')
+grid on
+
+axes(handles.ewaxis)
+plot(time_sec,allew_all8192,'b')
+set(handles.ewaxis,'XMinorTick','on')
+grid on
+hold on
+plot(time_sec,t_plot*max(allew_all8192),'g')
+hold off
+
+axes(handles.veraxis)
+plot(time_sec,allver_all8192,'b')
+set(handles.veraxis,'XMinorTick','on')
+grid on
+xlabel('Time (sec)')
+ylabel('m/sec')
+set(handles.dstat,'String','Resampled data',...
+                  'FontSize',14,...
+                  'FontWeight','bold',...
+                  'ForegroundColor','blue')
+on =[handles.savefinal];
+enableon(on)
+% 
+% 
+% --- Executes on button press in savefinal.
+function savefinal_Callback(hObject, eventdata, handles)
+% hObject    handle to savefinal (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+%% read
+allew_all8192=handles.allew_all8192;
+allns_all8192=handles.allns_all8192;
+allver_all8192=handles.allver_all8192;
+tim=handles.tim;
+time_sec=handles.time_sec;
+dt=handles.dt;
+t=handles.t;
+             
+%%
+%time_sec'; allns_all8192' ; allew_all8192' ; allver_all8192
 
 %%%%%%%%%read sampling rate
 srate = str2double(get(handles.sfreq,'String'));
@@ -1802,15 +1454,16 @@ else
     aa=fgetl(fid);
     constantns=str2num(fgetl(fid));
     
-      zer=fgetl(fid);
-      zer=zer(1:6);
-
+%       zer=fgetl(fid)
+%       zer=zer(1:6)
 %         if zer~='zeroes' then
 %             disp 'error'
 %         elseif zer=='zeroes' 
 %             disp 'ok'
 %         end
+         aa=fgetl(fid);
             nzerns=str2num(fgetl(fid));
+            
         for p=1:nzerns
             zer=str2num(fgetl(fid));
 %             whos zer
@@ -1824,15 +1477,17 @@ else
         
 %%% finished with zeroes
 %%% read poles
-            pol=fgetl(fid);
-                        pol=pol(1:5);
+%             pol=fgetl(fid);
+%             pol=pol(1:5);
 
 %         if pol~='poles' then
 %             disp 'error'
 %         elseif pol=='poles' 
 %             disp 'ok'
 %         end
+            aa=fgetl(fid);
             npolns=str2num(fgetl(fid));
+            
         for i=1:npolns
             pol=str2num(fgetl(fid));
             polesns(i)=complex(pol(1),pol(2));
@@ -1845,21 +1500,12 @@ else
     A0ew=str2num(fgetl(fid));
     aa=fgetl(fid);
     constantew=str2num(fgetl(fid));
+    aa=fgetl(fid);
     
-      zer=fgetl(fid);
-            zer=zer(1:6);
-
-%         if zer~='zeroes' then
-%             disp 'error'
-%         elseif zer=='zeroes' 
-%             disp 'ok'
-%         end
             nzerew=str2num(fgetl(fid));
         for p=1:nzerew
             zer=str2num(fgetl(fid));
-%             whos zer
             zeroesew(p)=complex(zer(1,1),zer(1,2));
-%             whos zeroes
         end
         
         if nzerew == 0
@@ -1867,14 +1513,7 @@ else
         end
 %%% finished with zeroes
 %%% read poles
-            pol=fgetl(fid);
-                        pol=pol(1:5);
-
-%         if pol~='poles' then
-%             disp 'error'
-%         elseif pol=='poles' 
-%             disp 'ok'
-%         end
+   aa=fgetl(fid);
             npolew=str2num(fgetl(fid));
         for i=1:npolew
             pol=str2num(fgetl(fid));
@@ -1888,37 +1527,22 @@ else
     A0ver=str2num(fgetl(fid));
     aa=fgetl(fid);
     constantver=str2num(fgetl(fid));
-    
-      zer=fgetl(fid);
-            zer=zer(1:6);
+    aa=fgetl(fid);
 
-%         if zer~='zeroes' then
-%             disp 'error'
-%         elseif zer=='zeroes' 
-%             disp 'ok'
-%         end
             nzerver=str2num(fgetl(fid));
         for p=1:nzerver
             zer=str2num(fgetl(fid));
-%             whos zer
             zeroesver(p)=complex(zer(1,1),zer(1,2));
-%             whos zeroes
         end
         
         if nzerver == 0
             zeroesver=[];
         end
 
- %%% finished with zeroes
+%%% finished with zeroes
 %%% read poles
-            pol=fgetl(fid);
-                        pol=pol(1:5);
+    aa=fgetl(fid);
 
-%         if pol~='poles' then
-%             disp 'error'
-%         elseif pol=='poles' 
-%             disp 'ok'
-%         end
             npolver=str2num(fgetl(fid));
         for i=1:npolver
             pol=str2num(fgetl(fid));
@@ -2010,13 +1634,13 @@ lcut = str2double(get(handles.lcut2,'String'))
 hcut = str2double(get(handles.hcut1,'String'))
 
 nptsew=length(ew)
-ewf=bandpass(ew,lcut,hcut,nptsew,dt);
+ewf=bandpass2(ew,lcut,hcut,nptsew,dt);
 
 nptsns=length(ns);
-nsf=bandpass(ns,lcut,hcut,nptsns,dt);
+nsf=bandpass2(ns,lcut,hcut,nptsns,dt);
 
 nptsver=length(ver);
-verf=bandpass(ver,lcut,hcut,nptsver,dt);
+verf=bandpass2(ver,lcut,hcut,nptsver,dt);
 
 %save instrument corrected - filtered data  to handles 
 handles.ewcor = ewf;

@@ -1,0 +1,1 @@
+C:\isola_dev\PSLSTA2.stn

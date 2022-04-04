@@ -258,16 +258,19 @@ end
 
 [file1,path1] = uigetfile([ '*.sac'],'Import Sac file');
 
-%%% we need to check if it is BH or HH..!!
+%%% we need to check if it is BH or HH or HN..!!
 file1
 
 bhn = findstr('BHN',file1);
 hhn = findstr('HHN',file1); 
 bhn2 = findstr('bhn',file1);
+bhn3 = findstr('HNN',file1);
+
 
 t1 = isempty(bhn);
 t2 = isempty(hhn);
 t3 = isempty(bhn2);
+t4 = isempty(bhn3);
 
 if ( t1==1  && t2 == 0 )  %% HH case 
         
@@ -283,10 +286,14 @@ elseif (t3==0)  %%bh case
 
 fileew= strrep(file1,'bhn','bhe');
 filez= strrep(file1,'bhn','bhz');
-    
+
+elseif (t4==0)  %%HN case
+fileew= strrep(file1,'HNN','HNE');
+filez= strrep(file1,'HNN','HNZ');
+   
 else
     %%
-disp('Input file doesn''t contain BH or HH as comp description. Autosacimport needs this. Use Sacimport or change filenames.')
+disp('Input file doesn''t contain BH or HH or HN as comp description. Autosacimport needs this. Use Sacimport or change filenames.')
 
 end
 
@@ -375,10 +382,10 @@ disp(['Sampling frequency ' num2str(1/dt) 'Hz. Number of samples  ' num2str(maxn
 
 
   %%% problem when file reference time is not the file start..!!   try to solve here...
-BVALUENS=lh(ns,'B');
+BVALUENS=lh(ns,'B')
 
 if (startmsecns==-12345)
-    startmsecns=0;
+    startmsecns=0.0;
     disp('warning ... msec not defined in sac header. set to 0')
 end
 
@@ -393,7 +400,7 @@ n = datenum(startyearns,monthns,dayns,starthourns,startminns,((startsecns+startm
 
 mon=num2mon(M);
 
-nn=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  '  ('  deblank(num2str(startjdayns)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S))];
+nn=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  ' ('  deblank(num2str(startjdayns)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S,'%5.2f'))];
 
 set(handles.nstime,'String',nn)
 
@@ -409,7 +416,7 @@ else   %%% BVALUE ==0 start of data file....
 mon=num2mon(monthns);
 
 n=[deblank(num2str(dayns)) '-' deblank(mon) '-'  deblank(num2str(startyearns))  '  ('  deblank(num2str(startjdayns)) ')  '  '  ' deblank(num2str(starthourns)) ':'...
-        deblank(num2str(startminns)) ':'  deblank(num2str(startsecns+startmsecns/1000))];
+        deblank(num2str(startminns)) ':'  deblank(num2str(startsecns+startmsecns/1000,'%5.2f'))];
 
 set(handles.nstime,'String',n)
 
@@ -454,7 +461,7 @@ n = datenum(startyearew,monthew,dayew,starthourew,startminew,((startsecew+startm
 
 mon=num2mon(M);
 
-nnew=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  '  ('  deblank(num2str(startjdayns)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S))];
+nnew=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  '  ('  deblank(num2str(startjdayns)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S,'%5.2f'))];
 
 istew = datenum([Y,M,D,H,MI,S]);
 %timerefns=datestr(istns)
@@ -469,7 +476,7 @@ istew = datenum([startyearew monthew dayew starthourew startminew startsecew+sta
 timerefew=istew;
 
 nnew=[deblank(num2str(dayew)) '-' deblank(monew) '-' deblank(num2str(startyearew))  '  ('  deblank(num2str(startjdayew)) ')  '  '  ' deblank(num2str(starthourew)) ':'...
-        deblank(num2str(startminew)) ':'  deblank(num2str(startsecew+startmsecew/1000))];
+        deblank(num2str(startminew)) ':'  deblank(num2str(startsecew+startmsecew/1000,'%5.2f'))];
 end
 
 
@@ -518,7 +525,7 @@ n = datenum(startyearver,monthver,dayver,starthourver,startminver,((startsecver+
 [Y,M,D,H,MI,S] = datevec(n);   %%% this is our new data start time
 mon=num2mon(M);
 
-nnver=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  '  ('  deblank(num2str(startjdayns)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S))];
+nnver=[deblank(num2str(D)) '-' deblank(mon) '-'  num2str(Y)  '  ('  deblank(num2str(startjdayns)) ')  '   ' ' deblank(num2str(H)) ':' deblank(num2str(MI)) ':'  deblank(num2str(S,'%5.2f'))];
 
 istver = datenum([Y,M,D,H,MI,S]);
 %timerefns=datestr(istns)
@@ -532,7 +539,7 @@ istver = datenum([startyearver monthver dayver starthourver startminver startsec
 timerefver=istver;
 
 nnver=[deblank(num2str(dayver)) '-' deblank(monver) '-'  deblank(num2str(startyearver))   '  ('  deblank(num2str(startjdayver)) ')  '  '  ' deblank(num2str(starthourver)) ':'...
-        deblank(num2str(startminver)) ':'  deblank(num2str(startsecver+startmsecver/1000))];
+        deblank(num2str(startminver)) ':'  deblank(num2str(startsecver+startmsecver/1000,'%5.2f'))];
 
 end
 

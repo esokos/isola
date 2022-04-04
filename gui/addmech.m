@@ -789,11 +789,14 @@ if a==2   %% moremech exists
      fclose(fid);
      
      fid=fopen('moremech.dat','w');
-     
-fprintf(fid,'%s%5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %s',tline(1:27), strike1,'.', dip1,'.',rake1,'.', strike2,'.',dip2,'.',rake2,'.',trendp,'.',plungp,'.',trendt,'.',plungt,'.',tline(98:length(tline)));     
-         
-         
-    fclose(fid);
+       fprintf(fid,'%s%5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %s',tline(1:27), strike1,'.', dip1,'.',rake1,'.', strike2,'.',dip2,'.',rake2,'.',trendp,'.',plungp,'.',trendt,'.',plungt,'.',tline(98:length(tline)));     
+     fclose(fid);
+
+    
+     fid=fopen('onemech.dat','w');
+       fprintf(fid,'%s%5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %5.0f%s %s',tline(1:27), strike1,'.', dip1,'.',rake1,'.', strike2,'.',dip2,'.',rake2,'.',trendp,'.',plungp,'.',trendt,'.',plungt,'.',tline(98:length(tline)));     
+     fclose(fid);
+    
     
 else
 

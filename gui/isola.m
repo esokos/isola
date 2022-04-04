@@ -22,7 +22,7 @@ function varargout = isola(varargin)
 
 % Edit the above text to modify the response to help isola
 
-% Last Modified by GUIDE v2.5 27-Aug-2013 13:26:20
+% Last Modified by GUIDE v2.5 13-May-2017 10:25:05
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -57,44 +57,67 @@ handles.output = hObject;
 
 disp('This is isola-GUI 05/09/2012')
 disp('   ')
+disp('Checking Matlab version')
+    v=version;
+    vn=str2num(strrep(v(1:(findstr(v,'('))-1),'.',''));  
+
+   if vn < 790529
+       errordlg('Matlab version error. ISOLA needs Matlab R2009b and above','Error');
+       return
+   else
+      disp('Matlab version is ok') 
+   end
+disp('   ')
 disp(['Starting in ' pwd])
 disp('   ')
 disp('Checking folder structure')
 disp('   ')
 
 
-%%% find isola folder
+%% find isola folder
 infold=which('isola.m');
 str = strrep(infold,'isola.m','');
 
-h=dir([str 'islimage.jpg']);
 
-if isempty(h);
-  
-    disp('islimage.jpg was not found in isola install folder ... nevermind')
-  
-else
-    
-%%% load image and display
-isolaimg=imread([str 'islimage.jpg']);
-axes(handles.axes1)
-image(isolaimg); axis off 
+%% load a different image in Linux !
+if ispc 
+     h=dir([str 'isolalogo.jpg']);
+        if isempty(h)
+          disp('isolalogo.jpg was not found in isola install folder ... nevermind')
+        else
+        % load image and display
+          isolaimg=imread([str 'isolalogo.jpg']);
+          axes(handles.axes1);
+          image(isolaimg); axis off 
+        end
+else % linux
+     h=dir([str 'isolalogo_tux.jpg']);
+        if isempty(h)
+          disp('isolalogo_tux.jpg was not found in isola install folder ... nevermind')
+        else
+        % load image and display
+          isolaimg=imread([str 'isolalogo_tux.jpg']);
+          axes(handles.axes1);
+          image(isolaimg); axis off 
+        end
 end
 
+% figure
+% ismg=imread('isola.jpg');
+% image(ismg); axis off 
+% Check if folder structure exists
 
-%%%%Check if folder structure exists
-
-%check if INVERT exists..!
+%% check if INVERT exists..!
 h=dir('invert');
-if isempty(h);
+if isempty(h)
     disp('Invert folder doesn''t exist. isola_GUI will create it.');
     [s,mess,messid] = mkdir('invert');
         if s ~=0 && s ~= 1 
             msgbox(mess,messid,'warn')
         end
 
-%% go to isola main folder and look for header, footer...
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% go to isola main folder and look for header, footer...
+
 sf=which('footer.txt');
 if ~isempty(sf) 
 [s,mess,messid]=copyfile(sf,'.\invert');
@@ -110,7 +133,6 @@ if ~isempty(sh)
 else
    disp('header.txt doesn''t exist in isola folder')
 end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
 else
     disp('Invert folder exists. ');
@@ -315,7 +337,8 @@ else
 %there is a crustal file in current folder 
 disp('Found crustal file in current folder ')
 end
-    
+
+%% 
 
 %%%%%%%%%%%%%%%%%%
 disp('  ')
@@ -355,7 +378,7 @@ function exit_Callback(hObject, eventdata, handles)
 % hObject    handle to exit (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-disp('tchau')
+disp('Na shledanou')
 close
 
 % --- Executes on button press in cfolder.
@@ -457,9 +480,9 @@ function uncestim_Callback(hObject, eventdata, handles)
 % hObject    handle to uncestim (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-disp('Main is Calling comp_uncert')
+disp('Main is Calling selunc')
 
-comp_uncert
+selunc
 
 % --- Executes on button press in hcplot.
 function hcplot_Callback(hObject, eventdata, handles)
@@ -517,8 +540,8 @@ function selectdata_Callback(hObject, eventdata, handles)
 % hObject    handle to selectdata (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-disp('Main is Calling datain4')
-datain4
+disp('Main is Calling datain5')
+datain5
 
 
 % --- Executes on button press in sourcedef.
@@ -574,8 +597,8 @@ function timefunc_Callback(hObject, eventdata, handles)
 % hObject    handle to timefunc (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-disp('Main is Calling timefun')
-timefun
+disp('Main is calling seltimfun')
+seltimfun
 
 
 % --- Executes on button press in jack.
@@ -585,3 +608,12 @@ function jack_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 disp('Main is calling jack')
 jack
+
+
+% --- Executes on button press in envinv.
+function envinv_Callback(hObject, eventdata, handles)
+% hObject    handle to envinv (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+disp('Main is calling envinv')
+envinv
