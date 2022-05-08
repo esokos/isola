@@ -1,5 +1,5 @@
 <h1> isola</h1>
-=====
+
 ISOLA software package has been developed continually since 2003 and is continually upgraded. 
 It is a combination of Matlab graphic user interface (by E. Sokos) and Fortran codes (by J. Zahradník). 
 ISOLA is an all-in-one package, intended for a transparent and detailed manual processing of selected events.
