@@ -1,0 +1,33 @@
+Names of the called codes called by GUI:
+=========================================
+
+
+gr_xyz.exe (or an alternative version gr_rtz.exe)
+
+elemse.exe (has no alternative)
+
+isola.exe (can be one of these versions isola2018_NOinteraction,  or isola2018_interaction...)
+
+newaspo.exe (can be newaspo10, newaspo9, neaspo9_WISH)
+
+sipolnew.exe (can be e.g. sipolnew4, sipolnew4_WISH, sipolnew5,  ...)
+
+time_fixed.exe (can be time_fixed_non-smooth, time_fixed_smooth)
+
+time_loop_two.exe (can be time_loop_twodiff or time_loop_twosame.exe)
+
+syn_cor.exe (can be syn_cor_norand.exe, or syn_cor_randgauss.exe, ...)
+
+conshift.exe (has no alternative)
+
+conshift_MT.exe (has no alternative)
+
+angone.exe (or an alternative version ang, anggradone, anggrad...)
+
+
+IMPORTANT NOTICE 
+GUI does not enable option of the codes. In the present distribution we have
+chosen always one of the existing versions. Using another version would
+require that user goes to this folder, and manually copies some version
+into generic file, e.g. he/she copies isola2018_interaction.exe into isola.exe.
+Consultation with authors is recommended.  
