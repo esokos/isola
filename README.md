@@ -35,6 +35,6 @@ http://geo.mff.cuni.cz/~jz/for_ISOLA_lectures_Gebze/
 <h1>Quick installation</h1>
 ============
 
-Copy the isola *.m, *.fig, *.exe files to your isola installation folder (e.g. c:\isola). Then add this folder to your system path and to your Matlab path. Restart Matlab, change directory (cd) to the folder you want to use for processing an event (so called run folder) and type isola, the GUI will ininitialize in this folder and you can start working with isola.
+Copy the isola *.m, *.fig, *.exe files, from Github folders GUI and fortran_code, to your isola installation folder (e.g. c:\isola). Then add this folder to your system path and to your Matlab path. Restart Matlab, change directory (cd) to the folder you want to use for processing an event (so called run folder e.g. c:\event1) and type isola, the GUI will ininitialize in this folder and you can start working with isola.
 
 
