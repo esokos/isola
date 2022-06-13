@@ -137,7 +137,9 @@ ccccccccccccccccccccccccccc
       omega=cmplx(pi2*freq,aw)
       deriv=(ai*omega)**icc
       us=fsource(ics,omega,t0,t1,pas) * deriv
-
+c      if(ics.eq.7) us=us*exp(-ai*omega*6.)    !! delta NOT shifted at all 
+      if(ics.eq.4) us=us*exp(-ai*omega*(t0/2.))    !!new Nov 21, 2021
+      
 ccccccccc modification for 0 freq
 
 c         if(jf.eq.1)  us=us*0.000   !! PAKZAD or 0.0001
@@ -182,17 +184,17 @@ c++++++++++++
       
    
       do itim=1,nt           ! time
-	ck=float(itim-1)/nt
-	cc=exp(-aw*tl*ck)/tl   !!! removing artific. absorption
-
+	  ck=float(itim-1)/nt
+      cc=exp(-aw*tl*ck)/tl   !!! removing artific. absorption
+c      if(itim.gt.2000) cc=0. ! for a test
 !!!!!!!!!!		(factor 1./tl has nothing to do with it, must be always) 
 c      cc=1./tl ! this will suppress exp() but keep division by tl
 !!!!!!!!!! in other words - if we experimentate with calcelling this operation
 !!!!!!!!!!!!!!    we must at least divite u(...) by TL  
 
-	ux(itim,ir,it)=ux(itim,ir,it)*cc ! this is regular (then in filter_stat we need artif. atten)
-	uy(itim,ir,it)=uy(itim,ir,it)*cc
-	uz(itim,ir,it)=uz(itim,ir,it)*cc
+	  ux(itim,ir,it)=ux(itim,ir,it)*cc ! this is regular (then in filter_stat we need artif. atten)
+	  uy(itim,ir,it)=uy(itim,ir,it)*cc
+	  uz(itim,ir,it)=uz(itim,ir,it)*cc
       enddo
 
       enddo ! moment tensor
@@ -478,14 +480,12 @@ c TYPE=3        Source = file
 	endif
  
 c TYPE=4        Source = triangle en deplacement
-	if (type.eq.4) then
-c	  t0=.5
+	  if (type.eq.4) then
 	  uu=exp(ai*omega*t0/4.)
 	  uu=(uu-1./uu)/2./ai
 	  uu=uu/(omega*t0/2.)
-	  fsource=uu*uu    *    4.   ! 4 was missing in original code
-c      write(3578,*) real(fsource),imag(fsource), abs(fsource)
-	endif
+	  fsource=uu*uu    *    4.
+      endif
  
 c TYPE=5        Source = rampe causale
 c               rise time T=t0
