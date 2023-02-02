@@ -22,6 +22,8 @@ doi:10.1007/978-3-319-77359-9
 <h1>Download  (check for the latest Isola version, zipped Fortran and GUI codes)</h1>
 http://geo.mff.cuni.cz/~jz/for_ISOLAnews/
 
+The latest code is also in Version2022_under_construction folder. It includes new features e.g.1024 points instead of 8192, isolacfg.isl file for specifiying defaults, etc
+
 
 <h1>Detailed instructions (how to install and use the software)</h1>
 http://geo.mff.cuni.cz/~jz/for_Brasilia2020/
