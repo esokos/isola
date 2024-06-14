@@ -1,0 +1,3 @@
+Example 03:
+In Test 4, teh frequency range was 0.01-0.1 Hz [not 0.01-1.0 Hz as written in the guides]
+

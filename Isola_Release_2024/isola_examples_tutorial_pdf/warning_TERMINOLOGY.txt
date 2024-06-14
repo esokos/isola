@@ -1,0 +1,8 @@
+The covariance matrix type sometimes called FULL 
+in these examples is in the newest version of Isola called  Toeplitz. 
+
+The covariance matrix type sometimes called FULL_MOV 
+in these examples is in the newest version of Isola called  Non-Toeplitz. 
+
+The covariance matrix type sometimes called COMPVAR
+in these examples is in the newest version of Isola called Variances. 
