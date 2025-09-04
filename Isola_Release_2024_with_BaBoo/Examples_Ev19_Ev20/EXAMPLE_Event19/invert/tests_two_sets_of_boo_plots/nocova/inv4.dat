@@ -1,0 +1,28 @@
+  2.3345878E-08  7.1535176E-08  0.6736448      4.6463309E-11         165
+           7         158   11672.71    
+ 
+ integral of residuals squared, weighted
+  2.3345878E-08
+ 
+ integral of data squared, , weighted
+  7.1535176E-08
+ 
+ variance reduction, weighted
+  0.6736448    
+ 
+ number of data
+ (assuming 5 indep. samples per comp.)
+ (this is a problematic estimate)
+         165
+ 
+ number of parameters
+ (assuming 1 sub, 5 MT components,1 position,1 time)
+           7
+ 
+ number of degrees of freedom
+ (this is a problematic estimate)
+         158
+ 
+ data variance
+ (this is a problematic estimate)
+  4.6463309E-11

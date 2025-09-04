@@ -1,0 +1,6 @@
+number of perturbations
+100
+first position no., last position, step
+7 16 1
+time (relative to OT, in seconds) first time, last time, time  step 
+-2.100000 2.100000 0.300000

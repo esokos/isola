@@ -1,0 +1,16 @@
+    mode of inversion: 1=full MT, 2=deviatoric MT (recommended), 3= DC MT, 4=known fixed DC MT
+1
+    time step of XXXRAW.DAT files (in sec)
+0.3
+    number of trial source positions (isourmax), max. 51
+20
+    trial time shifts (max. 100 shifts): from (>-3500), step, to (<3500)
+    example: -10,5,50 means -10dt to 50dt, step = 5dt, i.e. 12 shifts
+-7 1 7
+    number of subevents to be searched (isubmax), 
+1
+    filter (f1,f2,f3,f4); flat band-pass between f2, f3
+    cosine tapered between f1, f2 and between f3, f4
+0.03 0.03 0.06 0.06
+    guess of data variance (important only for absolute value of the parameter variance)
+2.0e-12

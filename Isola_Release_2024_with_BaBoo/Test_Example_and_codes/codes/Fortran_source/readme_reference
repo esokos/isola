@@ -1,0 +1,17 @@
+We Use external codes: 
+
+from Numerical Recipes
+[Press, W. H., Teukolsky, S. A., Vetterling, W. T., & Flannery, B. P. (2007). 
+Numerical Recipes: The Art of Scientific Computing (3rd ed.). Cambridge University Press.]:
+ ang, angles, hpsel, sort,jacobi, line, lubksb,ludcmp
+ 
+from Dave Harris
+XAPIIR (in timefilters.inc) 
+ 
+from Jan Sileny
+silsub2
+
+----
+  
+Besides codes listed above, used in the present demonstration, Isola makes use of 
+AXITRA (Green' functions code by O. Coutant)

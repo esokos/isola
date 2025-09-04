@@ -1,0 +1,15 @@
+As regards the conversion from RESP to ISOLA pz file you can do it either by hand or you can try the attached code...better if you try first the manual way and then switch to automatic .. in this way you will be able to check the solution better !!
+
+The main code is Resp2ISLpz.m and you run it like this
+Resp2ISLpz(respfilename,isolapzfile,comp,respdate) e.g. Resp2ISLpz('HP.LTK.resp','LTKBHE.pz','HHE', datetime(2008,11,12))
+
+So respfilename is your RESP file e.g. HP.LTK.resp the isolapzfile is the output e..g LTKBHE.pz , comp is the component and respdate is the date of the earthquake (for which you need the response)..remember that a RESP file has many epochs inside ..respdate should be given using the datetime function of Matlab 
+
+Resp2ISLpc will find the suitable date in the resp file, it will create a temp file with this information and then convert to ISOLA pz
+
+Put the 3 m files and your resp files in same folder and try the code ... don't forget to check the results !!!!
+
+Hope it is clear ... let me know if you have any questions
+
+t.
+

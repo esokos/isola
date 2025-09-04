@@ -1,0 +1,33 @@
+ All trial positions and shifts for subevent#           1
+ (isour = source position,ishift*dt=time shift)
+ isour,ishift,corr,moment,DC%,str,dip,rak,str,dip,rak
+     1     -1    0.805055       0.4852E+17    48.732    268     48    -51     37     54   -125
+ 
+ Selected source position for subevent #           1
+ isour,ishift           1          -1
+ 
+ SINGULAR values, incl. vardat (min, max, max/min)
+  2.5012073E-16  9.3717716E-16   3.746899    
+ 
+ Inversion result:
+ coefficients of elem.seismograms a(1),a(2),...a(6):
+ -0.17687E+17  0.70949E+16 -0.22369E+17 -0.31299E+17 -0.40885E+16  0.15629E+17
+ and their sigma_a(1), sigma_a(2),... sigma_a(6):
+  0.14024E+16  0.25599E+16  0.30482E+16  0.25994E+16  0.31068E+16  0.29436E+16
+ 
+ moment (Nm):  4.8520727E+16
+   moment magnitude:   5.1
+             VOL % :  28.0
+              DC % :  48.7
+            CLVD % : -23.3
+ strike,dip,rake:         268          48         -51
+ strike,dip,rake:          37          54        -125
+ P-axis azimuth and plunge:         248          61
+ T-axis azimuth and plunge:         152           3
+ B-axis azimuth and plunge:          60          28
+ 
+ After subtraction of subevent #           1
+ weighted variance reduction (used components only):
+ varred=  0.6480440    
+ =======================================
+ 
