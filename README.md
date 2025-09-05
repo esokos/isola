@@ -18,12 +18,7 @@ by our colleagues (for SeisComp, for Python, e.g. https://github.com/nikosT/Giso
 Zahradník, J. & Sokos, E. (2018): ISOLA code for multiple-point source modeling –review. in Moment Tensor Solutions - A Useful Tool for Seismotectonics 1–28 (Springer Natural Hazards, 2018).
 doi:10.1007/978-3-319-77359-9
 
-
-<h1>Download  (check for the latest Isola version, zipped Fortran and GUI codes)</h1>
-http://geo.mff.cuni.cz/~jz/for_ISOLAnews/
-
-The latest code is also in Version2022_under_construction folder. It includes new features e.g.1024 points instead of 8192, isolacfg.isl file for specifiying defaults, etc
-
+Zahradník, J., Sokos, E. (2025). ISOLA2024 – assessing and understanding uncertainties of full moment-tensors. Seis. Res. Lett. https://doi.org/10.1785/0220240420. 
 
 <h1>Detailed instructions (how to install and use the software)</h1>
 http://geo.mff.cuni.cz/~jz/for_Brasilia2020/
