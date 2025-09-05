@@ -14,7 +14,7 @@ Less transparent, but more suitable for routine processing are the automated ver
 by our colleagues (for SeisComp, for Python, e.g. https://github.com/nikosT/Gisola, http://geo.mff.cuni.cz/~vackar/isola-obspy/), not addressed here.
 
 
-<h1>Reference</h1>
+<h1>References</h1>
 Zahradník, J. & Sokos, E. (2018): ISOLA code for multiple-point source modeling –review. in Moment Tensor Solutions - A Useful Tool for Seismotectonics 1–28 (Springer Natural Hazards, 2018).
 doi:10.1007/978-3-319-77359-9
 
