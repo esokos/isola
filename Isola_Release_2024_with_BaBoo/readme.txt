@@ -9,7 +9,6 @@ Finally, the “Examples_Ev19_Ev20” folder includes additional examples (which
 
 The codes were developed by Jiří Zahradník (jiri.zahradnik@matfyz.cuni.cz) and Efthimios Sokos (esokos@upatras.gr). 
 
-
 Program languages: FORTRAN. MATLAB, Software required: Windows 10 or 11, MATLAB 2012-2025. 
 
 This release accompanies the paper “ISOLA-BaBoo, full moment tensors with uncertainty for the 2025 Anydros earthquakes (submitted)”
