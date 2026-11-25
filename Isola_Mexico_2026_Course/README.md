@@ -1,4 +1,4 @@
-# Isola distribution Mexico 2026 ISOLA course
+# Isola distribution for Mexico 2026 ISOLA course
 
 ## Codes
 
